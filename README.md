@@ -10,8 +10,9 @@ The hub is powered by Git submodules tracking official upstream repositories on 
 
 | Folder | Upstream Repository | Description | Skills Count |
 | :--- | :--- | :--- | :--- |
-| [`deepmind-science/`](file:///home/sergiobermudez/local_projects/skills-hub/deepmind-science) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | AlphaFold, PubMed, ChEMBL, UniProt, ClinVar, Foldseek, BLAST | ~40 skills |
-| [`googlecloud-base/`](file:///home/sergiobermudez/local_projects/skills-hub/googlecloud-base) | [google/skills](https://github.com/google/skills) | BigQuery, Cloud Build, Vertex AI, AlloyDB, Ads, Analytics | ~150 skills |
+| [`googlecloud-data/`](file:///home/sergiobermudez/local_projects/skills-hub/googlecloud-data) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | Data Agent Kit: Dataform, dbt, Spark, Composer, Lakehouse, Graph | 37 skills |
+| [`googlecloud-base/`](file:///home/sergiobermudez/local_projects/skills-hub/googlecloud-base) | [google/skills](https://github.com/google/skills) | BigQuery, Cloud Build, Vertex AI, AlloyDB, Ads, Analytics | ~144 skills |
+| [`deepmind-science/`](file:///home/sergiobermudez/local_projects/skills-hub/deepmind-science) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | AlphaFold, PubMed, ChEMBL, UniProt, ClinVar, Foldseek, BLAST | 40 skills |
 | [`agents-cli/`](file:///home/sergiobermudez/local_projects/skills-hub/agents-cli) | [google/agents-cli](https://github.com/google/agents-cli) | Google Agent Development Kit (ADK), Scaffold, Deploy, Eval | 7 skills |
 | [`skills/`](file:///home/sergiobermudez/local_projects/skills-hub/skills) | Local Custom Skills | Your own custom authored standalone skills | Extensible |
 | [`plugins/`](file:///home/sergiobermudez/local_projects/skills-hub/plugins) | Local Custom Plugins | Multi-skill and rule packages with `plugin.json` | Extensible |
@@ -25,12 +26,14 @@ skills-hub/
 ├── .git/                     # Track customizations with Git
 ├── .gitmodules               # Submodule definitions tracking upstream main branches
 ├── README.md                 # This documentation
-├── deepmind-science/         # Submodule: google-deepmind/science-skills
-│   └── skills/               # alphafold, pubmed, chembl, etc.
+├── googlecloud-data/         # Submodule: GoogleCloudPlatform/data-agent-kit-plugin
+│   └── skills/               # dataform, dbt, spark, dataflow, airflow, etc.
 ├── googlecloud-base/         # Submodule: google/skills
 │   ├── skills/cloud/         # bigquery, vertex, alloydb, etc.
 │   ├── skills/ads/           # ads API skills
 │   └── skills/analytics/     # GA4 / analytics skills
+├── deepmind-science/         # Submodule: google-deepmind/science-skills
+│   └── skills/               # alphafold, pubmed, chembl, etc.
 ├── agents-cli/               # Submodule: google/agents-cli
 │   └── skills/               # ADK code, deploy, eval, workflow
 ├── skills/                   # Standalone local skills
