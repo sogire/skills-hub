@@ -307,14 +307,20 @@ class HubManager:
             else:
                 print(f"{COLOR_RED}✗ Unknown skill or plugin:{COLOR_RESET} '{name}'")
 
-    def disable(self, workspace_root: Path, names: list[str] | None = None, group: str | None = None):
+    def disable(self, workspace_root: Path, names: list[str] | None = None, group: str | None = None, disable_all: bool = False):
         agents_dir = workspace_root / ".agents"
         if not agents_dir.exists():
             print(f"No .agents configuration found in {workspace_root}")
             return
 
         target_names = list(names or [])
-        if group:
+        if disable_all:
+            active_skills, active_plugins = self.get_workspace_active(workspace_root)
+            target_names = list(set(list(active_skills.keys()) + list(active_plugins.keys())))
+            if not target_names:
+                print(f"{COLOR_YELLOW}No customizations currently active in this workspace.{COLOR_RESET}")
+                return
+        elif group:
             all_skills, _ = self.get_available()
             g_lower = group.lower()
             matching = [s for s, info in all_skills.items() if info["group"].lower() == g_lower or info["group"].lower().startswith(g_lower + "/")]
@@ -322,7 +328,7 @@ class HubManager:
                 target_names.extend(matching)
 
         if not target_names:
-            print("No skills or plugins specified to disable.")
+            print("No skills or plugins specified to disable. Use --all to disable everything.")
             return
 
         for name in target_names:
@@ -509,6 +515,100 @@ description: Describe what {name} does and when the agent should activate it.
                 "description": f"Description for {name}"
             }, indent=2) + "\n", encoding="utf-8")
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new plugin '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
+
+    def add_repo(self, url: str, name: str | None = None, branch: str = "main"):
+        """Registers and clones a new GitHub skills repository as a git submodule."""
+        if not name:
+            clean_url = url.rstrip("/")
+            if clean_url.endswith(".git"):
+                clean_url = clean_url[:-4]
+            name = clean_url.split("/")[-1]
+
+        target_dir = self.hub_dir / name
+        if target_dir.exists():
+            print(f"{COLOR_RED}Error:{COLOR_RESET} Directory '{name}' already exists at {target_dir}")
+            return
+
+        print(f"\nAdding submodule {COLOR_BOLD}{name}{COLOR_RESET} from {url} (branch: {branch})...\n")
+        cmd = ["git", "submodule", "add", "-b", branch, url, name]
+        res = subprocess.run(cmd, cwd=self.hub_dir)
+        if res.returncode == 0:
+            print(f"\n{COLOR_GREEN}✓{COLOR_RESET} Successfully added repository '{COLOR_BOLD}{name}{COLOR_RESET}' as submodule!")
+            # Stage .gitmodules and submodule
+            subprocess.run(["git", "add", ".gitmodules", name], cwd=self.hub_dir)
+            print(f"Run {COLOR_BOLD}ag-hub list -g {name}{COLOR_RESET} to view newly available skills.")
+        else:
+            print(f"{COLOR_RED}✗ Failed to add submodule.{COLOR_RESET}")
+
+    def info(self, name: str):
+        """Displays detailed documentation and content for a specific skill or plugin."""
+        all_skills, all_plugins = self.get_available()
+
+        if name in all_skills:
+            info = all_skills[name]
+            skill_path = info["path"]
+            skill_md = skill_path / "SKILL.md"
+
+            print(f"\n{COLOR_CYAN}{COLOR_BOLD}Skill:{COLOR_RESET} {COLOR_BOLD}{name}{COLOR_RESET}")
+            print(f"{COLOR_BOLD}Group/Source:{COLOR_RESET} {info['group']}")
+            print(f"{COLOR_BOLD}Location:{COLOR_RESET}     {skill_path}")
+
+            if skill_md.exists():
+                content = skill_md.read_text(encoding="utf-8", errors="replace")
+                print(f"\n{COLOR_BOLD}=== Documentation (SKILL.md) ==={COLOR_RESET}\n")
+                lines = content.splitlines()
+                # If frontmatter exists, show description then body
+                in_fm = False
+                body_lines = []
+                for line in lines:
+                    if line.strip() == "---":
+                        in_fm = not in_fm
+                        continue
+                    if not in_fm:
+                        body_lines.append(line)
+
+                rendered = "\n".join(body_lines).strip()
+                if rendered:
+                    # Print first 50 lines if very long
+                    disp_lines = rendered.splitlines()
+                    if len(disp_lines) > 55:
+                        print("\n".join(disp_lines[:55]))
+                        print(f"\n{COLOR_DIM}... [{len(disp_lines) - 55} more lines in {skill_md}] ...{COLOR_RESET}\n")
+                    else:
+                        print(rendered + "\n")
+                else:
+                    print(f"{COLOR_DIM}No additional documentation found.{COLOR_RESET}\n")
+
+        elif name in all_plugins:
+            info = all_plugins[name]
+            plugin_path = info["path"]
+            manifest = plugin_path / "plugin.json"
+
+            print(f"\n{COLOR_CYAN}{COLOR_BOLD}Plugin:{COLOR_RESET} {COLOR_BOLD}{name}{COLOR_RESET}")
+            print(f"{COLOR_BOLD}Group/Source:{COLOR_RESET} {info['group']}")
+            print(f"{COLOR_BOLD}Location:{COLOR_RESET}     {plugin_path}")
+
+            if manifest.exists():
+                try:
+                    data = json.loads(manifest.read_text(encoding="utf-8"))
+                    print(f"\n{COLOR_BOLD}Description:{COLOR_RESET} {data.get('description', 'N/A')}")
+                    if "version" in data:
+                        print(f"{COLOR_BOLD}Version:{COLOR_RESET}     {data['version']}")
+                except Exception:
+                    pass
+
+            # List any bundled skills
+            p_skills_dir = plugin_path / "skills"
+            if p_skills_dir.exists():
+                p_skills = [d.name for d in p_skills_dir.iterdir() if d.is_dir()]
+                if p_skills:
+                    print(f"\n{COLOR_BOLD}Bundled Skills ({len(p_skills)}):{COLOR_RESET}")
+                    for s in sorted(p_skills):
+                        print(f"  • {s}")
+            print()
+        else:
+            print(f"\n{COLOR_RED}✗ Unknown skill or plugin:{COLOR_RESET} '{name}'")
+            print(f"Tip: Run {COLOR_BOLD}ag-hub list {name}{COLOR_RESET} to search matching customizations.\n")
 
 
 def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None, group_filter: str | None = None, show_all: bool = False):
@@ -729,6 +829,11 @@ def main():
     p_disable = subparsers.add_parser("disable", aliases=["rm"], help="Disable skills or plugins in workspace")
     p_disable.add_argument("names", nargs="*", default=[], help="Names of skills or plugins to disable")
     p_disable.add_argument("--group", "-g", default=None, help="Disable all skills from a specific group/repository")
+    p_disable.add_argument("--all", "-a", action="store_true", help="Disable all active customizations in current workspace")
+
+    # info / show / describe
+    p_info = subparsers.add_parser("info", aliases=["show", "describe"], help="Display documentation and instructions for a skill or plugin")
+    p_info.add_argument("name", help="Name of the skill or plugin")
 
     # select / interactive
     p_select = subparsers.add_parser("select", aliases=["interactive", "-i"], help="Interactive checklist to select active skills")
@@ -737,6 +842,12 @@ def main():
     p_update = subparsers.add_parser("update", help="Update skills repositories from original GitHub")
     p_update.add_argument("repos", nargs="*", default=None, help="Specific repositories to update (default: all)")
     p_update.add_argument("--check", "-c", action="store_true", help="Check for available updates without applying them")
+
+    # add-repo
+    p_add_repo = subparsers.add_parser("add-repo", help="Register and clone a new GitHub repository as a submodule in the hub")
+    p_add_repo.add_argument("url", help="GitHub repository URL")
+    p_add_repo.add_argument("name", nargs="?", default=None, help="Submodule directory name (optional, derived from URL)")
+    p_add_repo.add_argument("--branch", "-b", default="main", help="Branch to track (default: main)")
 
     # create
     p_create = subparsers.add_parser("create", help="Create a new skill or plugin in the hub")
@@ -752,14 +863,18 @@ def main():
         cmd_list(manager, workspace_root, query=getattr(args, "query", None), group_filter=getattr(args, "group", None), show_all=getattr(args, "all", False))
     elif args.command == "status":
         cmd_status(manager, workspace_root)
+    elif args.command in ("info", "show", "describe"):
+        manager.info(args.name)
     elif args.command in ("enable", "add"):
         manager.enable(workspace_root, names=args.names, group=args.group, as_symlink=args.symlink)
     elif args.command in ("disable", "rm"):
-        manager.disable(workspace_root, names=args.names, group=args.group)
+        manager.disable(workspace_root, names=args.names, group=args.group, disable_all=args.all)
     elif args.command in ("select", "interactive", "-i"):
         cmd_interactive(manager, workspace_root)
     elif args.command == "update":
         manager.update_repos(targets=args.repos if args.repos else None, check_only=args.check)
+    elif args.command == "add-repo":
+        manager.add_repo(args.url, name=args.name, branch=args.branch)
     elif args.command == "create":
         manager.scaffold(args.type, args.name)
     else:
