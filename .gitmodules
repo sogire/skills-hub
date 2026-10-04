@@ -1,0 +1,12 @@
+[submodule "deepmind-science"]
+	path = deepmind-science
+	url = https://github.com/google-deepmind/science-skills.git
+	branch = main
+[submodule "googlecloud-base"]
+	path = googlecloud-base
+	url = https://github.com/google/skills.git
+	branch = main
+[submodule "agents-cli"]
+	path = agents-cli
+	url = https://github.com/google/agents-cli.git
+	branch = main
