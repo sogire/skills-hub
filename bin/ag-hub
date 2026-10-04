@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 ag-hub: Zero-copy Antigravity Customizations Manager
-Manage and selectively activate Antigravity skills and plugins in any workspace.
+Manage, update, and selectively activate Antigravity skills and plugins in any workspace.
 """
 
 import argparse
+import configparser
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -21,6 +23,7 @@ COLOR_CYAN = "\033[36m"
 COLOR_YELLOW = "\033[33m"
 COLOR_RED = "\033[31m"
 COLOR_DIM = "\033[2m"
+COLOR_MAGENTA = "\033[35m"
 
 def find_workspace_root() -> Path:
     """Finds the workspace root by walking up from cwd looking for .git or .agents."""
@@ -44,7 +47,7 @@ def get_skill_description(skill_dir: Path) -> str:
             if desc_match:
                 desc = desc_match.group(1).replace("\n", " ").strip()
                 desc = re.sub(r"\s+", " ", desc)
-                return desc[:80] + ("..." if len(desc) > 80 else "")
+                return desc[:85] + ("..." if len(desc) > 85 else "")
     except Exception:
         pass
     return ""
@@ -58,7 +61,7 @@ def get_plugin_description(plugin_dir: Path) -> str:
         data = json.loads(manifest.read_text(encoding="utf-8"))
         desc = data.get("description", "")
         if desc:
-            return desc[:80] + ("..." if len(desc) > 80 else "")
+            return desc[:85] + ("..." if len(desc) > 85 else "")
     except Exception:
         pass
     return ""
@@ -66,46 +69,124 @@ def get_plugin_description(plugin_dir: Path) -> str:
 class HubManager:
     def __init__(self, hub_dir: Path = DEFAULT_HUB_DIR):
         self.hub_dir = hub_dir
-        self.skills_dir = hub_dir / "skills"
-        self.agents_cli_dir = hub_dir / "agents-cli"
-        self.plugins_dir = hub_dir / "plugins"
+
+    def get_submodules(self) -> dict[str, dict]:
+        """Reads .gitmodules from hub_dir to find registered repositories."""
+        modules = {}
+        gitmodules_file = self.hub_dir / ".gitmodules"
+        if not gitmodules_file.exists():
+            return modules
+
+        config = configparser.ConfigParser()
+        try:
+            config.read(gitmodules_file)
+            for section in config.sections():
+                path = config.get(section, "path", fallback="")
+                url = config.get(section, "url", fallback="")
+                branch = config.get(section, "branch", fallback="main")
+                if path:
+                    name = Path(path).name
+                    modules[name] = {
+                        "path": self.hub_dir / path,
+                        "url": url,
+                        "branch": branch
+                    }
+        except Exception:
+            pass
+        return modules
 
     def get_available(self):
-        """Returns dict of available customizations categorized by category."""
-        available = {
-            "skills": {},       # name -> {path, desc, category}
-            "agents-cli": {},   # name -> {path, desc, category}
-            "plugins": {}       # name -> {path, desc, category}
-        }
+        """Discovers all skills and plugins across standalone folders and submodules."""
+        skills = {}    # name -> {path, parent, desc, group}
+        plugins = {}   # name -> {path, parent, desc, group}
 
-        if self.skills_dir.exists():
-            for d in sorted(self.skills_dir.iterdir()):
+        # 1. Custom skills in skills/
+        custom_skills_dir = self.hub_dir / "skills"
+        if custom_skills_dir.exists():
+            for d in sorted(custom_skills_dir.iterdir()):
                 if d.is_dir() and (d / "SKILL.md").exists():
-                    available["skills"][d.name] = {
+                    skills[d.name] = {
                         "path": d,
+                        "parent": d.parent,
                         "desc": get_skill_description(d),
-                        "category": "skill"
+                        "group": "custom"
                     }
 
-        if self.agents_cli_dir.exists():
-            for d in sorted(self.agents_cli_dir.iterdir()):
-                if (d.is_dir() or d.is_symlink()) and (d / "SKILL.md").exists():
-                    available["agents-cli"][d.name] = {
-                        "path": d,
-                        "desc": get_skill_description(d),
-                        "category": "agents-cli"
-                    }
-
-        if self.plugins_dir.exists():
-            for d in sorted(self.plugins_dir.iterdir()):
+        # 2. Custom plugins in plugins/
+        custom_plugins_dir = self.hub_dir / "plugins"
+        if custom_plugins_dir.exists():
+            for d in sorted(custom_plugins_dir.iterdir()):
                 if d.is_dir() and (d / "plugin.json").exists():
-                    available["plugins"][d.name] = {
+                    plugins[d.name] = {
                         "path": d,
+                        "parent": d.parent,
                         "desc": get_plugin_description(d),
-                        "category": "plugin"
+                        "group": "custom"
                     }
 
-        return available
+        # 3. Submodules
+        submodules = self.get_submodules()
+        for sub_name, sub_info in submodules.items():
+            sub_path = sub_info["path"]
+            if not sub_path.exists():
+                continue
+
+            # Check root plugin.json in submodule
+            if (sub_path / "plugin.json").exists():
+                plugins[sub_name] = {
+                    "path": sub_path,
+                    "parent": sub_path.parent,
+                    "desc": get_plugin_description(sub_path),
+                    "group": sub_name
+                }
+
+            # Check plugins/ subdirectory in submodule
+            sub_plugins_dir = sub_path / "plugins"
+            if sub_plugins_dir.exists():
+                for item in sorted(sub_plugins_dir.iterdir()):
+                    if item.is_dir():
+                        if (item / "plugin.json").exists():
+                            plugins[item.name] = {
+                                "path": item,
+                                "parent": item.parent,
+                                "desc": get_plugin_description(item),
+                                "group": sub_name
+                            }
+                        else:
+                            for subitem in sorted(item.iterdir()):
+                                if subitem.is_dir() and (subitem / "plugin.json").exists():
+                                    plugins[subitem.name] = {
+                                        "path": subitem,
+                                        "parent": subitem.parent,
+                                        "desc": get_plugin_description(subitem),
+                                        "group": f"{sub_name}/{item.name}"
+                                    }
+
+            # Check skills/ subdirectory in submodule
+            sub_skills_dir = sub_path / "skills"
+            if sub_skills_dir.exists():
+                for item in sorted(sub_skills_dir.iterdir()):
+                    if item.is_dir():
+                        if (item / "SKILL.md").exists():
+                            # Direct skill
+                            skills[item.name] = {
+                                "path": item,
+                                "parent": item.parent,
+                                "desc": get_skill_description(item),
+                                "group": sub_name
+                            }
+                        else:
+                            # Subcategorized (e.g. cloud/, ads/, analytics/)
+                            for subitem in sorted(item.iterdir()):
+                                if subitem.is_dir() and (subitem / "SKILL.md").exists():
+                                    skills[subitem.name] = {
+                                        "path": subitem,
+                                        "parent": subitem.parent,
+                                        "desc": get_skill_description(subitem),
+                                        "group": f"{sub_name}/{item.name}"
+                                    }
+
+        return skills, plugins
 
     def get_workspace_active(self, workspace_root: Path):
         """Detects active skills and plugins in a workspace (manifests and symlinks)."""
@@ -128,7 +209,6 @@ class HubManager:
                         for s in include_only:
                             active_skills[s] = "manifest"
                     else:
-                        # Include all in that entry
                         ep = Path(entry_path)
                         if ep.exists():
                             for child in ep.iterdir():
@@ -172,19 +252,15 @@ class HubManager:
         return active_skills, active_plugins
 
     def enable(self, workspace_root: Path, names: list[str], as_symlink: bool = False):
-        available = self.get_available()
-        all_skills = {**available["skills"], **available["agents-cli"]}
-        all_plugins = available["plugins"]
-
+        all_skills, all_plugins = self.get_available()
         agents_dir = workspace_root / ".agents"
         agents_dir.mkdir(parents=True, exist_ok=True)
 
         for name in names:
             if name in all_skills:
                 item_info = all_skills[name]
-                cat = item_info["category"]
                 src_path = item_info["path"]
-                parent_dir = self.skills_dir if cat == "skill" else self.agents_cli_dir
+                parent_dir = item_info["parent"]
 
                 if as_symlink:
                     target_dir = agents_dir / "skills"
@@ -195,13 +271,14 @@ class HubManager:
                     link_path.symlink_to(src_path)
                     print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked skill '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}")
                 else:
-                    # Update skills.json
                     self._update_manifest(agents_dir / "skills.json", parent_dir, name, add=True)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled skill '{COLOR_BOLD}{name}{COLOR_RESET}' in .agents/skills.json")
+                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled skill '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in .agents/skills.json")
 
             elif name in all_plugins:
                 item_info = all_plugins[name]
                 src_path = item_info["path"]
+                parent_dir = item_info["parent"]
+
                 if as_symlink:
                     target_dir = agents_dir / "plugins"
                     target_dir.mkdir(parents=True, exist_ok=True)
@@ -211,9 +288,8 @@ class HubManager:
                     link_path.symlink_to(src_path)
                     print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked plugin '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}")
                 else:
-                    # Update plugins.json
-                    self._update_manifest(agents_dir / "plugins.json", self.plugins_dir, name, add=True)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled plugin '{COLOR_BOLD}{name}{COLOR_RESET}' in .agents/plugins.json")
+                    self._update_manifest(agents_dir / "plugins.json", parent_dir, name, add=True)
+                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled plugin '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in .agents/plugins.json")
 
             else:
                 print(f"{COLOR_RED}✗ Unknown skill or plugin:{COLOR_RESET} '{name}'")
@@ -226,7 +302,6 @@ class HubManager:
 
         for name in names:
             removed = False
-            # 1. Check manifests
             skills_json = agents_dir / "skills.json"
             if skills_json.exists():
                 if self._update_manifest(skills_json, None, name, add=False):
@@ -239,7 +314,6 @@ class HubManager:
                     print(f"{COLOR_YELLOW}Removed{COLOR_RESET} plugin '{name}' from .agents/plugins.json")
                     removed = True
 
-            # 2. Check symlinks
             skill_symlink = agents_dir / "skills" / name
             if skill_symlink.exists() or skill_symlink.is_symlink():
                 skill_symlink.unlink()
@@ -302,7 +376,6 @@ class HubManager:
 
         if modified:
             if not data["entries"]:
-                # If no entries left, remove manifest file
                 if manifest_file.exists():
                     manifest_file.unlink()
             else:
@@ -310,9 +383,74 @@ class HubManager:
                 manifest_file.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         return modified
 
+    def update_repos(self, targets: list[str] | None = None, check_only: bool = False):
+        """Fetches and pulls upstream updates for git submodules."""
+        submodules = self.get_submodules()
+        if not submodules:
+            print("No submodules found in .gitmodules.")
+            return
+
+        selected = {}
+        if targets:
+            for t in targets:
+                if t in submodules:
+                    selected[t] = submodules[t]
+                else:
+                    print(f"{COLOR_RED}Unknown repository:{COLOR_RESET} '{t}'. Available: {', '.join(submodules.keys())}")
+        else:
+            selected = submodules
+
+        print(f"\n{COLOR_BOLD}{'Checking' if check_only else 'Updating'} Git Submodules in {self.hub_dir}...{COLOR_RESET}\n")
+
+        for name, info in selected.items():
+            path = info["path"]
+            branch = info["branch"]
+            url = info["url"]
+
+            if not path.exists():
+                print(f"Initializing {name} ({url})...")
+                subprocess.run(["git", "submodule", "update", "--init", "--recursive", str(path.relative_to(self.hub_dir))],
+                               cwd=self.hub_dir, check=False)
+
+            # Get current commit
+            res_curr = subprocess.run(["git", "rev-parse", "HEAD"], cwd=path, capture_output=True, text=True)
+            curr_hash = res_curr.stdout.strip()[:8]
+
+            # Fetch upstream
+            fetch_res = subprocess.run(["git", "fetch", "origin", branch], cwd=path, capture_output=True, text=True)
+            if fetch_res.returncode != 0:
+                print(f"{COLOR_RED}✗ [{name}]{COLOR_RESET} Failed to fetch from {url} ({branch})")
+                continue
+
+            # Get remote commit
+            res_remote = subprocess.run(["git", "rev-parse", f"origin/{branch}"], cwd=path, capture_output=True, text=True)
+            remote_hash = res_remote.stdout.strip()[:8]
+
+            if curr_hash == remote_hash:
+                print(f"  {COLOR_GREEN}✓{COLOR_RESET} {COLOR_BOLD}{name:<18}{COLOR_RESET} Up to date ({curr_hash} on {branch})")
+            else:
+                # Count commits behind
+                res_count = subprocess.run(["git", "rev-list", "--count", f"HEAD..origin/{branch}"],
+                                           cwd=path, capture_output=True, text=True)
+                count = res_count.stdout.strip()
+
+                if check_only:
+                    print(f"  {COLOR_YELLOW}!{COLOR_RESET} {COLOR_BOLD}{name:<18}{COLOR_RESET} Update available: {curr_hash} -> {remote_hash} ({count} new commit{'s' if count != '1' else ''})")
+                else:
+                    merge_res = subprocess.run(["git", "merge", "--ff-only", f"origin/{branch}"],
+                                               cwd=path, capture_output=True, text=True)
+                    if merge_res.returncode == 0:
+                        print(f"  {COLOR_GREEN}✓{COLOR_RESET} {COLOR_BOLD}{name:<18}{COLOR_RESET} Updated: {curr_hash} -> {remote_hash} ({count} new commit{'s' if count != '1' else ''})")
+                        # Stage updated commit pointer in hub repo
+                        subprocess.run(["git", "add", str(path.relative_to(self.hub_dir))], cwd=self.hub_dir)
+                    else:
+                        print(f"  {COLOR_RED}✗{COLOR_RESET} {COLOR_BOLD}{name:<18}{COLOR_RESET} Merge conflict or error: {merge_res.stderr.strip()}")
+
+        print()
+
     def scaffold(self, item_type: str, name: str):
         if item_type == "skill":
-            target = self.skills_dir / name
+            target = self.hub_dir / "skills" / name
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Skill '{name}' already exists at {target}")
                 return
@@ -334,7 +472,7 @@ description: Describe what {name} does and when the agent should activate it.
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new skill '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
 
         elif item_type == "plugin":
-            target = self.plugins_dir / name
+            target = self.hub_dir / "plugins" / name
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Plugin '{name}' already exists at {target}")
                 return
@@ -348,20 +486,84 @@ description: Describe what {name} does and when the agent should activate it.
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new plugin '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
 
 
-def cmd_list(manager: HubManager, workspace_root: Path):
-    available = manager.get_available()
+def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None, group_filter: str | None = None, show_all: bool = False):
+    all_skills, all_plugins = manager.get_available()
     active_skills, active_plugins = manager.get_workspace_active(workspace_root)
 
     print(f"\n{COLOR_BOLD}Antigravity Hub:{COLOR_RESET} {manager.hub_dir}")
     print(f"{COLOR_BOLD}Current Workspace:{COLOR_RESET} {workspace_root}\n")
 
-    def print_section(title, items, active_dict):
-        print(f"{COLOR_CYAN}{COLOR_BOLD}=== {title} ==={COLOR_RESET}")
-        if not items:
-            print(f"  {COLOR_DIM}(none){COLOR_RESET}")
-            return
+    # If no search query, no group filter, and not show_all, show summary overview first
+    if not query and not group_filter and not show_all:
+        groups = {}
+        for s, info in all_skills.items():
+            top = info["group"].split("/")[0]
+            groups.setdefault(top, {"skills": 0, "active": 0})
+            groups[top]["skills"] += 1
+            if s in active_skills:
+                groups[top]["active"] += 1
+
+        print(f"{COLOR_BOLD}Catalog Summary: {len(all_skills)} skills, {len(all_plugins)} plugins across {len(groups)} sources:{COLOR_RESET}")
+        for g, counts in sorted(groups.items()):
+            act_str = f" ({COLOR_GREEN}{counts['active']} active in workspace{COLOR_RESET})" if counts["active"] else ""
+            print(f"  • {COLOR_CYAN}{COLOR_BOLD}{g:<18}{COLOR_RESET}: {counts['skills']} skills{act_str}")
+        print()
+
+        # If any skills/plugins are active in the current workspace, list them!
+        if active_skills or active_plugins:
+            print(f"{COLOR_CYAN}{COLOR_BOLD}=== Currently Active in Workspace ==={COLOR_RESET}")
+            for s, mode in sorted(active_skills.items()):
+                info = all_skills.get(s, {})
+                grp = f" [{info.get('group', 'unknown')}]" if info else ""
+                print(f"  {COLOR_GREEN}[ACTIVE ({mode})]{COLOR_RESET} {COLOR_BOLD}{s:<32}{COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+            for p, mode in sorted(active_plugins.items()):
+                print(f"  {COLOR_GREEN}[ACTIVE ({mode})]{COLOR_RESET} {COLOR_BOLD}{p:<32}{COLOR_RESET}{COLOR_DIM} [plugin]{COLOR_RESET}")
+            print()
+
+        print(f"{COLOR_DIM}Tips:{COLOR_RESET}")
+        print(f"  Search skills:      {COLOR_BOLD}ag-hub list <query>{COLOR_RESET} (e.g. 'ag-hub list bigquery', 'ag-hub list alphafold')")
+        print(f"  Filter by group:    {COLOR_BOLD}ag-hub list -g deepmind-science{COLOR_RESET} or {COLOR_BOLD}ag-hub list -g cloud{COLOR_RESET}")
+        print(f"  View all 200+:      {COLOR_BOLD}ag-hub list --all{COLOR_RESET}")
+        print(f"  Interactive select: {COLOR_BOLD}ag-hub select{COLOR_RESET} (or {COLOR_BOLD}ag-hub -i{COLOR_RESET})")
+        print(f"  Check for updates:  {COLOR_BOLD}ag-hub update --check{COLOR_RESET}\n")
+        return
+
+    # Filtered view
+    q = query.lower() if query else ""
+    gf = group_filter.lower() if group_filter else ""
+
+    matching_skills = {}
+    for name, info in all_skills.items():
+        if gf and gf not in info["group"].lower():
+            continue
+        if q and q not in name.lower() and q not in info["desc"].lower() and q not in info["group"].lower():
+            continue
+        matching_skills[name] = info
+
+    matching_plugins = {}
+    for name, info in all_plugins.items():
+        if gf and gf not in info["group"].lower():
+            continue
+        if q and q not in name.lower() and q not in info["desc"].lower() and q not in info["group"].lower():
+            continue
+        matching_plugins[name] = info
+
+    header = f"Found {len(matching_skills)} skills" + (f", {len(matching_plugins)} plugins" if matching_plugins else "")
+    if q:
+        header += f" matching '{query}'"
+    if gf:
+        header += f" in group '{group_filter}'"
+    print(f"{COLOR_BOLD}{header}:{COLOR_RESET}\n")
+
+    # Group matches by group
+    by_group = {}
+    for name, info in matching_skills.items():
+        by_group.setdefault(info["group"], {})[name] = info
+
+    for grp, items in sorted(by_group.items()):
+        print(f"{COLOR_CYAN}{COLOR_BOLD}=== {grp} ({len(items)}) ==={COLOR_RESET}")
         for name, info in sorted(items.items()):
-            active_mode = active_dict.get(name)
+            active_mode = active_skills.get(name)
             if active_mode:
                 badge = f"{COLOR_GREEN}[ACTIVE ({active_mode})]{COLOR_RESET}"
             else:
@@ -370,13 +572,23 @@ def cmd_list(manager: HubManager, workspace_root: Path):
             print(f"  {badge} {COLOR_BOLD}{name:<32}{COLOR_RESET}{desc}")
         print()
 
-    print_section("Custom Skills (skills/)", available["skills"], active_skills)
-    print_section("Google Agents CLI Suite (agents-cli/)", available["agents-cli"], active_skills)
-    print_section("Bundled Plugins (plugins/)", available["plugins"], active_plugins)
+    if matching_plugins:
+        print(f"{COLOR_CYAN}{COLOR_BOLD}=== Plugins ({len(matching_plugins)}) ==={COLOR_RESET}")
+        for name, info in sorted(matching_plugins.items()):
+            active_mode = active_plugins.get(name)
+            if active_mode:
+                badge = f"{COLOR_GREEN}[ACTIVE ({active_mode})]{COLOR_RESET}"
+            else:
+                badge = f"{COLOR_DIM}[              ]{COLOR_RESET}"
+            desc = f" - {COLOR_DIM}{info['desc']}{COLOR_RESET}" if info['desc'] else ""
+            print(f"  {badge} {COLOR_BOLD}{name:<32}{COLOR_RESET} [{info['group']}]{desc}")
+        print()
 
 
 def cmd_status(manager: HubManager, workspace_root: Path):
     active_skills, active_plugins = manager.get_workspace_active(workspace_root)
+    all_skills, all_plugins = manager.get_available()
+
     print(f"\n{COLOR_BOLD}Workspace:{COLOR_RESET} {workspace_root}")
     print(f"{COLOR_BOLD}Hub Directory:{COLOR_RESET} {manager.hub_dir}\n")
 
@@ -385,46 +597,56 @@ def cmd_status(manager: HubManager, workspace_root: Path):
         print(f"Run {COLOR_BOLD}ag-hub list{COLOR_RESET} or {COLOR_BOLD}ag-hub enable <name>{COLOR_RESET} to activate customizations.\n")
         return
 
-    print(f"{COLOR_CYAN}{COLOR_BOLD}Active Skills:{COLOR_RESET}")
+    print(f"{COLOR_CYAN}{COLOR_BOLD}Active Skills ({len(active_skills)}):{COLOR_RESET}")
     for s, mode in sorted(active_skills.items()):
-        print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s} {COLOR_DIM}(via {mode}){COLOR_RESET}")
+        grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
+        print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
 
     if active_plugins:
-        print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Plugins:{COLOR_RESET}")
+        print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Plugins ({len(active_plugins)}):{COLOR_RESET}")
         for p, mode in sorted(active_plugins.items()):
-            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {p} {COLOR_DIM}(via {mode}){COLOR_RESET}")
+            grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
+            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {p:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
     print()
 
 
 def cmd_interactive(manager: HubManager, workspace_root: Path):
-    available = manager.get_available()
+    all_skills, all_plugins = manager.get_available()
     active_skills, active_plugins = manager.get_workspace_active(workspace_root)
 
+    print(f"\n{COLOR_BOLD}Interactive Customization Selector{COLOR_RESET}")
+    print(f"Workspace: {workspace_root}")
+    print(f"Catalog: {len(all_skills)} skills, {len(all_plugins)} plugins available.\n")
+
+    filter_query = input(f"{COLOR_BOLD}Optional search filter (press Enter to show all / active): {COLOR_RESET}").strip().lower()
+
     items = []
-    # Gather all items
-    for name, info in sorted({**available["skills"], **available["agents-cli"]}.items()):
-        items.append((name, "skill", active_skills.get(name) is not None, info["desc"]))
-    for name, info in sorted(available["plugins"].items()):
-        items.append((name, "plugin", active_plugins.get(name) is not None, info["desc"]))
+    for name, info in sorted(all_skills.items()):
+        is_act = active_skills.get(name) is not None
+        if not filter_query or filter_query in name.lower() or filter_query in info["desc"].lower() or filter_query in info["group"].lower() or is_act:
+            items.append((name, "skill", is_act, info["group"], info["desc"]))
+
+    for name, info in sorted(all_plugins.items()):
+        is_act = active_plugins.get(name) is not None
+        if not filter_query or filter_query in name.lower() or filter_query in info["desc"].lower() or filter_query in info["group"].lower() or is_act:
+            items.append((name, "plugin", is_act, info["group"], info["desc"]))
 
     if not items:
-        print("No skills or plugins found in hub.")
+        print(f"No customizations matching '{filter_query}'.")
         return
 
-    selected = {name: is_active for name, _, is_active, _ in items}
+    selected = {name: is_act for name, _, is_act, _, _ in items}
 
-    print(f"\n{COLOR_BOLD}Interactive Customization Selector{COLOR_RESET}")
-    print(f"Workspace: {workspace_root}\n")
-    print("Toggle items by entering their numbers separated by spaces (e.g. '1 3 5').")
+    print("\nToggle items by entering numbers (e.g. '1 3 5').")
     print("Type 'save' to apply changes, or 'q' to quit without saving.\n")
 
     while True:
-        print("-" * 70)
-        for i, (name, itype, _, desc) in enumerate(items, 1):
+        print("-" * 80)
+        for i, (name, itype, _, grp, desc) in enumerate(items, 1):
             box = f"{COLOR_GREEN}[x]{COLOR_RESET}" if selected[name] else "[ ]"
-            type_tag = f"{COLOR_CYAN}[{itype}]{COLOR_RESET}"
-            print(f"  {i:>2}. {box} {type_tag} {COLOR_BOLD}{name:<30}{COLOR_RESET} {COLOR_DIM}{desc[:40]}{COLOR_RESET}")
-        print("-" * 70)
+            tag = f"{COLOR_CYAN}[{grp[:15]}]{COLOR_RESET}"
+            print(f"  {i:>3}. {box} {tag:<22} {COLOR_BOLD}{name:<30}{COLOR_RESET} {COLOR_DIM}{desc[:35]}{COLOR_RESET}")
+        print("-" * 80)
 
         choice = input(f"{COLOR_BOLD}Enter numbers to toggle, 'save', or 'q': {COLOR_RESET}").strip().lower()
         if choice in ('q', 'quit', 'exit'):
@@ -442,7 +664,6 @@ def cmd_interactive(manager: HubManager, workspace_root: Path):
                     selected[item_name] = not selected[item_name]
                     print(f"Toggled '{item_name}' -> {'ON' if selected[item_name] else 'OFF'}")
 
-    # Apply diff
     to_enable = [name for name, is_sel in selected.items() if is_sel and not (active_skills.get(name) or active_plugins.get(name))]
     to_disable = [name for name, is_sel in selected.items() if not is_sel and (active_skills.get(name) or active_plugins.get(name))]
 
@@ -466,6 +687,9 @@ def main():
 
     # list
     p_list = subparsers.add_parser("list", aliases=["ls"], help="List available skills and plugins")
+    p_list.add_argument("query", nargs="?", default=None, help="Optional search query")
+    p_list.add_argument("--group", "-g", default=None, help="Filter by group/repository name")
+    p_list.add_argument("--all", "-a", action="store_true", help="Print all skills in the catalog")
 
     # status
     p_status = subparsers.add_parser("status", help="Show active customizations in current workspace")
@@ -482,6 +706,11 @@ def main():
     # select / interactive
     p_select = subparsers.add_parser("select", aliases=["interactive", "-i"], help="Interactive checklist to select active skills")
 
+    # update
+    p_update = subparsers.add_parser("update", help="Update skills repositories from original GitHub")
+    p_update.add_argument("repos", nargs="*", default=None, help="Specific repositories to update (default: all)")
+    p_update.add_argument("--check", "-c", action="store_true", help="Check for available updates without applying them")
+
     # create
     p_create = subparsers.add_parser("create", help="Create a new skill or plugin in the hub")
     p_create.add_argument("type", choices=["skill", "plugin"], help="Type to create")
@@ -493,7 +722,7 @@ def main():
     workspace_root = args.workspace.resolve() if args.workspace else find_workspace_root()
 
     if args.command in ("list", "ls") or args.command is None:
-        cmd_list(manager, workspace_root)
+        cmd_list(manager, workspace_root, query=getattr(args, "query", None), group_filter=getattr(args, "group", None), show_all=getattr(args, "all", False))
     elif args.command == "status":
         cmd_status(manager, workspace_root)
     elif args.command in ("enable", "add"):
@@ -502,6 +731,8 @@ def main():
         manager.disable(workspace_root, args.names)
     elif args.command in ("select", "interactive", "-i"):
         cmd_interactive(manager, workspace_root)
+    elif args.command == "update":
+        manager.update_repos(targets=args.repos if args.repos else None, check_only=args.check)
     elif args.command == "create":
         manager.scaffold(args.type, args.name)
     else:
