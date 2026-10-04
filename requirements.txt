@@ -1,0 +1,13 @@
+# ==============================================================================
+# Antigravity Skills & Plugins Hub (ag-hub)
+# ==============================================================================
+# ag-hub is built entirely using the Python 3 Standard Library.
+# No third-party pip dependencies are required to run the CLI or manage skills.
+#
+# System Requirements:
+#   - Python >= 3.10
+#   - Git >= 2.25 (with submodule support)
+#
+# To install the CLI, simply run:
+#   ./install.sh
+# ==============================================================================

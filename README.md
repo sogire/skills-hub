@@ -1,6 +1,27 @@
 # Antigravity Skills & Plugins Hub
 
-A centralized, zero-copy repository for maintaining, developing, and version-controlling custom Antigravity skills, official Google skill suites, and plugins.
+A centralized, zero-copy repository for maintaining, developing, version-controlling, and distributing Antigravity skills, official Google skill suites, and plugins across teams.
+
+---
+
+## Quick Start & Installation
+
+### 1. Clone the Repository
+```bash
+# Clone with all upstream submodules included:
+git clone --recurse-submodules https://github.com/sogire/skills-hub.git
+cd skills-hub
+
+# Run the 1-click installer:
+./install.sh
+```
+
+> **Note**: If you already cloned without `--recurse-submodules`, running `./install.sh` will automatically fetch and initialize all submodules for you.
+
+### 2. System Requirements
+- **Python**: `>= 3.10`
+  - **Zero pip dependencies**: `ag-hub` is implemented entirely using the Python 3 Standard Library. No `pip install` or virtual environment required.
+- **Git**: `>= 2.25` (with submodule support).
 
 ---
 
@@ -10,13 +31,13 @@ The hub is organized into two primary domains: **`external/`** for read-only ups
 
 | Domain / Folder | Upstream / Source | Description | Skills Count |
 | :--- | :--- | :--- | :--- |
-| [`external/googlecloud-data/`](file:///home/sergiobermudez/local_projects/skills-hub/external/googlecloud-data) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | Data Agent Kit: Dataform, dbt, Spark, Composer, Lakehouse, Graph | 37 skills |
-| [`external/googlecloud-base/`](file:///home/sergiobermudez/local_projects/skills-hub/external/googlecloud-base) | [google/skills](https://github.com/google/skills) | BigQuery, Cloud Build, Vertex AI, AlloyDB, Ads, Analytics | ~144 skills |
-| [`external/deepmind-science/`](file:///home/sergiobermudez/local_projects/skills-hub/external/deepmind-science) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | AlphaFold, PubMed, ChEMBL, UniProt, ClinVar, Foldseek, BLAST | 40 skills |
-| [`external/agents-cli/`](file:///home/sergiobermudez/local_projects/skills-hub/external/agents-cli) | [google/agents-cli](https://github.com/google/agents-cli) | Google Agent Development Kit (ADK), Scaffold, Deploy, Eval | 7 skills |
-| [`internal/skills/`](file:///home/sergiobermudez/local_projects/skills-hub/internal/skills) | Internal Custom Skills | Standalone custom skills authored for your projects | Extensible |
-| [`internal/rules/`](file:///home/sergiobermudez/local_projects/skills-hub/internal/rules) | Internal Custom Rules | Always-on coding standards and architectural policies | Extensible |
-| [`internal/plugins/`](file:///home/sergiobermudez/local_projects/skills-hub/internal/plugins) | Internal Custom Plugins | Multi-skill and rule packages with `plugin.json` | Extensible |
+| [`external/googlecloud-data/`](external/googlecloud-data) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | Data Agent Kit: Dataform, dbt, Spark, Composer, Lakehouse, Graph | 37 skills |
+| [`external/googlecloud-base/`](external/googlecloud-base) | [google/skills](https://github.com/google/skills) | BigQuery, Cloud Build, Vertex AI, AlloyDB, Ads, Analytics | ~144 skills |
+| [`external/deepmind-science/`](external/deepmind-science) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | AlphaFold, PubMed, ChEMBL, UniProt, ClinVar, Foldseek, BLAST | 40 skills |
+| [`external/agents-cli/`](external/agents-cli) | [google/agents-cli](https://github.com/google/agents-cli) | Google Agent Development Kit (ADK), Scaffold, Deploy, Eval | 7 skills |
+| [`internal/skills/`](internal/skills) | Internal Custom Skills | Standalone custom skills authored for your projects | Extensible |
+| [`internal/rules/`](internal/rules) | Internal Custom Rules | Always-on coding standards and architectural policies | Extensible |
+| [`internal/plugins/`](internal/plugins) | Internal Custom Plugins | Multi-skill and rule packages with `plugin.json` | Extensible |
 
 ---
 

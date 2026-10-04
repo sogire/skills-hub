@@ -13,7 +13,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_HUB_DIR = Path(os.environ.get("AG_HUB_DIR", "/home/sergiobermudez/local_projects/skills-hub")).resolve()
+# Dynamically determine the repository root from the script's physical location:
+# bin/ag-hub -> parent is bin/ -> parent.parent is skills-hub/
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPT_DIR.parent if _SCRIPT_DIR.name == "bin" else _SCRIPT_DIR
+DEFAULT_HUB_DIR = Path(os.environ.get("AG_HUB_DIR", _REPO_ROOT)).resolve()
 GLOBAL_CONFIG_DIR = Path(os.environ.get("AG_GLOBAL_CONFIG_DIR", Path.home() / ".gemini" / "config")).resolve()
 
 # ANSI Color codes for clean output
