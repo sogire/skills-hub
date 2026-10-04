@@ -251,12 +251,25 @@ class HubManager:
 
         return active_skills, active_plugins
 
-    def enable(self, workspace_root: Path, names: list[str], as_symlink: bool = False):
+    def enable(self, workspace_root: Path, names: list[str] | None = None, group: str | None = None, as_symlink: bool = False):
         all_skills, all_plugins = self.get_available()
         agents_dir = workspace_root / ".agents"
         agents_dir.mkdir(parents=True, exist_ok=True)
 
-        for name in names:
+        target_names = list(names or [])
+        if group:
+            g_lower = group.lower()
+            matching = [s for s, info in all_skills.items() if info["group"].lower() == g_lower or info["group"].lower().startswith(g_lower + "/")]
+            if matching:
+                target_names.extend(matching)
+            else:
+                print(f"{COLOR_YELLOW}No skills found in group '{group}'.{COLOR_RESET}")
+
+        if not target_names:
+            print("No skills or plugins specified to enable.")
+            return
+
+        for name in target_names:
             if name in all_skills:
                 item_info = all_skills[name]
                 src_path = item_info["path"]
@@ -294,13 +307,25 @@ class HubManager:
             else:
                 print(f"{COLOR_RED}✗ Unknown skill or plugin:{COLOR_RESET} '{name}'")
 
-    def disable(self, workspace_root: Path, names: list[str]):
+    def disable(self, workspace_root: Path, names: list[str] | None = None, group: str | None = None):
         agents_dir = workspace_root / ".agents"
         if not agents_dir.exists():
             print(f"No .agents configuration found in {workspace_root}")
             return
 
-        for name in names:
+        target_names = list(names or [])
+        if group:
+            all_skills, _ = self.get_available()
+            g_lower = group.lower()
+            matching = [s for s, info in all_skills.items() if info["group"].lower() == g_lower or info["group"].lower().startswith(g_lower + "/")]
+            if matching:
+                target_names.extend(matching)
+
+        if not target_names:
+            print("No skills or plugins specified to disable.")
+            return
+
+        for name in target_names:
             removed = False
             skills_json = agents_dir / "skills.json"
             if skills_json.exists():
@@ -326,7 +351,7 @@ class HubManager:
                 print(f"{COLOR_YELLOW}Removed{COLOR_RESET} symlink {plugin_symlink}")
                 removed = True
 
-            if not removed:
+            if not removed and not group:
                 print(f"{COLOR_DIM}Item '{name}' was not active in this workspace.{COLOR_RESET}")
 
     def _update_manifest(self, manifest_file: Path, parent_dir: Path | None, item_name: str, add: bool = True) -> bool:
@@ -696,12 +721,14 @@ def main():
 
     # enable
     p_enable = subparsers.add_parser("enable", aliases=["add"], help="Enable skills or plugins in workspace")
-    p_enable.add_argument("names", nargs="+", help="Names of skills or plugins to enable")
+    p_enable.add_argument("names", nargs="*", default=[], help="Names of skills or plugins to enable")
+    p_enable.add_argument("--group", "-g", default=None, help="Enable all skills from a specific group/repository (e.g. agents-cli, deepmind-science)")
     p_enable.add_argument("--symlink", "-s", action="store_true", help="Use symlinks instead of .agents/skills.json manifest")
 
     # disable
     p_disable = subparsers.add_parser("disable", aliases=["rm"], help="Disable skills or plugins in workspace")
-    p_disable.add_argument("names", nargs="+", help="Names of skills or plugins to disable")
+    p_disable.add_argument("names", nargs="*", default=[], help="Names of skills or plugins to disable")
+    p_disable.add_argument("--group", "-g", default=None, help="Disable all skills from a specific group/repository")
 
     # select / interactive
     p_select = subparsers.add_parser("select", aliases=["interactive", "-i"], help="Interactive checklist to select active skills")
@@ -726,9 +753,9 @@ def main():
     elif args.command == "status":
         cmd_status(manager, workspace_root)
     elif args.command in ("enable", "add"):
-        manager.enable(workspace_root, args.names, as_symlink=args.symlink)
+        manager.enable(workspace_root, names=args.names, group=args.group, as_symlink=args.symlink)
     elif args.command in ("disable", "rm"):
-        manager.disable(workspace_root, args.names)
+        manager.disable(workspace_root, names=args.names, group=args.group)
     elif args.command in ("select", "interactive", "-i"):
         cmd_interactive(manager, workspace_root)
     elif args.command == "update":
