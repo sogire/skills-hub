@@ -10,3 +10,7 @@
 	path = agents-cli
 	url = https://github.com/google/agents-cli.git
 	branch = main
+[submodule "googlecloud-data"]
+	path = googlecloud-data
+	url = https://github.com/GoogleCloudPlatform/data-agent-kit-plugin.git
+	branch = main
