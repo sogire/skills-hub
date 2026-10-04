@@ -158,7 +158,39 @@ ag-hub disable --all
 
 ---
 
-### 5. Managing Any Workspace from Anywhere (`-w` / `--workspace`)
+### 5. Global Skills across All Workspaces (`-G` / `--global`)
+
+Antigravity natively supports machine-wide customizations loaded into **every** project workspace from `~/.gemini/config/`. With `ag-hub`, you can promote any skill or group to be globally active with zero file copies:
+
+```bash
+# Enable an individual skill globally (e.g., safety guardrails)
+ag-hub enable -G accidental-data-loss-prevention
+
+# Enable an entire group globally (e.g., all 7 Agent Development Kit tools everywhere)
+ag-hub enable -G -g agents-cli
+
+# Check global customizations
+ag-hub status -G
+
+# Normal workspace status also displays inherited global skills:
+ag-hub status
+
+# Disable an individual skill globally
+ag-hub disable -G google-agents-cli-scaffold
+
+# Disable an entire group globally
+ag-hub disable -G -g agents-cli
+
+# Reset all global hub customizations (preserves core system plugins like Chrome DevTools)
+ag-hub disable -G --all
+```
+
+> [!TIP]
+> Global skills are registered via `~/.gemini/config/skills.json` pointing directly to your local hub repository. They are inherited by all existing and future Antigravity workspaces on this machine.
+
+---
+
+### 6. Managing Any Workspace from Anywhere (`-w` / `--workspace`)
 
 You don't need to be in a project folder to manage its skills. Use `-w <path>` to target any workspace directory:
 
@@ -175,7 +207,7 @@ ag-hub -w ~/local_projects/my-agent disable --all
 
 ---
 
-### 6. Interactive Selection (`select` / `-i`)
+### 7. Interactive Selection (`select` / `-i`)
 
 ```bash
 ag-hub select
@@ -186,7 +218,7 @@ Launches an interactive menu with keyword filtering and numbered toggle switches
 
 ---
 
-### 7. Updating Repositories from GitHub Upstream
+### 8. Updating Repositories from GitHub Upstream
 
 Keep all skills updated with the latest releases from their official upstream GitHub repositories:
 
@@ -206,7 +238,7 @@ ag-hub update agents-cli
 
 ---
 
-### 8. Registering New Upstream Repositories (`add-repo`)
+### 9. Registering New Upstream Repositories (`add-repo`)
 
 Discovered a new GitHub repository with Antigravity skills? Register it into the hub with one command:
 
@@ -220,7 +252,7 @@ ag-hub add-repo https://github.com/example-org/genai-skills.git custom-genai --b
 
 ---
 
-### 9. Alternative Symlink Mode (`--symlink` / `-s`)
+### 10. Alternative Symlink Mode (`--symlink` / `-s`)
 
 If your workflow requires direct file-system symlinks in `.agents/skills/` instead of `.agents/skills.json`:
 
@@ -234,7 +266,7 @@ ag-hub enable --symlink -g agents-cli
 
 ---
 
-### 10. Authoring New Custom Skills in the Hub
+### 11. Authoring New Custom Skills in the Hub
 
 ```bash
 # Scaffold a new custom skill boilerplate in skills-hub/skills/<name>

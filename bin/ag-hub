@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_HUB_DIR = Path(os.environ.get("AG_HUB_DIR", "/home/sergiobermudez/local_projects/skills-hub")).resolve()
+GLOBAL_CONFIG_DIR = Path(os.environ.get("AG_GLOBAL_CONFIG_DIR", Path.home() / ".gemini" / "config")).resolve()
 
 # ANSI Color codes for clean output
 COLOR_RESET = "\033[0m"
@@ -188,17 +189,39 @@ class HubManager:
 
         return skills, plugins
 
-    def get_workspace_active(self, workspace_root: Path):
-        """Detects active skills and plugins in a workspace (manifests and symlinks)."""
+    def get_target_dirs(self, workspace_root: Path | None = None, is_global: bool = False):
+        """Returns (config_dir, skills_manifest, plugins_manifest, skills_symlinks_dir, plugins_symlinks_dir, scope_label)"""
+        if is_global:
+            GLOBAL_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            return (
+                GLOBAL_CONFIG_DIR,
+                GLOBAL_CONFIG_DIR / "skills.json",
+                GLOBAL_CONFIG_DIR / "plugins.json",
+                GLOBAL_CONFIG_DIR / "skills",
+                GLOBAL_CONFIG_DIR / "plugins",
+                "GLOBAL (~/.gemini/config)",
+            )
+        else:
+            ws = workspace_root or find_workspace_root()
+            agents_dir = ws / ".agents"
+            agents_dir.mkdir(parents=True, exist_ok=True)
+            return (
+                agents_dir,
+                agents_dir / "skills.json",
+                agents_dir / "plugins.json",
+                agents_dir / "skills",
+                agents_dir / "plugins",
+                f"WORKSPACE ({ws})",
+            )
+
+    def get_active(self, workspace_root: Path | None = None, is_global: bool = False):
+        """Detects active skills and plugins in target scope (workspace or global)."""
         active_skills = {}   # name -> mode ("manifest" or "symlink")
         active_plugins = {}  # name -> mode
 
-        agents_dir = workspace_root / ".agents"
-        if not agents_dir.exists():
-            return active_skills, active_plugins
+        _, skills_json_path, plugins_json_path, skills_dir, plugins_dir, _ = self.get_target_dirs(workspace_root, is_global)
 
         # 1. Check manifests
-        skills_json_path = agents_dir / "skills.json"
         if skills_json_path.exists():
             try:
                 data = json.loads(skills_json_path.read_text(encoding="utf-8"))
@@ -217,7 +240,6 @@ class HubManager:
             except Exception:
                 pass
 
-        plugins_json_path = agents_dir / "plugins.json"
         if plugins_json_path.exists():
             try:
                 data = json.loads(plugins_json_path.read_text(encoding="utf-8"))
@@ -237,24 +259,29 @@ class HubManager:
                 pass
 
         # 2. Check symlinks
-        ws_skills = agents_dir / "skills"
-        if ws_skills.exists():
-            for child in ws_skills.iterdir():
+        if skills_dir.exists():
+            for child in skills_dir.iterdir():
                 if child.is_symlink() or child.is_dir():
                     active_skills[child.name] = "symlink"
 
-        ws_plugins = agents_dir / "plugins"
-        if ws_plugins.exists():
-            for child in ws_plugins.iterdir():
+        if plugins_dir.exists():
+            for child in plugins_dir.iterdir():
                 if child.is_symlink() or child.is_dir():
                     active_plugins[child.name] = "symlink"
 
         return active_skills, active_plugins
 
-    def enable(self, workspace_root: Path, names: list[str] | None = None, group: str | None = None, as_symlink: bool = False):
+    def get_workspace_active(self, workspace_root: Path):
+        """Detects active customizations in workspace."""
+        return self.get_active(workspace_root=workspace_root, is_global=False)
+
+    def get_global_active(self):
+        """Detects active customizations in machine-wide global scope (~/.gemini/config)."""
+        return self.get_active(is_global=True)
+
+    def enable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, as_symlink: bool = False, is_global: bool = False):
         all_skills, all_plugins = self.get_available()
-        agents_dir = workspace_root / ".agents"
-        agents_dir.mkdir(parents=True, exist_ok=True)
+        target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
         target_names = list(names or [])
         if group:
@@ -269,6 +296,9 @@ class HubManager:
             print("No skills or plugins specified to enable.")
             return
 
+        scope_tag = f" {COLOR_MAGENTA}[GLOBAL]{COLOR_RESET}" if is_global else ""
+        manifest_rel = "~/.gemini/config/" if is_global else ".agents/"
+
         for name in target_names:
             if name in all_skills:
                 item_info = all_skills[name]
@@ -276,16 +306,15 @@ class HubManager:
                 parent_dir = item_info["parent"]
 
                 if as_symlink:
-                    target_dir = agents_dir / "skills"
-                    target_dir.mkdir(parents=True, exist_ok=True)
-                    link_path = target_dir / name
+                    skills_dir.mkdir(parents=True, exist_ok=True)
+                    link_path = skills_dir / name
                     if link_path.exists() or link_path.is_symlink():
                         link_path.unlink()
                     link_path.symlink_to(src_path)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked skill '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}")
+                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked skill '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}{scope_tag}")
                 else:
-                    self._update_manifest(agents_dir / "skills.json", parent_dir, name, add=True)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled skill '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in .agents/skills.json")
+                    self._update_manifest(skills_json, parent_dir, name, add=True)
+                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled skill '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in {manifest_rel}skills.json{scope_tag}")
 
             elif name in all_plugins:
                 item_info = all_plugins[name]
@@ -293,32 +322,36 @@ class HubManager:
                 parent_dir = item_info["parent"]
 
                 if as_symlink:
-                    target_dir = agents_dir / "plugins"
-                    target_dir.mkdir(parents=True, exist_ok=True)
-                    link_path = target_dir / name
+                    plugins_dir.mkdir(parents=True, exist_ok=True)
+                    link_path = plugins_dir / name
                     if link_path.exists() or link_path.is_symlink():
                         link_path.unlink()
                     link_path.symlink_to(src_path)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked plugin '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}")
+                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked plugin '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}{scope_tag}")
                 else:
-                    self._update_manifest(agents_dir / "plugins.json", parent_dir, name, add=True)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled plugin '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in .agents/plugins.json")
+                    self._update_manifest(plugins_json, parent_dir, name, add=True)
+                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled plugin '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in {manifest_rel}plugins.json{scope_tag}")
 
             else:
                 print(f"{COLOR_RED}✗ Unknown skill or plugin:{COLOR_RESET} '{name}'")
 
-    def disable(self, workspace_root: Path, names: list[str] | None = None, group: str | None = None, disable_all: bool = False):
-        agents_dir = workspace_root / ".agents"
-        if not agents_dir.exists():
-            print(f"No .agents configuration found in {workspace_root}")
-            return
+    def disable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, disable_all: bool = False, is_global: bool = False):
+        target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
         target_names = list(names or [])
+        scope_str = "global scope (~/.gemini/config)" if is_global else "this workspace"
+        manifest_rel = "~/.gemini/config/" if is_global else ".agents/"
+
         if disable_all:
-            active_skills, active_plugins = self.get_workspace_active(workspace_root)
-            target_names = list(set(list(active_skills.keys()) + list(active_plugins.keys())))
+            active_skills, active_plugins = self.get_active(workspace_root, is_global=is_global)
+            if is_global:
+                # In global mode, only target hub-managed items to preserve external system plugins
+                all_hub_skills, all_hub_plugins = self.get_available()
+                target_names = [s for s in active_skills if s in all_hub_skills] + [p for p in active_plugins if p in all_hub_plugins]
+            else:
+                target_names = list(set(list(active_skills.keys()) + list(active_plugins.keys())))
             if not target_names:
-                print(f"{COLOR_YELLOW}No customizations currently active in this workspace.{COLOR_RESET}")
+                print(f"{COLOR_YELLOW}No hub customizations currently active in {scope_str}.{COLOR_RESET}")
                 return
         elif group:
             all_skills, _ = self.get_available()
@@ -328,37 +361,39 @@ class HubManager:
                 target_names.extend(matching)
 
         if not target_names:
-            print("No skills or plugins specified to disable. Use --all to disable everything.")
+            print(f"No skills or plugins specified to disable. Use --all to disable everything in {scope_str}.")
             return
 
         for name in target_names:
             removed = False
-            skills_json = agents_dir / "skills.json"
             if skills_json.exists():
                 if self._update_manifest(skills_json, None, name, add=False):
-                    print(f"{COLOR_YELLOW}Removed{COLOR_RESET} skill '{name}' from .agents/skills.json")
+                    print(f"{COLOR_YELLOW}Removed{COLOR_RESET} skill '{name}' from {manifest_rel}skills.json")
                     removed = True
 
-            plugins_json = agents_dir / "plugins.json"
             if plugins_json.exists():
                 if self._update_manifest(plugins_json, None, name, add=False):
-                    print(f"{COLOR_YELLOW}Removed{COLOR_RESET} plugin '{name}' from .agents/plugins.json")
+                    print(f"{COLOR_YELLOW}Removed{COLOR_RESET} plugin '{name}' from {manifest_rel}plugins.json")
                     removed = True
 
-            skill_symlink = agents_dir / "skills" / name
+            skill_symlink = skills_dir / name
             if skill_symlink.exists() or skill_symlink.is_symlink():
-                skill_symlink.unlink()
-                print(f"{COLOR_YELLOW}Removed{COLOR_RESET} symlink {skill_symlink}")
-                removed = True
+                # In global mode, only unlink symlinks pointing into this hub
+                if not is_global or (skill_symlink.is_symlink() and str(skill_symlink.resolve()).startswith(str(self.hub_dir))):
+                    skill_symlink.unlink()
+                    print(f"{COLOR_YELLOW}Removed{COLOR_RESET} symlink {skill_symlink}")
+                    removed = True
 
-            plugin_symlink = agents_dir / "plugins" / name
+            plugin_symlink = plugins_dir / name
             if plugin_symlink.exists() or plugin_symlink.is_symlink():
-                plugin_symlink.unlink()
-                print(f"{COLOR_YELLOW}Removed{COLOR_RESET} symlink {plugin_symlink}")
-                removed = True
+                # In global mode, only unlink symlinks pointing into this hub
+                if not is_global or (plugin_symlink.is_symlink() and str(plugin_symlink.resolve()).startswith(str(self.hub_dir))):
+                    plugin_symlink.unlink()
+                    print(f"{COLOR_YELLOW}Removed{COLOR_RESET} symlink {plugin_symlink}")
+                    removed = True
 
             if not removed and not group:
-                print(f"{COLOR_DIM}Item '{name}' was not active in this workspace.{COLOR_RESET}")
+                print(f"{COLOR_DIM}Item '{name}' was not active in {scope_str}.{COLOR_RESET}")
 
     def _update_manifest(self, manifest_file: Path, parent_dir: Path | None, item_name: str, add: bool = True) -> bool:
         """Updates or removes items in skills.json or plugins.json."""
@@ -614,6 +649,7 @@ description: Describe what {name} does and when the agent should activate it.
 def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None, group_filter: str | None = None, show_all: bool = False):
     all_skills, all_plugins = manager.get_available()
     active_skills, active_plugins = manager.get_workspace_active(workspace_root)
+    glob_skills, glob_plugins = manager.get_global_active()
 
     print(f"\n{COLOR_BOLD}Antigravity Hub:{COLOR_RESET} {manager.hub_dir}")
     print(f"{COLOR_BOLD}Current Workspace:{COLOR_RESET} {workspace_root}\n")
@@ -623,32 +659,51 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
         groups = {}
         for s, info in all_skills.items():
             top = info["group"].split("/")[0]
-            groups.setdefault(top, {"skills": 0, "active": 0})
+            groups.setdefault(top, {"skills": 0, "active_ws": 0, "active_glob": 0})
             groups[top]["skills"] += 1
             if s in active_skills:
-                groups[top]["active"] += 1
+                groups[top]["active_ws"] += 1
+            if s in glob_skills:
+                groups[top]["active_glob"] += 1
 
         print(f"{COLOR_BOLD}Catalog Summary: {len(all_skills)} skills, {len(all_plugins)} plugins across {len(groups)} sources:{COLOR_RESET}")
         for g, counts in sorted(groups.items()):
-            act_str = f" ({COLOR_GREEN}{counts['active']} active in workspace{COLOR_RESET})" if counts["active"] else ""
+            details = []
+            if counts["active_ws"]:
+                details.append(f"{COLOR_GREEN}{counts['active_ws']} workspace{COLOR_RESET}")
+            if counts["active_glob"]:
+                details.append(f"{COLOR_MAGENTA}{counts['active_glob']} global{COLOR_RESET}")
+            act_str = f" ({', '.join(details)} active)" if details else ""
             print(f"  • {COLOR_CYAN}{COLOR_BOLD}{g:<18}{COLOR_RESET}: {counts['skills']} skills{act_str}")
         print()
 
-        # If any skills/plugins are active in the current workspace, list them!
-        if active_skills or active_plugins:
-            print(f"{COLOR_CYAN}{COLOR_BOLD}=== Currently Active in Workspace ==={COLOR_RESET}")
-            for s, mode in sorted(active_skills.items()):
-                info = all_skills.get(s, {})
-                grp = f" [{info.get('group', 'unknown')}]" if info else ""
-                print(f"  {COLOR_GREEN}[ACTIVE ({mode})]{COLOR_RESET} {COLOR_BOLD}{s:<32}{COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
-            for p, mode in sorted(active_plugins.items()):
-                print(f"  {COLOR_GREEN}[ACTIVE ({mode})]{COLOR_RESET} {COLOR_BOLD}{p:<32}{COLOR_RESET}{COLOR_DIM} [plugin]{COLOR_RESET}")
-            print()
+        # If any skills/plugins are active in current workspace or globally, display them
+        if active_skills or active_plugins or glob_skills or glob_plugins:
+            if active_skills or active_plugins:
+                print(f"{COLOR_CYAN}{COLOR_BOLD}=== Active in Workspace ==={COLOR_RESET}")
+                for s, mode in sorted(active_skills.items()):
+                    info = all_skills.get(s, {})
+                    grp = f" [{info.get('group', 'unknown')}]" if info else ""
+                    print(f"  {COLOR_GREEN}[WORKSPACE ({mode})]{COLOR_RESET} {COLOR_BOLD}{s:<32}{COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+                for p, mode in sorted(active_plugins.items()):
+                    print(f"  {COLOR_GREEN}[WORKSPACE ({mode})]{COLOR_RESET} {COLOR_BOLD}{p:<32}{COLOR_RESET}{COLOR_DIM} [plugin]{COLOR_RESET}")
+                print()
+
+            if glob_skills or glob_plugins:
+                print(f"{COLOR_MAGENTA}{COLOR_BOLD}=== Active Globally (All Workspaces) ==={COLOR_RESET}")
+                for s, mode in sorted(glob_skills.items()):
+                    info = all_skills.get(s, {})
+                    grp = f" [{info.get('group', 'unknown')}]" if info else ""
+                    print(f"  {COLOR_MAGENTA}[GLOBAL ({mode})]{COLOR_RESET}    {COLOR_BOLD}{s:<32}{COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+                for p, mode in sorted(glob_plugins.items()):
+                    print(f"  {COLOR_MAGENTA}[GLOBAL ({mode})]{COLOR_RESET}    {COLOR_BOLD}{p:<32}{COLOR_RESET}{COLOR_DIM} [plugin]{COLOR_RESET}")
+                print()
 
         print(f"{COLOR_DIM}Tips:{COLOR_RESET}")
         print(f"  Search skills:      {COLOR_BOLD}ag-hub list <query>{COLOR_RESET} (e.g. 'ag-hub list bigquery', 'ag-hub list alphafold')")
         print(f"  Filter by group:    {COLOR_BOLD}ag-hub list -g deepmind-science{COLOR_RESET} or {COLOR_BOLD}ag-hub list -g cloud{COLOR_RESET}")
         print(f"  View all 200+:      {COLOR_BOLD}ag-hub list --all{COLOR_RESET}")
+        print(f"  Enable globally:    {COLOR_BOLD}ag-hub enable -G <name>{COLOR_RESET} or {COLOR_BOLD}ag-hub enable -G -g <group>{COLOR_RESET}")
         print(f"  Interactive select: {COLOR_BOLD}ag-hub select{COLOR_RESET} (or {COLOR_BOLD}ag-hub -i{COLOR_RESET})")
         print(f"  Check for updates:  {COLOR_BOLD}ag-hub update --check{COLOR_RESET}\n")
         return
@@ -688,11 +743,16 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
     for grp, items in sorted(by_group.items()):
         print(f"{COLOR_CYAN}{COLOR_BOLD}=== {grp} ({len(items)}) ==={COLOR_RESET}")
         for name, info in sorted(items.items()):
-            active_mode = active_skills.get(name)
-            if active_mode:
-                badge = f"{COLOR_GREEN}[ACTIVE ({active_mode})]{COLOR_RESET}"
+            in_ws = name in active_skills
+            in_glob = name in glob_skills
+            if in_ws and in_glob:
+                badge = f"{COLOR_GREEN}[BOTH ({active_skills[name]}/{glob_skills[name]})]{COLOR_RESET}"
+            elif in_ws:
+                badge = f"{COLOR_GREEN}[WORKSPACE ({active_skills[name]})]{COLOR_RESET}"
+            elif in_glob:
+                badge = f"{COLOR_MAGENTA}[GLOBAL ({glob_skills[name]})]{COLOR_RESET}   "
             else:
-                badge = f"{COLOR_DIM}[              ]{COLOR_RESET}"
+                badge = f"{COLOR_DIM}[                   ]{COLOR_RESET}"
             desc = f" - {COLOR_DIM}{info['desc']}{COLOR_RESET}" if info['desc'] else ""
             print(f"  {badge} {COLOR_BOLD}{name:<32}{COLOR_RESET}{desc}")
         print()
@@ -700,38 +760,78 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
     if matching_plugins:
         print(f"{COLOR_CYAN}{COLOR_BOLD}=== Plugins ({len(matching_plugins)}) ==={COLOR_RESET}")
         for name, info in sorted(matching_plugins.items()):
-            active_mode = active_plugins.get(name)
-            if active_mode:
-                badge = f"{COLOR_GREEN}[ACTIVE ({active_mode})]{COLOR_RESET}"
+            in_ws = name in active_plugins
+            in_glob = name in glob_plugins
+            if in_ws and in_glob:
+                badge = f"{COLOR_GREEN}[BOTH]{COLOR_RESET}     "
+            elif in_ws:
+                badge = f"{COLOR_GREEN}[WORKSPACE]{COLOR_RESET}"
+            elif in_glob:
+                badge = f"{COLOR_MAGENTA}[GLOBAL]{COLOR_RESET}   "
             else:
-                badge = f"{COLOR_DIM}[              ]{COLOR_RESET}"
+                badge = f"{COLOR_DIM}[         ]{COLOR_RESET}"
             desc = f" - {COLOR_DIM}{info['desc']}{COLOR_RESET}" if info['desc'] else ""
             print(f"  {badge} {COLOR_BOLD}{name:<32}{COLOR_RESET} [{info['group']}]{desc}")
         print()
 
 
-def cmd_status(manager: HubManager, workspace_root: Path):
-    active_skills, active_plugins = manager.get_workspace_active(workspace_root)
+def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = False):
     all_skills, all_plugins = manager.get_available()
+
+    if is_global:
+        active_skills, active_plugins = manager.get_global_active()
+        print(f"\n{COLOR_BOLD}Scope:{COLOR_RESET} {COLOR_MAGENTA}GLOBAL{COLOR_RESET} (~/.gemini/config)")
+        print(f"{COLOR_BOLD}Hub Directory:{COLOR_RESET} {manager.hub_dir}\n")
+
+        if not active_skills and not active_plugins:
+            print(f"{COLOR_YELLOW}No skills or plugins currently activated globally.{COLOR_RESET}")
+            print(f"Run {COLOR_BOLD}ag-hub enable -G <name>{COLOR_RESET} to activate customizations globally.\n")
+            return
+
+        print(f"{COLOR_CYAN}{COLOR_BOLD}Active Global Skills ({len(active_skills)}):{COLOR_RESET}")
+        for s, mode in sorted(active_skills.items()):
+            grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
+            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+
+        if active_plugins:
+            print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Global Plugins ({len(active_plugins)}):{COLOR_RESET}")
+            for p, mode in sorted(active_plugins.items()):
+                grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
+                print(f"  {COLOR_GREEN}✓{COLOR_RESET} {p:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+        print()
+        return
+
+    # Workspace status
+    ws_skills, ws_plugins = manager.get_workspace_active(workspace_root)
+    glob_skills, glob_plugins = manager.get_global_active()
 
     print(f"\n{COLOR_BOLD}Workspace:{COLOR_RESET} {workspace_root}")
     print(f"{COLOR_BOLD}Hub Directory:{COLOR_RESET} {manager.hub_dir}\n")
 
-    if not active_skills and not active_plugins:
+    if not ws_skills and not ws_plugins:
         print(f"{COLOR_YELLOW}No skills or plugins currently activated in this workspace.{COLOR_RESET}")
-        print(f"Run {COLOR_BOLD}ag-hub list{COLOR_RESET} or {COLOR_BOLD}ag-hub enable <name>{COLOR_RESET} to activate customizations.\n")
-        return
+        print(f"Run {COLOR_BOLD}ag-hub list{COLOR_RESET} or {COLOR_BOLD}ag-hub enable <name>{COLOR_RESET} to activate customizations.")
+    else:
+        print(f"{COLOR_CYAN}{COLOR_BOLD}Active Workspace Skills ({len(ws_skills)}):{COLOR_RESET}")
+        for s, mode in sorted(ws_skills.items()):
+            grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
+            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
 
-    print(f"{COLOR_CYAN}{COLOR_BOLD}Active Skills ({len(active_skills)}):{COLOR_RESET}")
-    for s, mode in sorted(active_skills.items()):
-        grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
-        print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+        if ws_plugins:
+            print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Workspace Plugins ({len(ws_plugins)}):{COLOR_RESET}")
+            for p, mode in sorted(ws_plugins.items()):
+                grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
+                print(f"  {COLOR_GREEN}✓{COLOR_RESET} {p:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
 
-    if active_plugins:
-        print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Plugins ({len(active_plugins)}):{COLOR_RESET}")
-        for p, mode in sorted(active_plugins.items()):
-            grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
-            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {p:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+    if glob_skills or glob_plugins:
+        print(f"\n{COLOR_MAGENTA}{COLOR_BOLD}Active Global Skills ({len(glob_skills)}) [Inherited by all workspaces]:{COLOR_RESET}")
+        for s, mode in sorted(glob_skills.items()):
+            grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
+            print(f"  {COLOR_MAGENTA}🌐{COLOR_RESET} {s:<32} {COLOR_DIM}(via global {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+        if glob_plugins:
+            for p, mode in sorted(glob_plugins.items()):
+                grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
+                print(f"  {COLOR_MAGENTA}🌐{COLOR_RESET} {p:<32} {COLOR_DIM}(via global {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
     print()
 
 
@@ -807,6 +907,7 @@ def main():
     )
     parser.add_argument("--hub", type=Path, default=DEFAULT_HUB_DIR, help=f"Path to skills hub (default: {DEFAULT_HUB_DIR})")
     parser.add_argument("--workspace", "-w", type=Path, default=None, help="Target workspace root (default: current workspace)")
+    parser.add_argument("--global", "-G", dest="is_global", action="store_true", help="Target machine-wide global configuration (~/.gemini/config) instead of local workspace")
 
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
@@ -817,19 +918,22 @@ def main():
     p_list.add_argument("--all", "-a", action="store_true", help="Print all skills in the catalog")
 
     # status
-    p_status = subparsers.add_parser("status", help="Show active customizations in current workspace")
+    p_status = subparsers.add_parser("status", help="Show active customizations in current workspace or global scope")
+    p_status.add_argument("--global", "-G", dest="is_global", action="store_true", help="Show machine-wide global customizations (~/.gemini/config)")
 
     # enable
-    p_enable = subparsers.add_parser("enable", aliases=["add"], help="Enable skills or plugins in workspace")
+    p_enable = subparsers.add_parser("enable", aliases=["add"], help="Enable skills or plugins in workspace or globally")
     p_enable.add_argument("names", nargs="*", default=[], help="Names of skills or plugins to enable")
     p_enable.add_argument("--group", "-g", default=None, help="Enable all skills from a specific group/repository (e.g. agents-cli, deepmind-science)")
     p_enable.add_argument("--symlink", "-s", action="store_true", help="Use symlinks instead of .agents/skills.json manifest")
+    p_enable.add_argument("--global", "-G", dest="is_global", action="store_true", help="Enable in machine-wide global scope (~/.gemini/config)")
 
     # disable
-    p_disable = subparsers.add_parser("disable", aliases=["rm"], help="Disable skills or plugins in workspace")
+    p_disable = subparsers.add_parser("disable", aliases=["rm"], help="Disable skills or plugins in workspace or globally")
     p_disable.add_argument("names", nargs="*", default=[], help="Names of skills or plugins to disable")
     p_disable.add_argument("--group", "-g", default=None, help="Disable all skills from a specific group/repository")
-    p_disable.add_argument("--all", "-a", action="store_true", help="Disable all active customizations in current workspace")
+    p_disable.add_argument("--all", "-a", action="store_true", help="Disable all active customizations in target scope")
+    p_disable.add_argument("--global", "-G", dest="is_global", action="store_true", help="Disable in machine-wide global scope (~/.gemini/config)")
 
     # info / show / describe
     p_info = subparsers.add_parser("info", aliases=["show", "describe"], help="Display documentation and instructions for a skill or plugin")
@@ -858,17 +962,18 @@ def main():
 
     manager = HubManager(hub_dir=args.hub)
     workspace_root = args.workspace.resolve() if args.workspace else find_workspace_root()
+    is_global = getattr(args, "is_global", False)
 
     if args.command in ("list", "ls") or args.command is None:
         cmd_list(manager, workspace_root, query=getattr(args, "query", None), group_filter=getattr(args, "group", None), show_all=getattr(args, "all", False))
     elif args.command == "status":
-        cmd_status(manager, workspace_root)
+        cmd_status(manager, workspace_root, is_global=is_global)
     elif args.command in ("info", "show", "describe"):
         manager.info(args.name)
     elif args.command in ("enable", "add"):
-        manager.enable(workspace_root, names=args.names, group=args.group, as_symlink=args.symlink)
+        manager.enable(workspace_root, names=args.names, group=args.group, as_symlink=args.symlink, is_global=is_global)
     elif args.command in ("disable", "rm"):
-        manager.disable(workspace_root, names=args.names, group=args.group, disable_all=args.all)
+        manager.disable(workspace_root, names=args.names, group=args.group, disable_all=args.all, is_global=is_global)
     elif args.command in ("select", "interactive", "-i"):
         cmd_interactive(manager, workspace_root)
     elif args.command == "update":
@@ -882,3 +987,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
