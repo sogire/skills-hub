@@ -1,0 +1,4 @@
+{
+  "name": "template-plugin",
+  "description": "A starter template plugin packaging skills, rules, and optional MCP configs into a bundle."
+}
