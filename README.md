@@ -6,16 +6,17 @@ A centralized, zero-copy repository for maintaining, developing, and version-con
 
 ## Included Skill Repositories
 
-The hub is powered by Git submodules tracking official upstream repositories on their `main` branches:
+The hub is organized into two primary domains: **`external/`** for read-only upstream Git submodules tracking GitHub releases, and **`internal/`** for your team's proprietary custom skills, rules, and plugins:
 
-| Folder | Upstream Repository | Description | Skills Count |
+| Domain / Folder | Upstream / Source | Description | Skills Count |
 | :--- | :--- | :--- | :--- |
-| [`googlecloud-data/`](file:///home/sergiobermudez/local_projects/skills-hub/googlecloud-data) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | Data Agent Kit: Dataform, dbt, Spark, Composer, Lakehouse, Graph | 37 skills |
-| [`googlecloud-base/`](file:///home/sergiobermudez/local_projects/skills-hub/googlecloud-base) | [google/skills](https://github.com/google/skills) | BigQuery, Cloud Build, Vertex AI, AlloyDB, Ads, Analytics | ~144 skills |
-| [`deepmind-science/`](file:///home/sergiobermudez/local_projects/skills-hub/deepmind-science) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | AlphaFold, PubMed, ChEMBL, UniProt, ClinVar, Foldseek, BLAST | 40 skills |
-| [`agents-cli/`](file:///home/sergiobermudez/local_projects/skills-hub/agents-cli) | [google/agents-cli](https://github.com/google/agents-cli) | Google Agent Development Kit (ADK), Scaffold, Deploy, Eval | 7 skills |
-| [`skills/`](file:///home/sergiobermudez/local_projects/skills-hub/skills) | Local Custom Skills | Your own custom authored standalone skills | Extensible |
-| [`plugins/`](file:///home/sergiobermudez/local_projects/skills-hub/plugins) | Local Custom Plugins | Multi-skill and rule packages with `plugin.json` | Extensible |
+| [`external/googlecloud-data/`](file:///home/sergiobermudez/local_projects/skills-hub/external/googlecloud-data) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | Data Agent Kit: Dataform, dbt, Spark, Composer, Lakehouse, Graph | 37 skills |
+| [`external/googlecloud-base/`](file:///home/sergiobermudez/local_projects/skills-hub/external/googlecloud-base) | [google/skills](https://github.com/google/skills) | BigQuery, Cloud Build, Vertex AI, AlloyDB, Ads, Analytics | ~144 skills |
+| [`external/deepmind-science/`](file:///home/sergiobermudez/local_projects/skills-hub/external/deepmind-science) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | AlphaFold, PubMed, ChEMBL, UniProt, ClinVar, Foldseek, BLAST | 40 skills |
+| [`external/agents-cli/`](file:///home/sergiobermudez/local_projects/skills-hub/external/agents-cli) | [google/agents-cli](https://github.com/google/agents-cli) | Google Agent Development Kit (ADK), Scaffold, Deploy, Eval | 7 skills |
+| [`internal/skills/`](file:///home/sergiobermudez/local_projects/skills-hub/internal/skills) | Internal Custom Skills | Standalone custom skills authored for your projects | Extensible |
+| [`internal/rules/`](file:///home/sergiobermudez/local_projects/skills-hub/internal/rules) | Internal Custom Rules | Always-on coding standards and architectural policies | Extensible |
+| [`internal/plugins/`](file:///home/sergiobermudez/local_projects/skills-hub/internal/plugins) | Internal Custom Plugins | Multi-skill and rule packages with `plugin.json` | Extensible |
 
 ---
 
@@ -23,26 +24,33 @@ The hub is powered by Git submodules tracking official upstream repositories on 
 
 ```text
 skills-hub/
-├── .git/                     # Track customizations with Git
-├── .gitmodules               # Submodule definitions tracking upstream main branches
-├── README.md                 # This documentation
-├── googlecloud-data/         # Submodule: GoogleCloudPlatform/data-agent-kit-plugin
-│   └── skills/               # dataform, dbt, spark, dataflow, airflow, etc.
-├── googlecloud-base/         # Submodule: google/skills
-│   ├── skills/cloud/         # bigquery, vertex, alloydb, etc.
-│   ├── skills/ads/           # ads API skills
-│   └── skills/analytics/     # GA4 / analytics skills
-├── deepmind-science/         # Submodule: google-deepmind/science-skills
-│   └── skills/               # alphafold, pubmed, chembl, etc.
-├── agents-cli/               # Submodule: google/agents-cli
-│   └── skills/               # ADK code, deploy, eval, workflow
-├── skills/                   # Standalone local skills
-│   └── template-skill/
-├── plugins/                  # Bundled plugins
-│   └── template-plugin/
-├── rules/                    # Shared AGENTS.md rule presets
+├── .git/                          # Track customizations with Git
+├── .gitmodules                    # Submodule definitions tracking upstream main branches
+├── .gitignore                     # Git exclusions
+├── README.md                      # This documentation
+│
+├── external/                      # [Upstream Git Submodules]
+│   ├── googlecloud-data/          # Submodule: GoogleCloudPlatform/data-agent-kit-plugin
+│   │   └── skills/                # dataform, dbt, spark, dataflow, airflow, etc.
+│   ├── googlecloud-base/          # Submodule: google/skills
+│   │   ├── skills/cloud/          # bigquery, vertex, alloydb, etc.
+│   │   ├── skills/ads/            # ads API skills
+│   │   └── skills/analytics/      # GA4 / analytics skills
+│   ├── deepmind-science/          # Submodule: google-deepmind/science-skills
+│   │   └── skills/                # alphafold, pubmed, chembl, etc.
+│   └── agents-cli/                # Submodule: google/agents-cli
+│       └── skills/                # ADK code, deploy, eval, workflow
+│
+├── internal/                      # [Proprietary / In-House Customizations]
+│   ├── skills/                    # Standalone local skills (SKILL.md)
+│   │   └── template-skill/
+│   ├── rules/                     # Shared AGENTS.md rule presets
+│   │   └── general-standards.md
+│   └── plugins/                   # Bundled plugins (plugin.json)
+│       └── template-plugin/
+│
 └── bin/
-    └── ag-hub                # CLI tool (symlinked to ~/.local/bin/ag-hub)
+    └── ag-hub                     # CLI tool (symlinked to ~/.local/bin/ag-hub)
 ```
 
 ---
@@ -56,8 +64,10 @@ You can run `ag-hub` from any project terminal. All changes use **zero file copi
 Instead of enabling skills one by one, you can activate entire suites or categories with `-g` or `--group`:
 
 ```bash
-# Enable all 7 Google Agent Development Kit skills
+# Enable an entire external suite (names or full group paths work):
 ag-hub enable -g agents-cli
+# or:
+ag-hub enable -g external/agents-cli
 
 # Enable all 37 Data Agent Kit skills (Dataform, dbt, Spark, etc.)
 ag-hub enable -g googlecloud-data
@@ -65,13 +75,16 @@ ag-hub enable -g googlecloud-data
 # Enable all DeepMind science skills (AlphaFold, PubMed, BLAST, etc.)
 ag-hub enable -g deepmind-science
 
+# Enable all internal proprietary skills
+ag-hub enable -g internal
+
 # Enable all general Google Cloud base skills
 ag-hub enable -g googlecloud-base
 
 # Or enable a specific subcategory within googlecloud-base:
-ag-hub enable -g googlecloud-base/cloud
-ag-hub enable -g googlecloud-base/ads
-ag-hub enable -g googlecloud-base/analytics
+ag-hub enable -g cloud
+ag-hub enable -g ads
+ag-hub enable -g analytics
 
 # Combine a group with individual skills from other suites:
 ag-hub enable -g agents-cli dbt-bigquery alphafold_database_fetch_and_analyze
@@ -79,13 +92,13 @@ ag-hub enable -g agents-cli dbt-bigquery alphafold_database_fetch_and_analyze
 
 #### Available Groups Overview
 
-| Group Name | Skills Count | Typical Use Cases |
-| :--- | :--- | :--- |
-| `agents-cli` | 7 | Developing, testing, evaluating, and deploying ADK agents |
-| `googlecloud-data` | 37 | Data engineering, ETL, dbt, Dataform, Dataproc Spark, Composer Airflow |
-| `deepmind-science` | 40 | Bioinformatics, protein structure, literature search, chemistry |
-| `googlecloud-base` | ~144 | Vertex AI, AlloyDB, BigQuery, IAM, Cloud Build, Ads & Analytics |
-| `custom` | Extensible | Standalone custom skills authored in `skills-hub/skills/` |
+| Group Name | Skills Count | Provenance | Typical Use Cases |
+| :--- | :--- | :--- | :--- |
+| `external/agents-cli` (or `agents-cli`) | 7 | Upstream | Developing, testing, evaluating, and deploying ADK agents |
+| `external/googlecloud-data` (or `googlecloud-data`) | 37 | Upstream | Data engineering, ETL, dbt, Dataform, Dataproc Spark, Airflow |
+| `external/deepmind-science` (or `deepmind-science`) | 40 | Upstream | Bioinformatics, protein structure, literature search, chemistry |
+| `external/googlecloud-base` (or `googlecloud-base`) | ~144 | Upstream | Vertex AI, AlloyDB, BigQuery, IAM, Cloud Build, Ads & Analytics |
+| `internal` (or `internal/skills`) | Extensible | Internal | Proprietary custom skills authored in `skills-hub/internal/skills/` |
 
 #### Disabling Groups
 
@@ -97,6 +110,9 @@ ag-hub disable -g agents-cli
 
 # Deactivate all data engineering skills
 ag-hub disable -g googlecloud-data
+
+# Deactivate all internal skills
+ag-hub disable -g internal
 ```
 
 ---
@@ -269,9 +285,9 @@ ag-hub enable --symlink -g agents-cli
 ### 11. Authoring New Custom Skills in the Hub
 
 ```bash
-# Scaffold a new custom skill boilerplate in skills-hub/skills/<name>
+# Scaffold a new custom skill boilerplate in skills-hub/internal/skills/<name>
 ag-hub create skill my-specialized-tool
 
-# Scaffold a new plugin in skills-hub/plugins/<name>
+# Scaffold a new plugin in skills-hub/internal/plugins/<name>
 ag-hub create plugin my-specialized-plugin
 ```

@@ -1,16 +1,16 @@
 [submodule "deepmind-science"]
-	path = deepmind-science
+	path = external/deepmind-science
 	url = https://github.com/google-deepmind/science-skills.git
 	branch = main
 [submodule "googlecloud-base"]
-	path = googlecloud-base
+	path = external/googlecloud-base
 	url = https://github.com/google/skills.git
 	branch = main
 [submodule "agents-cli"]
-	path = agents-cli
+	path = external/agents-cli
 	url = https://github.com/google/agents-cli.git
 	branch = main
 [submodule "googlecloud-data"]
-	path = googlecloud-data
+	path = external/googlecloud-data
 	url = https://github.com/GoogleCloudPlatform/data-agent-kit-plugin.git
 	branch = main

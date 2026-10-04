@@ -101,36 +101,38 @@ class HubManager:
         skills = {}    # name -> {path, parent, desc, group}
         plugins = {}   # name -> {path, parent, desc, group}
 
-        # 1. Custom skills in skills/
-        custom_skills_dir = self.hub_dir / "skills"
-        if custom_skills_dir.exists():
-            for d in sorted(custom_skills_dir.iterdir()):
-                if d.is_dir() and (d / "SKILL.md").exists():
-                    skills[d.name] = {
-                        "path": d,
-                        "parent": d.parent,
-                        "desc": get_skill_description(d),
-                        "group": "custom"
-                    }
+        # 1. Internal skills in internal/skills/ (fallback: skills/)
+        for s_dir in [self.hub_dir / "internal" / "skills", self.hub_dir / "skills"]:
+            if s_dir.exists():
+                for d in sorted(s_dir.iterdir()):
+                    if d.is_dir() and (d / "SKILL.md").exists() and d.name not in skills:
+                        skills[d.name] = {
+                            "path": d,
+                            "parent": d.parent,
+                            "desc": get_skill_description(d),
+                            "group": "internal/skills"
+                        }
 
-        # 2. Custom plugins in plugins/
-        custom_plugins_dir = self.hub_dir / "plugins"
-        if custom_plugins_dir.exists():
-            for d in sorted(custom_plugins_dir.iterdir()):
-                if d.is_dir() and (d / "plugin.json").exists():
-                    plugins[d.name] = {
-                        "path": d,
-                        "parent": d.parent,
-                        "desc": get_plugin_description(d),
-                        "group": "custom"
-                    }
+        # 2. Internal plugins in internal/plugins/ (fallback: plugins/)
+        for p_dir in [self.hub_dir / "internal" / "plugins", self.hub_dir / "plugins"]:
+            if p_dir.exists():
+                for d in sorted(p_dir.iterdir()):
+                    if d.is_dir() and (d / "plugin.json").exists() and d.name not in plugins:
+                        plugins[d.name] = {
+                            "path": d,
+                            "parent": d.parent,
+                            "desc": get_plugin_description(d),
+                            "group": "internal/plugins"
+                        }
 
-        # 3. Submodules
+        # 3. Submodules (external/ and registered in .gitmodules)
         submodules = self.get_submodules()
         for sub_name, sub_info in submodules.items():
             sub_path = sub_info["path"]
             if not sub_path.exists():
                 continue
+
+            group_prefix = f"external/{sub_name}"
 
             # Check root plugin.json in submodule
             if (sub_path / "plugin.json").exists():
@@ -138,7 +140,7 @@ class HubManager:
                     "path": sub_path,
                     "parent": sub_path.parent,
                     "desc": get_plugin_description(sub_path),
-                    "group": sub_name
+                    "group": group_prefix
                 }
 
             # Check plugins/ subdirectory in submodule
@@ -151,7 +153,7 @@ class HubManager:
                                 "path": item,
                                 "parent": item.parent,
                                 "desc": get_plugin_description(item),
-                                "group": sub_name
+                                "group": group_prefix
                             }
                         else:
                             for subitem in sorted(item.iterdir()):
@@ -160,7 +162,7 @@ class HubManager:
                                         "path": subitem,
                                         "parent": subitem.parent,
                                         "desc": get_plugin_description(subitem),
-                                        "group": f"{sub_name}/{item.name}"
+                                        "group": f"{group_prefix}/{item.name}"
                                     }
 
             # Check skills/ subdirectory in submodule
@@ -174,7 +176,7 @@ class HubManager:
                                 "path": item,
                                 "parent": item.parent,
                                 "desc": get_skill_description(item),
-                                "group": sub_name
+                                "group": group_prefix
                             }
                         else:
                             # Subcategorized (e.g. cloud/, ads/, analytics/)
@@ -184,7 +186,7 @@ class HubManager:
                                         "path": subitem,
                                         "parent": subitem.parent,
                                         "desc": get_skill_description(subitem),
-                                        "group": f"{sub_name}/{item.name}"
+                                        "group": f"{group_prefix}/{item.name}"
                                     }
 
         return skills, plugins
@@ -285,8 +287,14 @@ class HubManager:
 
         target_names = list(names or [])
         if group:
-            g_lower = group.lower()
-            matching = [s for s, info in all_skills.items() if info["group"].lower() == g_lower or info["group"].lower().startswith(g_lower + "/")]
+            g_lower = group.lower().strip("/")
+            matching = [
+                s for s, info in all_skills.items()
+                if info["group"].lower() == g_lower
+                or info["group"].lower().startswith(g_lower + "/")
+                or info["group"].lower().endswith("/" + g_lower)
+                or f"/{g_lower}/" in info["group"].lower()
+            ]
             if matching:
                 target_names.extend(matching)
             else:
@@ -355,8 +363,14 @@ class HubManager:
                 return
         elif group:
             all_skills, _ = self.get_available()
-            g_lower = group.lower()
-            matching = [s for s, info in all_skills.items() if info["group"].lower() == g_lower or info["group"].lower().startswith(g_lower + "/")]
+            g_lower = group.lower().strip("/")
+            matching = [
+                s for s, info in all_skills.items()
+                if info["group"].lower() == g_lower
+                or info["group"].lower().startswith(g_lower + "/")
+                or info["group"].lower().endswith("/" + g_lower)
+                or f"/{g_lower}/" in info["group"].lower()
+            ]
             if matching:
                 target_names.extend(matching)
 
@@ -459,7 +473,10 @@ class HubManager:
         selected = {}
         if targets:
             for t in targets:
-                if t in submodules:
+                clean_t = t.rstrip("/").split("/")[-1]
+                if clean_t in submodules:
+                    selected[clean_t] = submodules[clean_t]
+                elif t in submodules:
                     selected[t] = submodules[t]
                 else:
                     print(f"{COLOR_RED}Unknown repository:{COLOR_RESET} '{t}'. Available: {', '.join(submodules.keys())}")
@@ -516,7 +533,7 @@ class HubManager:
 
     def scaffold(self, item_type: str, name: str):
         if item_type == "skill":
-            target = self.hub_dir / "skills" / name
+            target = self.hub_dir / "internal" / "skills" / name
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Skill '{name}' already exists at {target}")
                 return
@@ -538,7 +555,7 @@ description: Describe what {name} does and when the agent should activate it.
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new skill '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
 
         elif item_type == "plugin":
-            target = self.hub_dir / "plugins" / name
+            target = self.hub_dir / "internal" / "plugins" / name
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Plugin '{name}' already exists at {target}")
                 return
@@ -552,25 +569,26 @@ description: Describe what {name} does and when the agent should activate it.
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new plugin '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
 
     def add_repo(self, url: str, name: str | None = None, branch: str = "main"):
-        """Registers and clones a new GitHub skills repository as a git submodule."""
+        """Registers and clones a new GitHub skills repository as a git submodule in external/."""
         if not name:
             clean_url = url.rstrip("/")
             if clean_url.endswith(".git"):
                 clean_url = clean_url[:-4]
             name = clean_url.split("/")[-1]
 
-        target_dir = self.hub_dir / name
+        target_dir = self.hub_dir / "external" / name
+        submodule_path = f"external/{name}"
         if target_dir.exists():
             print(f"{COLOR_RED}Error:{COLOR_RESET} Directory '{name}' already exists at {target_dir}")
             return
 
-        print(f"\nAdding submodule {COLOR_BOLD}{name}{COLOR_RESET} from {url} (branch: {branch})...\n")
-        cmd = ["git", "submodule", "add", "-b", branch, url, name]
+        print(f"\nAdding submodule {COLOR_BOLD}{name}{COLOR_RESET} from {url} into {submodule_path} (branch: {branch})...\n")
+        cmd = ["git", "submodule", "add", "-b", branch, url, submodule_path]
         res = subprocess.run(cmd, cwd=self.hub_dir)
         if res.returncode == 0:
             print(f"\n{COLOR_GREEN}✓{COLOR_RESET} Successfully added repository '{COLOR_BOLD}{name}{COLOR_RESET}' as submodule!")
             # Stage .gitmodules and submodule
-            subprocess.run(["git", "add", ".gitmodules", name], cwd=self.hub_dir)
+            subprocess.run(["git", "add", ".gitmodules", submodule_path], cwd=self.hub_dir)
             print(f"Run {COLOR_BOLD}ag-hub list -g {name}{COLOR_RESET} to view newly available skills.")
         else:
             print(f"{COLOR_RED}✗ Failed to add submodule.{COLOR_RESET}")
@@ -658,7 +676,8 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
     if not query and not group_filter and not show_all:
         groups = {}
         for s, info in all_skills.items():
-            top = info["group"].split("/")[0]
+            grp = info["group"]
+            top = "/".join(grp.split("/")[:2]) if "/" in grp else grp
             groups.setdefault(top, {"skills": 0, "active_ws": 0, "active_glob": 0})
             groups[top]["skills"] += 1
             if s in active_skills:
@@ -674,7 +693,7 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
             if counts["active_glob"]:
                 details.append(f"{COLOR_MAGENTA}{counts['active_glob']} global{COLOR_RESET}")
             act_str = f" ({', '.join(details)} active)" if details else ""
-            print(f"  • {COLOR_CYAN}{COLOR_BOLD}{g:<18}{COLOR_RESET}: {counts['skills']} skills{act_str}")
+            print(f"  • {COLOR_CYAN}{COLOR_BOLD}{g:<26}{COLOR_RESET}: {counts['skills']} skills{act_str}")
         print()
 
         # If any skills/plugins are active in current workspace or globally, display them
@@ -714,16 +733,20 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
 
     matching_skills = {}
     for name, info in all_skills.items():
-        if gf and gf not in info["group"].lower():
-            continue
+        if gf:
+            grp_low = info["group"].lower()
+            if not (grp_low == gf or grp_low.startswith(gf + "/") or grp_low.endswith("/" + gf) or f"/{gf}/" in grp_low):
+                continue
         if q and q not in name.lower() and q not in info["desc"].lower() and q not in info["group"].lower():
             continue
         matching_skills[name] = info
 
     matching_plugins = {}
     for name, info in all_plugins.items():
-        if gf and gf not in info["group"].lower():
-            continue
+        if gf:
+            grp_low = info["group"].lower()
+            if not (grp_low == gf or grp_low.startswith(gf + "/") or grp_low.endswith("/" + gf) or f"/{gf}/" in grp_low):
+                continue
         if q and q not in name.lower() and q not in info["desc"].lower() and q not in info["group"].lower():
             continue
         matching_plugins[name] = info
