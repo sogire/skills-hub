@@ -64,11 +64,19 @@ skills-hub/
 │
 ├── internal/                      # [Proprietary / In-House Customizations]
 │   ├── skills/                    # Standalone local skills (SKILL.md)
+│   │   ├── cluster-role-creation/ # Agent skill for designing role clusters & docs
 │   │   └── template-skill/
 │   ├── rules/                     # Shared AGENTS.md rule presets
 │   │   └── general-standards.md
 │   └── plugins/                   # Bundled plugins (plugin.json)
 │       └── template-plugin/
+│
+├── clusters/                      # [Curated Skill Clusters across Internal & External sources]
+│   ├── gcp-data-enterprise-architect.json # Lakehouse, Data Mesh, Governance, Lineage, FinOps, Security
+│   ├── gcp-data-enterprise-architect.md   # Architectural blueprint & role documentation
+│   ├── data-engineer.json         # BigQuery, dbt, Spark, Dataform
+│   ├── science-researcher.json    # AlphaFold, PubMed, ChEMBL, UniProt, Clinical Trials
+│   └── agent-developer.json       # ADK code, eval, deploy, workflow, template-skill
 │
 └── bin/
     └── ag-hub                     # CLI tool (symlinked to ~/.local/bin/ag-hub)
@@ -138,7 +146,79 @@ ag-hub disable -g internal
 
 ---
 
-### 2. Catalog Browsing & Searching
+### 2. Curated Skill Clusters (`-c` / `--cluster` & `ag-hub cluster`)
+
+While `--group` enables all skills from a single repository or category, **Clusters** allow you to activate a curated subset of skills tailored for specific engineering roles, personas, or workflows across **multiple repositories** (combining internal and external skills):
+
+| Predefined Cluster | Description | Included Skill Sources |
+| :--- | :--- | :--- |
+| `gcp-data-enterprise-architect` | Lakehouse & Data Mesh, Dataplex governance & lineage, WAF, FinOps, zero-trust security | `external/googlecloud-base`, `external/googlecloud-data` |
+| `data-engineer` | BigQuery, dbt, Spark, Dataform, BigQuery optimization | `external/googlecloud-data`, `external/googlecloud-base` |
+| `science-researcher` | AlphaFold, PubMed, ChEMBL, UniProt, Clinical Trials | `external/deepmind-science` |
+| `agent-developer` | ADK code, eval, deploy, workflow, template-skill | `external/agents-cli`, `internal/skills` |
+
+#### Cluster Commands
+```bash
+# List all available clusters and their activation status in current workspace
+ag-hub cluster list
+# or:
+ag-hub clusters
+
+# Inspect a cluster's skills and status
+ag-hub cluster info data-engineer
+ag-hub cluster info science-researcher
+
+# Activate a cluster in current workspace
+ag-hub enable -c data-engineer
+# or:
+ag-hub cluster enable data-engineer
+
+# Activate multiple clusters or combine clusters with individual skills:
+ag-hub enable -c data-engineer -c agent-developer accidental-data-loss-prevention
+
+# Deactivate a cluster from current workspace
+ag-hub disable -c data-engineer
+# or:
+ag-hub cluster disable data-engineer
+
+# Create a new custom cluster template
+ag-hub create cluster ml-ops
+```
+
+#### Predefining Custom Clusters (JSON & YAML)
+Clusters are configured via simple JSON files (or standard YAML) with zero external dependencies. You can place cluster definitions in:
+- **Hub-wide clusters**: `clusters/<name>.json` or `internal/clusters/<name>.json`
+- **Catalog file**: `clusters.json` in the hub root
+- **Workspace-local clusters**: `<workspace>/.agents/clusters/<name>.json`
+
+Example definition (`clusters/data-engineer.json`):
+```json
+{
+  "name": "data-engineer",
+  "description": "GCP Data Engineering and ETL toolset (BigQuery, dbt, Spark, Dataform)",
+  "skills": [
+    "bigquery-sql",
+    "dbt-bigquery",
+    "gcp-spark",
+    "dataform-bigquery",
+    "bigquery-optimization"
+  ],
+  "plugins": []
+}
+```
+
+#### Companion Role Documentation (`clusters/<name>.md`)
+Clusters can be accompanied by human-readable markdown guides (e.g. [`clusters/gcp-data-enterprise-architect.md`](file:///home/sergiobermudez/local_projects/skills-hub/clusters/gcp-data-enterprise-architect.md)) documenting:
+1. **Role Definition & Core Architectural Pillars** (with Mermaid architecture topology).
+2. **Skill Breakdown by Competency** (matrix of skills, architectural rationale, and provenance).
+3. **Missing Skills Analysis (Catalog Gaps)** (roadmaps for authoring missing skills in `internal/skills/`).
+
+> [!TIP]
+> **Need help creating clusters?** Enable the internal skill [`cluster-role-creation`](file:///home/sergiobermudez/local_projects/skills-hub/internal/skills/cluster-role-creation/SKILL.md) (`ag-hub enable cluster-role-creation`) to have an agent interview you, explore the catalog, identify missing skills, and automatically generate both the JSON manifest and Markdown blueprint.
+
+---
+
+### 3. Catalog Browsing & Searching
 
 ```bash
 # High-level summary of all repositories and active workspace skills
@@ -160,7 +240,7 @@ ag-hub list --all
 
 ---
 
-### 3. Inspecting Skill Documentation (`info` / `show`)
+### 4. Inspecting Skill Documentation (`info` / `show`)
 
 Inspect the full documentation, triggers, and prompt guidelines for any skill directly from the terminal without opening files:
 
@@ -177,7 +257,7 @@ ag-hub info dak
 
 ---
 
-### 4. Activating & Checking Workspace Status
+### 5. Activating & Checking Workspace Status
 
 ```bash
 # Check what skills and plugins are currently active in this workspace
@@ -195,13 +275,16 @@ ag-hub disable --all
 
 ---
 
-### 5. Global Skills across All Workspaces (`-G` / `--global`)
+### 6. Global Skills across All Workspaces (`-G` / `--global`)
 
-Antigravity natively supports machine-wide customizations loaded into **every** project workspace from `~/.gemini/config/`. With `ag-hub`, you can promote any skill or group to be globally active with zero file copies:
+Antigravity natively supports machine-wide customizations loaded into **every** project workspace from `~/.gemini/config/`. With `ag-hub`, you can promote any skill, cluster, or group to be globally active with zero file copies:
 
 ```bash
 # Enable an individual skill globally (e.g., safety guardrails)
 ag-hub enable -G accidental-data-loss-prevention
+
+# Enable a cluster globally across all workspaces
+ag-hub enable -G -c agent-developer
 
 # Enable an entire group globally (e.g., all 7 Agent Development Kit tools everywhere)
 ag-hub enable -G -g agents-cli
@@ -215,6 +298,9 @@ ag-hub status
 # Disable an individual skill globally
 ag-hub disable -G google-agents-cli-scaffold
 
+# Disable an entire cluster globally
+ag-hub disable -G -c agent-developer
+
 # Disable an entire group globally
 ag-hub disable -G -g agents-cli
 
@@ -227,24 +313,41 @@ ag-hub disable -G --all
 
 ---
 
-### 6. Managing Any Workspace from Anywhere (`-w` / `--workspace`)
+### 7. Workspace Resolution & Directory Targeting
 
-You don't need to be in a project folder to manage its skills. Use `-w <path>` to target any workspace directory:
+`ag-hub` gives you complete control over which directory is treated as your target workspace:
 
-```bash
-# Enable skills in another project
-ag-hub -w ~/local_projects/my-data-pipeline enable -g googlecloud-data
+1. **Current Directory by Default**:
+   By default, `ag-hub` executes strictly in the **current working directory** where you invoke it (`cwd`), creating or modifying `.agents/` right there:
+   ```bash
+   cd ~/my-monorepo/packages/backend
+   ag-hub enable -c data-engineer   # Configures ~/my-monorepo/packages/backend/.agents/
+   ```
 
-# Check active status of another project
-ag-hub -w ~/local_projects/my-agent status
+2. **Search for Git / Agents Root (`-r` / `--find-root`)**:
+   If you are deep in a subdirectory of a project and want `ag-hub` to search parent directories upward for the `.git` or `.agents` workspace root:
+   ```bash
+   cd ~/my-monorepo/packages/backend/src/controllers
+   ag-hub status -r                 # Automatically targets ~/my-monorepo
+   ag-hub enable -r -c data-engineer
+   ```
 
-# Reset customizations in another project
-ag-hub -w ~/local_projects/my-agent disable --all
-```
+3. **Explicit Workspace Target (`-w` / `--workspace`)**:
+   You can target any workspace directory from anywhere without `cd`:
+   ```bash
+   # Enable skills in another project
+   ag-hub -w ~/local_projects/my-data-pipeline enable -c data-engineer
+
+   # Check active status of another project
+   ag-hub -w ~/local_projects/my-agent status
+
+   # Reset customizations in another project
+   ag-hub -w ~/local_projects/my-agent disable --all
+   ```
 
 ---
 
-### 7. Interactive Selection (`select` / `-i`)
+### 8. Interactive Selection (`select` / `-i`)
 
 ```bash
 ag-hub select
@@ -255,7 +358,7 @@ Launches an interactive menu with keyword filtering and numbered toggle switches
 
 ---
 
-### 8. Updating Repositories from GitHub Upstream
+### 9. Updating Repositories from GitHub Upstream
 
 Keep all skills updated with the latest releases from their official upstream GitHub repositories:
 
@@ -275,7 +378,7 @@ ag-hub update agents-cli
 
 ---
 
-### 9. Registering New Upstream Repositories (`add-repo`)
+### 10. Registering New Upstream Repositories (`add-repo`)
 
 Discovered a new GitHub repository with Antigravity skills? Register it into the hub with one command:
 
@@ -289,7 +392,7 @@ ag-hub add-repo https://github.com/example-org/genai-skills.git custom-genai --b
 
 ---
 
-### 10. Alternative Symlink Mode (`--symlink` / `-s`)
+### 11. Alternative Symlink Mode (`--symlink` / `-s`)
 
 If your workflow requires direct file-system symlinks in `.agents/skills/` instead of `.agents/skills.json`:
 
@@ -297,13 +400,16 @@ If your workflow requires direct file-system symlinks in `.agents/skills/` inste
 # Symlink individual skills
 ag-hub enable --symlink bigquery-sql
 
+# Symlink an entire cluster
+ag-hub enable --symlink -c data-engineer
+
 # Symlink an entire group
 ag-hub enable --symlink -g agents-cli
 ```
 
 ---
 
-### 11. Authoring New Custom Skills in the Hub
+### 12. Authoring New Custom Skills, Plugins & Clusters in the Hub
 
 ```bash
 # Scaffold a new custom skill boilerplate in skills-hub/internal/skills/<name>
@@ -311,4 +417,8 @@ ag-hub create skill my-specialized-tool
 
 # Scaffold a new plugin in skills-hub/internal/plugins/<name>
 ag-hub create plugin my-specialized-plugin
+
+# Scaffold a new cluster definition in skills-hub/clusters/<name>.json
+ag-hub create cluster my-project-team
 ```
+

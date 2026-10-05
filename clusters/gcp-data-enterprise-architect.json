@@ -1,0 +1,30 @@
+{
+  "name": "gcp-data-enterprise-architect",
+  "description": "Google Cloud Data Enterprise Architect: multi-product lakehouse design, data mesh, governance, lineage, FinOps, security, and migration",
+  "skills": [
+    "google-cloud-solution-architecture",
+    "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+    "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+    "google-cloud-recipe-foundation-builder",
+    "google-cloud-waf-cost-optimization",
+    "google-cloud-waf-security",
+    "google-cloud-waf-reliability",
+    "bigquery-optimization",
+    "bigquery-slot-cost-optimizer",
+    "datalineage-summary",
+    "datalineage-bigquery-asset-impact-analysis",
+    "federate-lakehouse-catalog",
+    "discovering-gcp-data-assets",
+    "google-cloud-storage-bucket-architect",
+    "iam-helper-for-policy-management",
+    "iam-helper-for-privileged-access-management",
+    "gcp-data-pipelines",
+    "gcp-dataflow",
+    "dbt-sf-to-bq-translator",
+    "gcs-security-assessment",
+    "accidental-data-loss-prevention"
+  ],
+  "plugins": [
+    "googlecloud-data"
+  ]
+}

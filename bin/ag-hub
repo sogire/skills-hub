@@ -30,13 +30,150 @@ COLOR_RED = "\033[31m"
 COLOR_DIM = "\033[2m"
 COLOR_MAGENTA = "\033[35m"
 
-def find_workspace_root() -> Path:
-    """Finds the workspace root by walking up from cwd looking for .git or .agents."""
+def find_workspace_root(find_root: bool = False) -> Path:
+    """Finds the workspace root.
+    By default, returns the exact directory where ag-hub was executed (Path.cwd().resolve()).
+    If find_root is True, searches parent directories for .git or .agents.
+    """
     curr = Path.cwd().resolve()
-    for p in [curr] + list(curr.parents):
-        if (p / ".git").exists() or (p / ".agents").exists():
-            return p
+    if find_root:
+        for p in [curr] + list(curr.parents):
+            if (p / ".git").exists() or (p / ".agents").exists():
+                return p
     return curr
+
+def _simple_yaml_parse(content: str) -> dict:
+    """Zero-dependency parser for standard cluster YAML files (key-values and lists)."""
+    result = {}
+    current_list_key = None
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("- ") and current_list_key:
+            item = line[2:].strip().strip("\"'")
+            result.setdefault(current_list_key, []).append(item)
+            continue
+        if ":" in line:
+            key, val = line.split(":", 1)
+            key = key.strip()
+            val = val.strip().strip("\"'")
+            if not val:
+                current_list_key = key
+                result[key] = []
+            else:
+                current_list_key = None
+                result[key] = val
+    return result
+
+def _load_cluster_file(file_path: Path) -> dict:
+    """Loads a cluster definition from a JSON or YAML file."""
+    content = file_path.read_text(encoding="utf-8")
+    if file_path.suffix.lower() == ".json":
+        return json.loads(content)
+    elif file_path.suffix.lower() in (".yaml", ".yml"):
+        try:
+            import yaml
+            return yaml.safe_load(content) or {}
+        except ImportError:
+            return _simple_yaml_parse(content)
+    return {}
+
+class ClusterManager:
+    def __init__(self, hub_dir: Path = DEFAULT_HUB_DIR, workspace_root: Path | None = None):
+        self.hub_dir = hub_dir
+        self.workspace_root = workspace_root or find_workspace_root()
+
+    def get_cluster_dirs(self) -> list[Path]:
+        """Returns search paths for cluster definitions in priority order."""
+        dirs = [
+            self.hub_dir / "clusters",
+            self.hub_dir / "internal" / "clusters",
+            self.workspace_root / ".agents" / "clusters",
+        ]
+        return dirs
+
+    def load_clusters(self) -> dict[str, dict]:
+        """Discovers and parses all cluster definitions."""
+        clusters = {}
+
+        # 1. Check single catalog files
+        catalog_files = [
+            self.hub_dir / "clusters.json",
+            self.hub_dir / "clusters.yaml",
+            self.hub_dir / "clusters.yml",
+            self.workspace_root / ".agents" / "clusters.json",
+        ]
+        for cat_file in catalog_files:
+            if cat_file.exists():
+                try:
+                    data = _load_cluster_file(cat_file)
+                    raw_clusters = data.get("clusters", data) if isinstance(data, dict) else {}
+                    for name, info in raw_clusters.items():
+                        if isinstance(info, dict):
+                            clusters[name] = {
+                                "name": name,
+                                "description": info.get("description", ""),
+                                "skills": list(info.get("skills", [])),
+                                "plugins": list(info.get("plugins", [])),
+                                "source": str(cat_file)
+                            }
+                except Exception:
+                    pass
+
+        # 2. Check cluster directories for individual definition files
+        for c_dir in self.get_cluster_dirs():
+            if c_dir.exists() and c_dir.is_dir():
+                for item in sorted(c_dir.iterdir()):
+                    if item.is_file() and item.suffix.lower() in (".json", ".yaml", ".yml"):
+                        try:
+                            data = _load_cluster_file(item)
+                            if not isinstance(data, dict):
+                                continue
+                            if "clusters" in data and isinstance(data["clusters"], dict):
+                                for c_name, c_info in data["clusters"].items():
+                                    clusters[c_name] = {
+                                        "name": c_name,
+                                        "description": c_info.get("description", ""),
+                                        "skills": list(c_info.get("skills", [])),
+                                        "plugins": list(c_info.get("plugins", [])),
+                                        "source": str(item)
+                                    }
+                            else:
+                                c_name = data.get("name", item.stem)
+                                clusters[c_name] = {
+                                    "name": c_name,
+                                    "description": data.get("description", ""),
+                                    "skills": list(data.get("skills", [])),
+                                    "plugins": list(data.get("plugins", [])),
+                                    "source": str(item)
+                                }
+                        except Exception:
+                            pass
+
+        return clusters
+
+    def get_cluster(self, name: str) -> dict | None:
+        clusters = self.load_clusters()
+        return clusters.get(name)
+
+    def get_cluster_status(self, cluster_info: dict, active_skills: dict, active_plugins: dict) -> tuple[int, int, str]:
+        """Returns (active_count, total_count, status_label)"""
+        skills = cluster_info.get("skills", [])
+        plugins = cluster_info.get("plugins", [])
+        total = len(skills) + len(plugins)
+        if total == 0:
+            return 0, 0, "EMPTY"
+
+        active = sum(1 for s in skills if s in active_skills) + sum(1 for p in plugins if p in active_plugins)
+        if active == total:
+            status = "ACTIVE"
+        elif active > 0:
+            status = "PARTIAL"
+        else:
+            status = "INACTIVE"
+        return active, total, status
+
 
 def get_skill_description(skill_dir: Path) -> str:
     """Extracts description from SKILL.md YAML frontmatter."""
@@ -285,11 +422,26 @@ class HubManager:
         """Detects active customizations in machine-wide global scope (~/.gemini/config)."""
         return self.get_active(is_global=True)
 
-    def enable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, as_symlink: bool = False, is_global: bool = False):
+    def enable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, clusters: list[str] | None = None, as_symlink: bool = False, is_global: bool = False):
         all_skills, all_plugins = self.get_available()
         target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
         target_names = list(names or [])
+
+        if clusters:
+            cm = ClusterManager(hub_dir=self.hub_dir, workspace_root=workspace_root)
+            all_clusters = cm.load_clusters()
+            for c_name in clusters:
+                if c_name in all_clusters:
+                    c_info = all_clusters[c_name]
+                    c_skills = c_info.get("skills", [])
+                    c_plugins = c_info.get("plugins", [])
+                    target_names.extend(c_skills)
+                    target_names.extend(c_plugins)
+                    print(f"{COLOR_CYAN}Applying cluster '{COLOR_BOLD}{c_name}{COLOR_RESET}{COLOR_CYAN}' ({len(c_skills)} skills, {len(c_plugins)} plugins)...{COLOR_RESET}")
+                else:
+                    print(f"{COLOR_RED}Unknown cluster:{COLOR_RESET} '{c_name}'. Run 'ag-hub cluster list' to view available clusters.")
+
         if group:
             g_lower = group.lower().strip("/")
             matching = [
@@ -305,7 +457,7 @@ class HubManager:
                 print(f"{COLOR_YELLOW}No skills found in group '{group}'.{COLOR_RESET}")
 
         if not target_names:
-            print("No skills or plugins specified to enable.")
+            print("No skills, plugins, or clusters specified to enable.")
             return
 
         scope_tag = f" {COLOR_MAGENTA}[GLOBAL]{COLOR_RESET}" if is_global else ""
@@ -347,12 +499,26 @@ class HubManager:
             else:
                 print(f"{COLOR_RED}✗ Unknown skill or plugin:{COLOR_RESET} '{name}'")
 
-    def disable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, disable_all: bool = False, is_global: bool = False):
+    def disable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, clusters: list[str] | None = None, disable_all: bool = False, is_global: bool = False):
         target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
         target_names = list(names or [])
         scope_str = "global scope (~/.gemini/config)" if is_global else "this workspace"
         manifest_rel = "~/.gemini/config/" if is_global else ".agents/"
+
+        if clusters:
+            cm = ClusterManager(hub_dir=self.hub_dir, workspace_root=workspace_root)
+            all_clusters = cm.load_clusters()
+            for c_name in clusters:
+                if c_name in all_clusters:
+                    c_info = all_clusters[c_name]
+                    c_skills = c_info.get("skills", [])
+                    c_plugins = c_info.get("plugins", [])
+                    target_names.extend(c_skills)
+                    target_names.extend(c_plugins)
+                    print(f"{COLOR_CYAN}Deactivating cluster '{COLOR_BOLD}{c_name}{COLOR_RESET}{COLOR_CYAN}'...{COLOR_RESET}")
+                else:
+                    print(f"{COLOR_RED}Unknown cluster:{COLOR_RESET} '{c_name}'.")
 
         if disable_all:
             active_skills, active_plugins = self.get_active(workspace_root, is_global=is_global)
@@ -572,6 +738,23 @@ description: Describe what {name} does and when the agent should activate it.
             }, indent=2) + "\n", encoding="utf-8")
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new plugin '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
 
+        elif item_type == "cluster":
+            target_dir = self.hub_dir / "clusters"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target = target_dir / f"{name}.json"
+            if target.exists():
+                print(f"{COLOR_RED}Error:{COLOR_RESET} Cluster '{name}' already exists at {target}")
+                return
+            boilerplate = {
+                "name": name,
+                "description": f"Curated skill cluster for {name}",
+                "skills": [],
+                "plugins": []
+            }
+            target.write_text(json.dumps(boilerplate, indent=2) + "\n", encoding="utf-8")
+            print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new cluster '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
+            print(f"Edit {target} to add skill names to the cluster.")
+
     def add_repo(self, url: str, name: str | None = None, branch: str = "main"):
         """Registers and clones a new GitHub skills repository as a git submodule in external/."""
         if not name:
@@ -689,7 +872,10 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
             if s in glob_skills:
                 groups[top]["active_glob"] += 1
 
-        print(f"{COLOR_BOLD}Catalog Summary: {len(all_skills)} skills, {len(all_plugins)} plugins across {len(groups)} sources:{COLOR_RESET}")
+        cm = ClusterManager(hub_dir=manager.hub_dir, workspace_root=workspace_root)
+        clusters = cm.load_clusters()
+        cluster_str = f", {len(clusters)} clusters" if clusters else ""
+        print(f"{COLOR_BOLD}Catalog Summary: {len(all_skills)} skills, {len(all_plugins)} plugins across {len(groups)} sources{cluster_str}:{COLOR_RESET}")
         for g, counts in sorted(groups.items()):
             details = []
             if counts["active_ws"]:
@@ -723,6 +909,8 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
                 print()
 
         print(f"{COLOR_DIM}Tips:{COLOR_RESET}")
+        print(f"  List clusters:      {COLOR_BOLD}ag-hub cluster list{COLOR_RESET} (or {COLOR_BOLD}ag-hub clusters{COLOR_RESET})")
+        print(f"  Enable cluster:     {COLOR_BOLD}ag-hub enable -c <cluster>{COLOR_RESET}")
         print(f"  Search skills:      {COLOR_BOLD}ag-hub list <query>{COLOR_RESET} (e.g. 'ag-hub list bigquery', 'ag-hub list alphafold')")
         print(f"  Filter by group:    {COLOR_BOLD}ag-hub list -g deepmind-science{COLOR_RESET} or {COLOR_BOLD}ag-hub list -g cloud{COLOR_RESET}")
         print(f"  View all 200+:      {COLOR_BOLD}ag-hub list --all{COLOR_RESET}")
@@ -859,7 +1047,114 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
             for p, mode in sorted(glob_plugins.items()):
                 grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
                 print(f"  {COLOR_MAGENTA}🌐{COLOR_RESET} {p:<32} {COLOR_DIM}(via global {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+
+    cm = ClusterManager(hub_dir=manager.hub_dir, workspace_root=workspace_root)
+    clusters = cm.load_clusters()
+    if clusters:
+        matched_active = []
+        matched_partial = []
+        check_skills = glob_skills if is_global else ws_skills
+        check_plugins = glob_plugins if is_global else ws_plugins
+        for c_name, c_info in sorted(clusters.items()):
+            act, tot, status = cm.get_cluster_status(c_info, check_skills, check_plugins)
+            if status == "ACTIVE":
+                matched_active.append((c_name, act, tot))
+            elif status == "PARTIAL":
+                matched_partial.append((c_name, act, tot))
+
+        if matched_active or matched_partial:
+            scope_desc = "Global" if is_global else "Workspace"
+            print(f"\n{COLOR_CYAN}{COLOR_BOLD}Matched Clusters ({scope_desc}):{COLOR_RESET}")
+            for c_name, act, tot in matched_active:
+                print(f"  {COLOR_GREEN}✓{COLOR_RESET} {COLOR_BOLD}{c_name:<24}{COLOR_RESET} ({act}/{tot} active)")
+            for c_name, act, tot in matched_partial:
+                print(f"  {COLOR_YELLOW}◐{COLOR_RESET} {c_name:<24} ({act}/{tot} active)")
     print()
+
+
+def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = "list", name: str | None = None, is_global: bool = False):
+    cm = ClusterManager(hub_dir=manager.hub_dir, workspace_root=workspace_root)
+    clusters = cm.load_clusters()
+    active_skills, active_plugins = manager.get_active(workspace_root=workspace_root, is_global=is_global)
+
+    if action in ("list", "ls") or action is None:
+        print(f"\n{COLOR_BOLD}Antigravity Hub Clusters:{COLOR_RESET} {manager.hub_dir}")
+        print(f"{COLOR_BOLD}Target Scope:{COLOR_RESET} {'GLOBAL (~/.gemini/config)' if is_global else f'WORKSPACE ({workspace_root})'}\n")
+
+        if not clusters:
+            print(f"{COLOR_YELLOW}No clusters found.{COLOR_RESET}")
+            print(f"Create a cluster using: {COLOR_BOLD}ag-hub create cluster <name>{COLOR_RESET} or add JSON files to {manager.hub_dir}/clusters/\n")
+            return
+
+        for c_name, c_info in sorted(clusters.items()):
+            act, tot, status = cm.get_cluster_status(c_info, active_skills, active_plugins)
+            if status == "ACTIVE":
+                badge = f"{COLOR_GREEN}[ACTIVE ({act}/{tot})]{COLOR_RESET}"
+            elif status == "PARTIAL":
+                badge = f"{COLOR_YELLOW}[PARTIAL ({act}/{tot})]{COLOR_RESET}"
+            else:
+                badge = f"{COLOR_DIM}[INACTIVE (0/{tot})]{COLOR_RESET}"
+
+            desc = f" - {COLOR_DIM}{c_info['description']}{COLOR_RESET}" if c_info.get('description') else ""
+            print(f"  {badge:<28} {COLOR_BOLD}{c_name:<24}{COLOR_RESET}{desc}")
+
+        print(f"\n{COLOR_DIM}Tips:{COLOR_RESET}")
+        print(f"  Inspect a cluster:  {COLOR_BOLD}ag-hub cluster info <name>{COLOR_RESET}")
+        print(f"  Enable a cluster:   {COLOR_BOLD}ag-hub enable -c <name>{COLOR_RESET} (or {COLOR_BOLD}ag-hub cluster enable <name>{COLOR_RESET})")
+        print(f"  Disable a cluster:  {COLOR_BOLD}ag-hub disable -c <name>{COLOR_RESET}")
+        print(f"  Create new cluster: {COLOR_BOLD}ag-hub create cluster <name>{COLOR_RESET}\n")
+
+    elif action in ("info", "show", "describe"):
+        if not name:
+            print(f"{COLOR_RED}Please specify a cluster name.{COLOR_RESET} Example: ag-hub cluster info data-engineer")
+            return
+        if name not in clusters:
+            print(f"{COLOR_RED}Unknown cluster:{COLOR_RESET} '{name}'. Available: {', '.join(sorted(clusters.keys()))}")
+            return
+
+        c_info = clusters[name]
+        act, tot, status = cm.get_cluster_status(c_info, active_skills, active_plugins)
+        all_skills, all_plugins = manager.get_available()
+
+        print(f"\n{COLOR_CYAN}{COLOR_BOLD}Cluster:{COLOR_RESET}     {COLOR_BOLD}{name}{COLOR_RESET}")
+        print(f"{COLOR_BOLD}Description:{COLOR_RESET} {c_info.get('description', 'N/A')}")
+        print(f"{COLOR_BOLD}Source File:{COLOR_RESET} {c_info.get('source', 'N/A')}")
+        print(f"{COLOR_BOLD}Status:{COLOR_RESET}      {act}/{tot} active in {'GLOBAL' if is_global else 'WORKSPACE'}")
+
+        skills = c_info.get("skills", [])
+        if skills:
+            print(f"\n{COLOR_BOLD}Included Skills ({len(skills)}):{COLOR_RESET}")
+            for s in skills:
+                is_act = s in active_skills
+                stat_badge = f"{COLOR_GREEN}✓ active{COLOR_RESET}" if is_act else f"{COLOR_DIM}○ inactive{COLOR_RESET}"
+                info = all_skills.get(s, {})
+                grp = f" [{info.get('group', 'unknown')}]" if info else f" {COLOR_RED}[NOT FOUND IN CATALOG]{COLOR_RESET}"
+                desc = f" - {COLOR_DIM}{info.get('desc', '')}{COLOR_RESET}" if info.get('desc') else ""
+                print(f"  {stat_badge:<20} {COLOR_BOLD}{s:<36}{COLOR_RESET}{grp}{desc}")
+
+        plugins = c_info.get("plugins", [])
+        if plugins:
+            print(f"\n{COLOR_BOLD}Included Plugins ({len(plugins)}):{COLOR_RESET}")
+            for p in plugins:
+                is_act = p in active_plugins
+                stat_badge = f"{COLOR_GREEN}✓ active{COLOR_RESET}" if is_act else f"{COLOR_DIM}○ inactive{COLOR_RESET}"
+                info = all_plugins.get(p, {})
+                grp = f" [{info.get('group', 'unknown')}]" if info else f" {COLOR_RED}[NOT FOUND IN CATALOG]{COLOR_RESET}"
+                desc = f" - {COLOR_DIM}{info.get('desc', '')}{COLOR_RESET}" if info.get('desc') else ""
+                print(f"  {stat_badge:<20} {COLOR_BOLD}{p:<36}{COLOR_RESET}{grp}{desc}")
+        print()
+
+    elif action == "enable":
+        if not name:
+            print(f"{COLOR_RED}Please specify a cluster name to enable.{COLOR_RESET}")
+            return
+        manager.enable(workspace_root=workspace_root, clusters=[name], is_global=is_global)
+
+    elif action == "disable":
+        if not name:
+            print(f"{COLOR_RED}Please specify a cluster name to disable.{COLOR_RESET}")
+            return
+        manager.disable(workspace_root=workspace_root, clusters=[name], is_global=is_global)
 
 
 def cmd_interactive(manager: HubManager, workspace_root: Path):
@@ -933,41 +1228,51 @@ def main():
         description="Zero-copy Antigravity Customizations Manager"
     )
     parser.add_argument("--hub", type=Path, default=DEFAULT_HUB_DIR, help=f"Path to skills hub (default: {DEFAULT_HUB_DIR})")
-    parser.add_argument("--workspace", "-w", type=Path, default=None, help="Target workspace root (default: current workspace)")
+    parser.add_argument("--workspace", "-w", type=Path, default=None, help="Target workspace root (default: current directory)")
+    parser.add_argument("--find-root", "-r", action="store_true", help="Search parent directories for .git or .agents root instead of using current directory")
     parser.add_argument("--global", "-G", dest="is_global", action="store_true", help="Target machine-wide global configuration (~/.gemini/config) instead of local workspace")
+
+    common_sub = argparse.ArgumentParser(add_help=False)
+    common_sub.add_argument("--workspace", "-w", type=Path, default=argparse.SUPPRESS, help="Target workspace root (default: current directory)")
+    common_sub.add_argument("--find-root", "-r", action="store_true", default=argparse.SUPPRESS, help="Search parent directories for .git or .agents root")
+    common_sub.add_argument("--global", "-G", dest="is_global", action="store_true", default=argparse.SUPPRESS, help="Target machine-wide global configuration (~/.gemini/config)")
 
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
     # list
-    p_list = subparsers.add_parser("list", aliases=["ls"], help="List available skills and plugins")
+    p_list = subparsers.add_parser("list", aliases=["ls"], parents=[common_sub], help="List available skills and plugins")
     p_list.add_argument("query", nargs="?", default=None, help="Optional search query")
     p_list.add_argument("--group", "-g", default=None, help="Filter by group/repository name")
     p_list.add_argument("--all", "-a", action="store_true", help="Print all skills in the catalog")
 
     # status
-    p_status = subparsers.add_parser("status", help="Show active customizations in current workspace or global scope")
-    p_status.add_argument("--global", "-G", dest="is_global", action="store_true", help="Show machine-wide global customizations (~/.gemini/config)")
+    p_status = subparsers.add_parser("status", parents=[common_sub], help="Show active customizations in current workspace or global scope")
+
+    # cluster
+    p_cluster = subparsers.add_parser("cluster", aliases=["clusters"], parents=[common_sub], help="Manage predefined skill clusters")
+    p_cluster.add_argument("cluster_action", choices=["list", "ls", "info", "show", "describe", "enable", "disable"], nargs="?", default="list", help="Cluster action (default: list)")
+    p_cluster.add_argument("cluster_name", nargs="?", default=None, help="Cluster name for info, enable, or disable")
 
     # enable
-    p_enable = subparsers.add_parser("enable", aliases=["add"], help="Enable skills or plugins in workspace or globally")
+    p_enable = subparsers.add_parser("enable", aliases=["add"], parents=[common_sub], help="Enable skills, plugins, or clusters in workspace or globally")
     p_enable.add_argument("names", nargs="*", default=[], help="Names of skills or plugins to enable")
+    p_enable.add_argument("--cluster", "-c", action="append", default=[], help="Enable all skills in specified cluster (can be repeated)")
     p_enable.add_argument("--group", "-g", default=None, help="Enable all skills from a specific group/repository (e.g. agents-cli, deepmind-science)")
     p_enable.add_argument("--symlink", "-s", action="store_true", help="Use symlinks instead of .agents/skills.json manifest")
-    p_enable.add_argument("--global", "-G", dest="is_global", action="store_true", help="Enable in machine-wide global scope (~/.gemini/config)")
 
     # disable
-    p_disable = subparsers.add_parser("disable", aliases=["rm"], help="Disable skills or plugins in workspace or globally")
+    p_disable = subparsers.add_parser("disable", aliases=["rm"], parents=[common_sub], help="Disable skills, plugins, or clusters in workspace or globally")
     p_disable.add_argument("names", nargs="*", default=[], help="Names of skills or plugins to disable")
+    p_disable.add_argument("--cluster", "-c", action="append", default=[], help="Disable all skills in specified cluster (can be repeated)")
     p_disable.add_argument("--group", "-g", default=None, help="Disable all skills from a specific group/repository")
     p_disable.add_argument("--all", "-a", action="store_true", help="Disable all active customizations in target scope")
-    p_disable.add_argument("--global", "-G", dest="is_global", action="store_true", help="Disable in machine-wide global scope (~/.gemini/config)")
 
     # info / show / describe
     p_info = subparsers.add_parser("info", aliases=["show", "describe"], help="Display documentation and instructions for a skill or plugin")
     p_info.add_argument("name", help="Name of the skill or plugin")
 
     # select / interactive
-    p_select = subparsers.add_parser("select", aliases=["interactive", "-i"], help="Interactive checklist to select active skills")
+    p_select = subparsers.add_parser("select", aliases=["interactive", "-i"], parents=[common_sub], help="Interactive checklist to select active skills")
 
     # update
     p_update = subparsers.add_parser("update", help="Update skills repositories from original GitHub")
@@ -981,26 +1286,28 @@ def main():
     p_add_repo.add_argument("--branch", "-b", default="main", help="Branch to track (default: main)")
 
     # create
-    p_create = subparsers.add_parser("create", help="Create a new skill or plugin in the hub")
-    p_create.add_argument("type", choices=["skill", "plugin"], help="Type to create")
-    p_create.add_argument("name", help="Name of the skill or plugin")
+    p_create = subparsers.add_parser("create", help="Create a new skill, plugin, or cluster template in the hub")
+    p_create.add_argument("type", choices=["skill", "plugin", "cluster"], help="Type to create")
+    p_create.add_argument("name", help="Name of the skill, plugin, or cluster")
 
     args = parser.parse_args()
 
     manager = HubManager(hub_dir=args.hub)
-    workspace_root = args.workspace.resolve() if args.workspace else find_workspace_root()
+    workspace_root = args.workspace.resolve() if args.workspace else find_workspace_root(find_root=getattr(args, "find_root", False))
     is_global = getattr(args, "is_global", False)
 
     if args.command in ("list", "ls") or args.command is None:
         cmd_list(manager, workspace_root, query=getattr(args, "query", None), group_filter=getattr(args, "group", None), show_all=getattr(args, "all", False))
     elif args.command == "status":
         cmd_status(manager, workspace_root, is_global=is_global)
+    elif args.command in ("cluster", "clusters"):
+        cmd_cluster(manager, workspace_root, action=args.cluster_action, name=args.cluster_name, is_global=is_global)
     elif args.command in ("info", "show", "describe"):
         manager.info(args.name)
     elif args.command in ("enable", "add"):
-        manager.enable(workspace_root, names=args.names, group=args.group, as_symlink=args.symlink, is_global=is_global)
+        manager.enable(workspace_root, names=args.names, clusters=args.cluster, group=args.group, as_symlink=args.symlink, is_global=is_global)
     elif args.command in ("disable", "rm"):
-        manager.disable(workspace_root, names=args.names, group=args.group, disable_all=args.all, is_global=is_global)
+        manager.disable(workspace_root, names=args.names, clusters=args.cluster, group=args.group, disable_all=args.all, is_global=is_global)
     elif args.command in ("select", "interactive", "-i"):
         cmd_interactive(manager, workspace_root)
     elif args.command == "update":
