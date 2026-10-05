@@ -1,6 +1,6 @@
 # Role Blueprint: Google Cloud Data Enterprise Architect
 
-This document serves as the architectural reference and companion guide to the [`clusters/gcp-data-enterprise-architect.json`](file:///home/sergiobermudez/local_projects/skills-hub/clusters/gcp-data-enterprise-architect.json) cluster definition.
+This document serves as the architectural reference and companion guide to the [`clusters/gcp-data-enterprise-architect.json`](./gcp-data-enterprise-architect.json) cluster definition.
 
 ---
 
@@ -82,7 +82,7 @@ flowchart TD
 
 ## 2. Skill Breakdown by Competency
 
-The [`gcp-data-enterprise-architect`](file:///home/sergiobermudez/local_projects/skills-hub/clusters/gcp-data-enterprise-architect.json) cluster bundles **21 skills** and **1 plugin** mapped directly to the core architectural pillars:
+The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) cluster bundles **21 skills** and **1 plugin** mapped directly to the core architectural pillars:
 
 | Competency Domain | Skill / Plugin Identifier | Architectural Rationale | Provenance Source |
 | :--- | :--- | :--- | :--- |

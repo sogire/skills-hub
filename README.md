@@ -63,8 +63,10 @@ skills-hub/
 │       └── skills/                # ADK code, deploy, eval, workflow
 │
 ├── internal/                      # [Proprietary / In-House Customizations]
-│   ├── skills/                    # Standalone local skills (SKILL.md)
+│   ├── hub-tools/                 # Meta-tooling skills (role design, gap authoring)
 │   │   ├── cluster-role-creation/ # Agent skill for designing role clusters & docs
+│   │   └── skills-gaps-creator/   # Agent skill for authoring missing/gap skills
+│   ├── skills/                    # General / Uncategorized fallback skills
 │   │   └── template-skill/
 │   ├── rules/                     # Shared AGENTS.md rule presets
 │   │   └── general-standards.md
@@ -104,8 +106,11 @@ ag-hub enable -g googlecloud-data
 # Enable all DeepMind science skills (AlphaFold, PubMed, BLAST, etc.)
 ag-hub enable -g deepmind-science
 
-# Enable all internal proprietary skills
+# Enable all internal proprietary skills across all typologies
 ag-hub enable -g internal
+
+# Enable a specific internal typology group (e.g. hub meta-tooling)
+ag-hub enable -g hub-tools
 
 # Enable all general Google Cloud base skills
 ag-hub enable -g googlecloud-base
@@ -208,13 +213,15 @@ Example definition (`clusters/data-engineer.json`):
 ```
 
 #### Companion Role Documentation (`clusters/<name>.md`)
-Clusters can be accompanied by human-readable markdown guides (e.g. [`clusters/gcp-data-enterprise-architect.md`](file:///home/sergiobermudez/local_projects/skills-hub/clusters/gcp-data-enterprise-architect.md)) documenting:
+Clusters can be accompanied by human-readable markdown guides (e.g. [`clusters/gcp-data-enterprise-architect.md`](clusters/gcp-data-enterprise-architect.md)) documenting:
 1. **Role Definition & Core Architectural Pillars** (with Mermaid architecture topology).
 2. **Skill Breakdown by Competency** (matrix of skills, architectural rationale, and provenance).
-3. **Missing Skills Analysis (Catalog Gaps)** (roadmaps for authoring missing skills in `internal/skills/`).
+3. **Missing Skills Analysis (Catalog Gaps)** (roadmaps for authoring missing skills in `internal/<typology>/`).
 
 > [!TIP]
-> **Need help creating clusters?** Enable the internal skill [`cluster-role-creation`](file:///home/sergiobermudez/local_projects/skills-hub/internal/skills/cluster-role-creation/SKILL.md) (`ag-hub enable cluster-role-creation`) to have an agent interview you, explore the catalog, identify missing skills, and automatically generate both the JSON manifest and Markdown blueprint.
+> **Need help creating clusters?** Enable the internal skill [`cluster-role-creation`](internal/hub-tools/cluster-role-creation/SKILL.md) (`ag-hub enable cluster-role-creation`) to have an agent interview you, explore the catalog, identify missing skills, and automatically generate both the JSON manifest and Markdown blueprint.
+>
+> **Need to build a missing skill or resolve a role gap?** Enable the internal skill [`skills-gaps-creator`](internal/hub-tools/skills-gaps-creator/SKILL.md) (`ag-hub enable skills-gaps-creator`) as an independent, standalone task anytime. An agent will grill you on boundaries, ingest documentation links (web URLs or local files), and author a complete, verified skill under `internal/<typology>/<name>/` (e.g. `internal/data-platform/<name>/`).
 
 ---
 
@@ -412,7 +419,10 @@ ag-hub enable --symlink -g agents-cli
 ### 12. Authoring New Custom Skills, Plugins & Clusters in the Hub
 
 ```bash
-# Scaffold a new custom skill boilerplate in skills-hub/internal/skills/<name>
+# Scaffold a new skill in a specific typology group (e.g. skills-hub/internal/hub-tools/<name> or data-platform/<name>)
+ag-hub create skill my-specialized-tool -g data-platform
+
+# Scaffold in general skills-hub/internal/skills/<name> (default)
 ag-hub create skill my-specialized-tool
 
 # Scaffold a new plugin in skills-hub/internal/plugins/<name>

@@ -242,19 +242,69 @@ class HubManager:
         skills = {}    # name -> {path, parent, desc, group}
         plugins = {}   # name -> {path, parent, desc, group}
 
-        # 1. Internal skills in internal/skills/ (fallback: skills/)
+        # 1. Internal skills in internal/skills/ and fallback skills/
         for s_dir in [self.hub_dir / "internal" / "skills", self.hub_dir / "skills"]:
             if s_dir.exists():
                 for d in sorted(s_dir.iterdir()):
-                    if d.is_dir() and (d / "SKILL.md").exists() and d.name not in skills:
-                        skills[d.name] = {
-                            "path": d,
-                            "parent": d.parent,
-                            "desc": get_skill_description(d),
-                            "group": "internal/skills"
-                        }
+                    if d.is_dir():
+                        if (d / "SKILL.md").exists() and d.name not in skills:
+                            skills[d.name] = {
+                                "path": d,
+                                "parent": d.parent,
+                                "desc": get_skill_description(d),
+                                "group": "internal/skills"
+                            }
+                        else:
+                            # Subcategorized under internal/skills/<category>/<skill>
+                            for sub in sorted(d.iterdir()):
+                                if sub.is_dir() and (sub / "SKILL.md").exists() and sub.name not in skills:
+                                    skills[sub.name] = {
+                                        "path": sub,
+                                        "parent": sub.parent,
+                                        "desc": get_skill_description(sub),
+                                        "group": f"internal/{d.name}"
+                                    }
 
-        # 2. Internal plugins in internal/plugins/ (fallback: plugins/)
+        # 2. Internal typology directories in internal/ (e.g. internal/hub-tools/)
+        internal_dir = self.hub_dir / "internal"
+        if internal_dir.exists():
+            reserved_internal = {"rules", "plugins", "clusters", "skills", ".git"}
+            for grp_dir in sorted(internal_dir.iterdir()):
+                if grp_dir.is_dir() and grp_dir.name not in reserved_internal and not grp_dir.name.startswith("."):
+                    grp_name = grp_dir.name
+                    # Check if there is a skills/ subfolder inside internal/<grp>/
+                    sub_skills_dir = grp_dir / "skills"
+                    if sub_skills_dir.exists():
+                        for item in sorted(sub_skills_dir.iterdir()):
+                            if item.is_dir() and (item / "SKILL.md").exists() and item.name not in skills:
+                                skills[item.name] = {
+                                    "path": item,
+                                    "parent": item.parent,
+                                    "desc": get_skill_description(item),
+                                    "group": f"internal/{grp_name}"
+                                }
+                    # Check direct skills inside internal/<grp>/<skill>/SKILL.md
+                    for item in sorted(grp_dir.iterdir()):
+                        if item.is_dir() and item.name != "skills" and (item / "SKILL.md").exists() and item.name not in skills:
+                            skills[item.name] = {
+                                "path": item,
+                                "parent": item.parent,
+                                "desc": get_skill_description(item),
+                                "group": f"internal/{grp_name}"
+                            }
+                    # Check if there is a plugins/ subfolder inside internal/<grp>/
+                    sub_plugins_dir = grp_dir / "plugins"
+                    if sub_plugins_dir.exists():
+                        for item in sorted(sub_plugins_dir.iterdir()):
+                            if item.is_dir() and (item / "plugin.json").exists() and item.name not in plugins:
+                                plugins[item.name] = {
+                                    "path": item,
+                                    "parent": item.parent,
+                                    "desc": get_plugin_description(item),
+                                    "group": f"internal/{grp_name}"
+                                }
+
+        # 3. Internal plugins in internal/plugins/ (fallback: plugins/)
         for p_dir in [self.hub_dir / "internal" / "plugins", self.hub_dir / "plugins"]:
             if p_dir.exists():
                 for d in sorted(p_dir.iterdir()):
@@ -701,9 +751,15 @@ class HubManager:
 
         print()
 
-    def scaffold(self, item_type: str, name: str):
+    def scaffold(self, item_type: str, name: str, group: str | None = None):
         if item_type == "skill":
-            target = self.hub_dir / "internal" / "skills" / name
+            if group:
+                clean_group = group.strip("/")
+                if clean_group.startswith("internal/"):
+                    clean_group = clean_group[len("internal/"):]
+                target = self.hub_dir / "internal" / clean_group / name
+            else:
+                target = self.hub_dir / "internal" / "skills" / name
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Skill '{name}' already exists at {target}")
                 return
@@ -1289,6 +1345,7 @@ def main():
     p_create = subparsers.add_parser("create", help="Create a new skill, plugin, or cluster template in the hub")
     p_create.add_argument("type", choices=["skill", "plugin", "cluster"], help="Type to create")
     p_create.add_argument("name", help="Name of the skill, plugin, or cluster")
+    p_create.add_argument("--group", "-g", default=None, help="Typology group for internal skills (e.g. hub-tools, data-platform)")
 
     args = parser.parse_args()
 
@@ -1315,7 +1372,7 @@ def main():
     elif args.command == "add-repo":
         manager.add_repo(args.url, name=args.name, branch=args.branch)
     elif args.command == "create":
-        manager.scaffold(args.type, args.name)
+        manager.scaffold(args.type, args.name, group=getattr(args, "group", None))
     else:
         parser.print_help()
 
