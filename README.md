@@ -2,6 +2,10 @@
 
 A centralized, zero-copy repository for maintaining, developing, version-controlling, and distributing Antigravity skills, official Google skill suites, and plugins across teams.
 
+> [!TIP]
+> **Looking for the complete list of available skills, groups, and clusters?**
+> Browse the full catalog in [**`CURRENT_SKILLS.md`**](CURRENT_SKILLS.md), featuring detailed descriptions, skill counts, and role blueprints for all 230+ skills across 6 domains.
+
 ---
 
 ## Quick Start & Installation
@@ -25,22 +29,6 @@ cd skills-hub
 
 ---
 
-## Included Skill Repositories
-
-The hub is organized into two primary domains: **`external/`** for read-only upstream Git submodules tracking GitHub releases, and **`internal/`** for your team's proprietary custom skills, rules, and plugins:
-
-| Domain / Folder | Upstream / Source | Description | Skills Count |
-| :--- | :--- | :--- | :--- |
-| [`external/googlecloud-data/`](external/googlecloud-data) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | Data Agent Kit: Dataform, dbt, Spark, Composer, Lakehouse, Graph | 37 skills |
-| [`external/googlecloud-base/`](external/googlecloud-base) | [google/skills](https://github.com/google/skills) | BigQuery, Cloud Build, Vertex AI, AlloyDB, Ads, Analytics | ~144 skills |
-| [`external/deepmind-science/`](external/deepmind-science) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | AlphaFold, PubMed, ChEMBL, UniProt, ClinVar, Foldseek, BLAST | 40 skills |
-| [`external/agents-cli/`](external/agents-cli) | [google/agents-cli](https://github.com/google/agents-cli) | Google Agent Development Kit (ADK), Scaffold, Deploy, Eval | 7 skills |
-| [`internal/skills/`](internal/skills) | Internal Custom Skills | Standalone custom skills authored for your projects | Extensible |
-| [`internal/rules/`](internal/rules) | Internal Custom Rules | Always-on coding standards and architectural policies | Extensible |
-| [`internal/plugins/`](internal/plugins) | Internal Custom Plugins | Multi-skill and rule packages with `plugin.json` | Extensible |
-
----
-
 ## Directory Structure
 
 ```text
@@ -48,7 +36,8 @@ skills-hub/
 ├── .git/                          # Track customizations with Git
 ├── .gitmodules                    # Submodule definitions tracking upstream main branches
 ├── .gitignore                     # Git exclusions
-├── README.md                      # This documentation
+├── README.md                      # Hub setup, architecture, and CLI usage manual
+├── CURRENT_SKILLS.md              # Full inventory of skills, groups, clusters & plugins
 │
 ├── external/                      # [Upstream Git Submodules]
 │   ├── googlecloud-data/          # Submodule: GoogleCloudPlatform/data-agent-kit-plugin
@@ -63,15 +52,16 @@ skills-hub/
 │       └── skills/                # ADK code, deploy, eval, workflow
 │
 ├── internal/                      # [Proprietary / In-House Customizations]
-│   ├── hub-tools/                 # Meta-tooling skills (role design, gap authoring)
-│   │   ├── cluster-role-creation/ # Agent skill for designing role clusters & docs
-│   │   └── skills-gaps-creator/   # Agent skill for authoring missing/gap skills
-│   ├── skills/                    # General / Uncategorized fallback skills
-│   │   └── template-skill/
-│   ├── rules/                     # Shared AGENTS.md rule presets
-│   │   └── general-standards.md
-│   └── plugins/                   # Bundled plugins (plugin.json)
-│       └── template-plugin/
+│   ├── hub-tools/                 # Meta-tooling typology
+│   │   └── skills/                # Tooling skills (cluster-role-creation, skills-gaps-creator, ag-hub-agent)
+│   ├── templates/                 # Reusable starter templates & baseline presets
+│   │   ├── skills/                # template-skill/
+│   │   ├── plugins/               # template-plugin/ (plugin.json)
+│   │   └── rules/                 # general-standards.md
+│   └── <typology>/                # Domain-specific typologies (e.g., data-platform, mlops)
+│       ├── skills/                # Domain-specific skills
+│       ├── plugins/               # Bundled domain plugins
+│       └── rules/                 # Domain architectural rules
 │
 ├── clusters/                      # [Curated Skill Clusters across Internal & External sources]
 │   ├── gcp-data-enterprise-architect.json # Lakehouse, Data Mesh, Governance, Lineage, FinOps, Security
@@ -84,13 +74,38 @@ skills-hub/
     └── ag-hub                     # CLI tool (symlinked to ~/.local/bin/ag-hub)
 ```
 
+The hub organizes tools into two primary domains:
+- **`external/`**: Read-only upstream Git submodules tracking GitHub releases.
+- **`internal/`**: Proprietary, custom skills, plugins, and architectural rules authored by your organization.
+- **`clusters/`**: Curated manifests combining external and internal skills for specific engineering roles.
+
 ---
 
 ## `ag-hub` CLI Guide
 
 You can run `ag-hub` from any project terminal. All changes use **zero file copies** by default through Antigravity workspace manifests (`.agents/skills.json` and `.agents/plugins.json`).
 
-### 1. Enabling Groups (`-g` / `--group`)
+### 1. Activating & Checking Workspace Status
+
+Check active skills and plugins in your workspace, or enable and disable individual items:
+
+```bash
+# Check what skills and plugins are currently active in this workspace
+ag-hub status
+
+# Enable individual skills
+ag-hub enable bigquery-sql dbt-bigquery gcp-spark
+
+# Disable specific skills
+ag-hub disable bigquery-sql
+
+# Reset workspace: disable ALL active skills and plugins at once
+ag-hub disable --all
+```
+
+---
+
+### 2. Enabling & Disabling Groups (`-g` / `--group`)
 
 Instead of enabling skills one by one, you can activate entire suites or categories with `-g` or `--group`:
 
@@ -124,16 +139,6 @@ ag-hub enable -g analytics
 ag-hub enable -g agents-cli dbt-bigquery alphafold_database_fetch_and_analyze
 ```
 
-#### Available Groups Overview
-
-| Group Name | Skills Count | Provenance | Typical Use Cases |
-| :--- | :--- | :--- | :--- |
-| `external/agents-cli` (or `agents-cli`) | 7 | Upstream | Developing, testing, evaluating, and deploying ADK agents |
-| `external/googlecloud-data` (or `googlecloud-data`) | 37 | Upstream | Data engineering, ETL, dbt, Dataform, Dataproc Spark, Airflow |
-| `external/deepmind-science` (or `deepmind-science`) | 40 | Upstream | Bioinformatics, protein structure, literature search, chemistry |
-| `external/googlecloud-base` (or `googlecloud-base`) | ~144 | Upstream | Vertex AI, AlloyDB, BigQuery, IAM, Cloud Build, Ads & Analytics |
-| `internal` (or `internal/skills`) | Extensible | Internal | Proprietary custom skills authored in `skills-hub/internal/skills/` |
-
 #### Disabling Groups
 
 To deactivate an entire group from your workspace:
@@ -149,18 +154,17 @@ ag-hub disable -g googlecloud-data
 ag-hub disable -g internal
 ```
 
+> [!NOTE]
+> For the complete breakdown of all available groups, subcategories, provenance, and descriptions, see [**`CURRENT_SKILLS.md — Available Groups & Sources`**](CURRENT_SKILLS.md#available-groups--sources).
+
 ---
 
-### 2. Curated Skill Clusters (`-c` / `--cluster` & `ag-hub cluster`)
+### 3. Curated Skill Clusters (`-c` / `--cluster` & `ag-hub cluster`)
 
-While `--group` enables all skills from a single repository or category, **Clusters** allow you to activate a curated subset of skills tailored for specific engineering roles, personas, or workflows across **multiple repositories** (combining internal and external skills):
+While `--group` enables all skills from a single repository or category, **Clusters** allow you to activate a curated subset of skills tailored for specific engineering roles, personas, or workflows across **multiple repositories** (combining internal and external skills).
 
-| Predefined Cluster | Description | Included Skill Sources |
-| :--- | :--- | :--- |
-| `gcp-data-enterprise-architect` | Lakehouse & Data Mesh, Dataplex governance & lineage, WAF, FinOps, zero-trust security | `external/googlecloud-base`, `external/googlecloud-data` |
-| `data-engineer` | BigQuery, dbt, Spark, Dataform, BigQuery optimization | `external/googlecloud-data`, `external/googlecloud-base` |
-| `science-researcher` | AlphaFold, PubMed, ChEMBL, UniProt, Clinical Trials | `external/deepmind-science` |
-| `agent-developer` | ADK code, eval, deploy, workflow, template-skill | `external/agents-cli`, `internal/skills` |
+> [!NOTE]
+> For detailed descriptions and complete skill breakdowns of all predefined clusters, see [**`CURRENT_SKILLS.md — Curated Clusters`**](CURRENT_SKILLS.md#curated-clusters).
 
 #### Cluster Commands
 ```bash
@@ -219,13 +223,13 @@ Clusters can be accompanied by human-readable markdown guides (e.g. [`clusters/g
 3. **Missing Skills Analysis (Catalog Gaps)** (roadmaps for authoring missing skills in `internal/<typology>/`).
 
 > [!TIP]
-> **Need help creating clusters?** Enable the internal skill [`cluster-role-creation`](internal/hub-tools/cluster-role-creation/SKILL.md) (`ag-hub enable cluster-role-creation`) to have an agent interview you, explore the catalog, identify missing skills, and automatically generate both the JSON manifest and Markdown blueprint.
+> **Need help creating clusters?** Enable the internal skill [`cluster-role-creation`](internal/hub-tools/skills/cluster-role-creation/SKILL.md) (`ag-hub enable cluster-role-creation`) to have an agent interview you, explore the catalog, identify missing skills, and automatically generate both the JSON manifest and Markdown blueprint.
 >
-> **Need to build a missing skill or resolve a role gap?** Enable the internal skill [`skills-gaps-creator`](internal/hub-tools/skills-gaps-creator/SKILL.md) (`ag-hub enable skills-gaps-creator`) as an independent, standalone task anytime. An agent will grill you on boundaries, ingest documentation links (web URLs or local files), and author a complete, verified skill under `internal/<typology>/<name>/` (e.g. `internal/data-platform/<name>/`).
+> **Need to build a missing skill or resolve a role gap?** Enable the internal skill [`skills-gaps-creator`](internal/hub-tools/skills/skills-gaps-creator/SKILL.md) (`ag-hub enable skills-gaps-creator`) as an independent, standalone task anytime. An agent will grill you on boundaries, ingest documentation links (web URLs or local files), and author a complete, verified skill under `internal/<typology>/<name>/` (e.g. `internal/data-platform/<name>/`).
 
 ---
 
-### 3. Catalog Browsing & Searching
+### 4. Catalog Browsing & Searching
 
 ```bash
 # High-level summary of all repositories and active workspace skills
@@ -245,9 +249,12 @@ ag-hub list -g cloud
 ag-hub list --all
 ```
 
+> [!TIP]
+> You can also browse the offline, hyperlinked inventory in [**`CURRENT_SKILLS.md — Complete Skills Inventory`**](CURRENT_SKILLS.md#complete-skills-inventory).
+
 ---
 
-### 4. Inspecting Skill Documentation (`info` / `show`)
+### 5. Inspecting Skill Documentation (`info` / `show` / `describe`)
 
 Inspect the full documentation, triggers, and prompt guidelines for any skill directly from the terminal without opening files:
 
@@ -260,24 +267,6 @@ ag-hub describe google-agents-cli-adk-code
 
 # View plugin details and bundled skills
 ag-hub info dak
-```
-
----
-
-### 5. Activating & Checking Workspace Status
-
-```bash
-# Check what skills and plugins are currently active in this workspace
-ag-hub status
-
-# Enable individual skills
-ag-hub enable bigquery-sql dbt-bigquery gcp-spark
-
-# Disable specific skills
-ag-hub disable bigquery-sql
-
-# Reset workspace: disable ALL active skills and plugins at once
-ag-hub disable --all
 ```
 
 ---
@@ -419,16 +408,18 @@ ag-hub enable --symlink -g agents-cli
 ### 12. Authoring New Custom Skills, Plugins & Clusters in the Hub
 
 ```bash
-# Scaffold a new skill in a specific typology group (e.g. skills-hub/internal/hub-tools/<name> or data-platform/<name>)
+# Scaffold a new skill in a specific typology group (e.g. skills-hub/internal/data-platform/skills/<name>)
 ag-hub create skill my-specialized-tool -g data-platform
 
-# Scaffold in general skills-hub/internal/skills/<name> (default)
+# Scaffold in default templates typology (skills-hub/internal/templates/skills/<name>)
 ag-hub create skill my-specialized-tool
 
-# Scaffold a new plugin in skills-hub/internal/plugins/<name>
-ag-hub create plugin my-specialized-plugin
+# Scaffold a new plugin in a specific typology (skills-hub/internal/<typology>/plugins/<name>)
+ag-hub create plugin my-specialized-plugin -g data-platform
+
+# Scaffold a new rule in a specific typology (skills-hub/internal/<typology>/rules/<name>.md)
+ag-hub create rule my-team-standards -g data-platform
 
 # Scaffold a new cluster definition in skills-hub/clusters/<name>.json
 ag-hub create cluster my-project-team
 ```
-

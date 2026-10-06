@@ -79,6 +79,22 @@ def _load_cluster_file(file_path: Path) -> dict:
             return _simple_yaml_parse(content)
     return {}
 
+def _match_group(filter_group: str, candidate_group: str) -> bool:
+    """Matches a group filter against an item's group attribute with alias support (e.g. template <-> templates)."""
+    fg = filter_group.lower().strip("/")
+    cg = candidate_group.lower().strip("/")
+
+    filter_variants = {fg}
+    if fg in ("template", "templates"):
+        filter_variants.update(["template", "templates", "internal/template", "internal/templates"])
+    elif fg in ("internal/template", "internal/templates"):
+        filter_variants.update(["template", "templates", "internal/template", "internal/templates"])
+
+    for var in filter_variants:
+        if cg == var or cg.startswith(var + "/") or cg.endswith("/" + var) or f"/{var}/" in cg:
+            return True
+    return False
+
 class ClusterManager:
     def __init__(self, hub_dir: Path = DEFAULT_HUB_DIR, workspace_root: Path | None = None):
         self.hub_dir = hub_dir
@@ -242,7 +258,46 @@ class HubManager:
         skills = {}    # name -> {path, parent, desc, group}
         plugins = {}   # name -> {path, parent, desc, group}
 
-        # 1. Internal skills in internal/skills/ and fallback skills/
+        # 1. Internal typology directories in internal/ (e.g. internal/templates/, internal/hub-tools/)
+        internal_dir = self.hub_dir / "internal"
+        if internal_dir.exists():
+            reserved_internal = {"clusters", ".git"}
+            for grp_dir in sorted(internal_dir.iterdir()):
+                if grp_dir.is_dir() and grp_dir.name not in reserved_internal and not grp_dir.name.startswith("."):
+                    grp_name = grp_dir.name
+                    # Check if there is a skills/ subfolder inside internal/<grp>/skills/
+                    sub_skills_dir = grp_dir / "skills"
+                    if sub_skills_dir.exists():
+                        for item in sorted(sub_skills_dir.iterdir()):
+                            if item.is_dir() and (item / "SKILL.md").exists() and item.name not in skills:
+                                skills[item.name] = {
+                                    "path": item,
+                                    "parent": item.parent,
+                                    "desc": get_skill_description(item),
+                                    "group": f"internal/{grp_name}"
+                                }
+                    # Check direct skills inside internal/<grp>/<skill>/SKILL.md (backward-compat fallback)
+                    for item in sorted(grp_dir.iterdir()):
+                        if item.is_dir() and item.name not in ("skills", "plugins", "rules") and (item / "SKILL.md").exists() and item.name not in skills:
+                            skills[item.name] = {
+                                "path": item,
+                                "parent": item.parent,
+                                "desc": get_skill_description(item),
+                                "group": f"internal/{grp_name}"
+                            }
+                    # Check if there is a plugins/ subfolder inside internal/<grp>/plugins/
+                    sub_plugins_dir = grp_dir / "plugins"
+                    if sub_plugins_dir.exists():
+                        for item in sorted(sub_plugins_dir.iterdir()):
+                            if item.is_dir() and (item / "plugin.json").exists() and item.name not in plugins:
+                                plugins[item.name] = {
+                                    "path": item,
+                                    "parent": item.parent,
+                                    "desc": get_plugin_description(item),
+                                    "group": f"internal/{grp_name}"
+                                }
+
+        # 2. Legacy fallback: root skills/ or internal/skills/ if present
         for s_dir in [self.hub_dir / "internal" / "skills", self.hub_dir / "skills"]:
             if s_dir.exists():
                 for d in sorted(s_dir.iterdir()):
@@ -265,46 +320,7 @@ class HubManager:
                                         "group": f"internal/{d.name}"
                                     }
 
-        # 2. Internal typology directories in internal/ (e.g. internal/hub-tools/)
-        internal_dir = self.hub_dir / "internal"
-        if internal_dir.exists():
-            reserved_internal = {"rules", "plugins", "clusters", "skills", ".git"}
-            for grp_dir in sorted(internal_dir.iterdir()):
-                if grp_dir.is_dir() and grp_dir.name not in reserved_internal and not grp_dir.name.startswith("."):
-                    grp_name = grp_dir.name
-                    # Check if there is a skills/ subfolder inside internal/<grp>/
-                    sub_skills_dir = grp_dir / "skills"
-                    if sub_skills_dir.exists():
-                        for item in sorted(sub_skills_dir.iterdir()):
-                            if item.is_dir() and (item / "SKILL.md").exists() and item.name not in skills:
-                                skills[item.name] = {
-                                    "path": item,
-                                    "parent": item.parent,
-                                    "desc": get_skill_description(item),
-                                    "group": f"internal/{grp_name}"
-                                }
-                    # Check direct skills inside internal/<grp>/<skill>/SKILL.md
-                    for item in sorted(grp_dir.iterdir()):
-                        if item.is_dir() and item.name != "skills" and (item / "SKILL.md").exists() and item.name not in skills:
-                            skills[item.name] = {
-                                "path": item,
-                                "parent": item.parent,
-                                "desc": get_skill_description(item),
-                                "group": f"internal/{grp_name}"
-                            }
-                    # Check if there is a plugins/ subfolder inside internal/<grp>/
-                    sub_plugins_dir = grp_dir / "plugins"
-                    if sub_plugins_dir.exists():
-                        for item in sorted(sub_plugins_dir.iterdir()):
-                            if item.is_dir() and (item / "plugin.json").exists() and item.name not in plugins:
-                                plugins[item.name] = {
-                                    "path": item,
-                                    "parent": item.parent,
-                                    "desc": get_plugin_description(item),
-                                    "group": f"internal/{grp_name}"
-                                }
-
-        # 3. Internal plugins in internal/plugins/ (fallback: plugins/)
+        # 3. Legacy fallback: root plugins/ or internal/plugins/ if present
         for p_dir in [self.hub_dir / "internal" / "plugins", self.hub_dir / "plugins"]:
             if p_dir.exists():
                 for d in sorted(p_dir.iterdir()):
@@ -316,7 +332,7 @@ class HubManager:
                             "group": "internal/plugins"
                         }
 
-        # 3. Submodules (external/ and registered in .gitmodules)
+        # 4. Submodules (external/ and registered in .gitmodules)
         submodules = self.get_submodules()
         for sub_name, sub_info in submodules.items():
             sub_path = sub_info["path"]
@@ -493,18 +509,19 @@ class HubManager:
                     print(f"{COLOR_RED}Unknown cluster:{COLOR_RESET} '{c_name}'. Run 'ag-hub cluster list' to view available clusters.")
 
         if group:
-            g_lower = group.lower().strip("/")
-            matching = [
+            matching_skills = [
                 s for s, info in all_skills.items()
-                if info["group"].lower() == g_lower
-                or info["group"].lower().startswith(g_lower + "/")
-                or info["group"].lower().endswith("/" + g_lower)
-                or f"/{g_lower}/" in info["group"].lower()
+                if _match_group(group, info["group"])
             ]
-            if matching:
-                target_names.extend(matching)
+            matching_plugins = [
+                p for p, info in all_plugins.items()
+                if _match_group(group, info["group"])
+            ]
+            if matching_skills or matching_plugins:
+                target_names.extend(matching_skills)
+                target_names.extend(matching_plugins)
             else:
-                print(f"{COLOR_YELLOW}No skills found in group '{group}'.{COLOR_RESET}")
+                print(f"{COLOR_YELLOW}No skills or plugins found in group '{group}'.{COLOR_RESET}")
 
         if not target_names:
             print("No skills, plugins, or clusters specified to enable.")
@@ -582,14 +599,13 @@ class HubManager:
                 print(f"{COLOR_YELLOW}No hub customizations currently active in {scope_str}.{COLOR_RESET}")
                 return
         elif group:
-            all_skills, _ = self.get_available()
-            g_lower = group.lower().strip("/")
+            all_skills, all_plugins = self.get_available()
             matching = [
                 s for s, info in all_skills.items()
-                if info["group"].lower() == g_lower
-                or info["group"].lower().startswith(g_lower + "/")
-                or info["group"].lower().endswith("/" + g_lower)
-                or f"/{g_lower}/" in info["group"].lower()
+                if _match_group(group, info["group"])
+            ] + [
+                p for p, info in all_plugins.items()
+                if _match_group(group, info["group"])
             ]
             if matching:
                 target_names.extend(matching)
@@ -752,14 +768,14 @@ class HubManager:
         print()
 
     def scaffold(self, item_type: str, name: str, group: str | None = None):
+        clean_group = "templates"
+        if group:
+            clean_group = group.strip("/")
+            if clean_group.startswith("internal/"):
+                clean_group = clean_group[len("internal/"):]
+
         if item_type == "skill":
-            if group:
-                clean_group = group.strip("/")
-                if clean_group.startswith("internal/"):
-                    clean_group = clean_group[len("internal/"):]
-                target = self.hub_dir / "internal" / clean_group / name
-            else:
-                target = self.hub_dir / "internal" / "skills" / name
+            target = self.hub_dir / "internal" / clean_group / "skills" / name
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Skill '{name}' already exists at {target}")
                 return
@@ -781,10 +797,11 @@ description: Describe what {name} does and when the agent should activate it.
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new skill '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
 
         elif item_type == "plugin":
-            target = self.hub_dir / "internal" / "plugins" / name
+            target = self.hub_dir / "internal" / clean_group / "plugins" / name
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Plugin '{name}' already exists at {target}")
                 return
+            target.mkdir(parents=True, exist_ok=True)
             (target / "skills").mkdir(parents=True, exist_ok=True)
             (target / "rules").mkdir(parents=True, exist_ok=True)
             manifest = target / "plugin.json"
@@ -793,6 +810,25 @@ description: Describe what {name} does and when the agent should activate it.
                 "description": f"Description for {name}"
             }, indent=2) + "\n", encoding="utf-8")
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new plugin '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
+
+        elif item_type == "rule":
+            target_dir = self.hub_dir / "internal" / clean_group / "rules"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            rule_file = name if name.endswith(".md") else f"{name}.md"
+            target = target_dir / rule_file
+            if target.exists():
+                print(f"{COLOR_RED}Error:{COLOR_RESET} Rule '{rule_file}' already exists at {target}")
+                return
+            rule_title = name[:-3] if name.endswith(".md") else name
+            target.write_text(f"""# {rule_title.replace('-', ' ').title()} Guidelines
+
+Guidelines and coding standards for {rule_title}.
+
+## Principles
+- Prefer simple, readable, and maintainable solutions.
+- Follow established project architecture and testing standards.
+""", encoding="utf-8")
+            print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new rule '{COLOR_BOLD}{rule_file}{COLOR_RESET}' at {target}")
 
         elif item_type == "cluster":
             target_dir = self.hub_dir / "clusters"
@@ -982,8 +1018,7 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
     matching_skills = {}
     for name, info in all_skills.items():
         if gf:
-            grp_low = info["group"].lower()
-            if not (grp_low == gf or grp_low.startswith(gf + "/") or grp_low.endswith("/" + gf) or f"/{gf}/" in grp_low):
+            if not _match_group(gf, info["group"]):
                 continue
         if q and q not in name.lower() and q not in info["desc"].lower() and q not in info["group"].lower():
             continue
@@ -992,8 +1027,7 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
     matching_plugins = {}
     for name, info in all_plugins.items():
         if gf:
-            grp_low = info["group"].lower()
-            if not (grp_low == gf or grp_low.startswith(gf + "/") or grp_low.endswith("/" + gf) or f"/{gf}/" in grp_low):
+            if not _match_group(gf, info["group"]):
                 continue
         if q and q not in name.lower() and q not in info["desc"].lower() and q not in info["group"].lower():
             continue
@@ -1342,10 +1376,10 @@ def main():
     p_add_repo.add_argument("--branch", "-b", default="main", help="Branch to track (default: main)")
 
     # create
-    p_create = subparsers.add_parser("create", help="Create a new skill, plugin, or cluster template in the hub")
-    p_create.add_argument("type", choices=["skill", "plugin", "cluster"], help="Type to create")
-    p_create.add_argument("name", help="Name of the skill, plugin, or cluster")
-    p_create.add_argument("--group", "-g", default=None, help="Typology group for internal skills (e.g. hub-tools, data-platform)")
+    p_create = subparsers.add_parser("create", help="Create a new skill, plugin, rule, or cluster template in the hub")
+    p_create.add_argument("type", choices=["skill", "plugin", "rule", "cluster"], help="Type to create")
+    p_create.add_argument("name", help="Name of the skill, plugin, rule, or cluster")
+    p_create.add_argument("--group", "-g", default=None, help="Typology group for internal items (default: templates; e.g. hub-tools, data-platform)")
 
     args = parser.parse_args()
 

@@ -108,7 +108,7 @@ The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) clus
 | **Ingestion & Pipelines** | `gcp-data-pipelines` | Architecture patterns for batch and real-time ingestion, Cloud Composer orchestration, and Pub/Sub. | `data-engineer` |
 | | `gcp-dataflow` | Apache Beam / Dataflow stream processing architecture, autoscaling, and exactly-once processing. | `google-cloud-skills` |
 | **Modernization & Translation** | `dbt-sf-to-bq-translator` | Automated migration rules, SQL dialect conversion, and dbt models from Snowflake to BigQuery. | `data-engineer` |
-| **Plugin** | `googlecloud-data` | Bundled plugin providing ready-to-run rules and data engineering standards for Google Cloud. | `internal/plugins` |
+| **Plugin** | `googlecloud-data` | Bundled plugin providing ready-to-run rules and data engineering standards for Google Cloud. | `external/googlecloud-data` |
 
 ---
 
@@ -116,7 +116,7 @@ The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) clus
 
 While the existing catalog provides strong coverage across lakehouse storage, query optimization, and foundational security, an Enterprise Architect role requires deeper capabilities in **cross-organization sharing**, **automated data quality**, **data contracts**, and **zero-trust perimeters**.
 
-The following skills are not yet available in the hub catalog and are recommended for creation in `internal/skills/`:
+The following skills are not yet available in the hub catalog and are recommended for creation in `internal/data-platform/skills/`:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
@@ -138,7 +138,7 @@ The following skills are not yet available in the hub catalog and are recommende
   - Designing private and public Analytics Hub Data Exchanges.
   - Configuring curated listings, authorized datasets, and subscriber access entitlements.
   - Architecting BigQuery data clean rooms with differential privacy and aggregated query enforcement.
-- **Recommended Implementation**: Scaffold in `internal/skills/gcp-analytics-hub-data-sharing` using Google Cloud Analytics Hub Terraform modules and gcloud/REST templates.
+- **Recommended Implementation**: Scaffold in `internal/data-platform/skills/gcp-analytics-hub-data-sharing` (via `ag-hub create skill gcp-analytics-hub-data-sharing -g data-platform`) using Google Cloud Analytics Hub Terraform modules and gcloud/REST templates.
 
 #### 2. `dataplex-data-quality-autodq`
 - **Architectural Need**: Enterprise architects must establish automated data quality gates rather than relying on disparate ad-hoc SQL assertions.
@@ -146,7 +146,7 @@ The following skills are not yet available in the hub catalog and are recommende
   - Authoring declarative YAML data quality rule definitions (completeness, uniqueness, range, regex, custom SQL).
   - Configuring Dataplex AutoDQ continuous profiling jobs and publishing scorecards to the Dataplex catalog.
   - Wiring quality score thresholds to Cloud Monitoring alerts and automated pipeline halts.
-- **Recommended Implementation**: Scaffold in `internal/skills/dataplex-data-quality-autodq` with standard Dataplex YAML rule templates and CI/CD validation scripts.
+- **Recommended Implementation**: Scaffold in `internal/data-platform/skills/dataplex-data-quality-autodq` (via `ag-hub create skill dataplex-data-quality-autodq -g data-platform`) with standard Dataplex YAML rule templates and CI/CD validation scripts.
 
 #### 3. `cloud-dlp-sensitive-data-protection`
 - **Architectural Need**: Protecting sensitive PII, PHI, and financial data across the lakehouse is mandatory under GDPR, HIPAA, and PCI-DSS.
@@ -154,7 +154,7 @@ The following skills are not yet available in the hub catalog and are recommende
   - Automated continuous inspection and discovery scans on BigQuery tables and Cloud Storage buckets.
   - Designing de-identification templates: deterministic cryptographic hashing, pseudonymization, and bucketing.
   - Integrating Cloud DLP with BigQuery Policy Tags for dynamic column-level data masking based on IAM caller identity.
-- **Recommended Implementation**: Scaffold in `internal/skills/cloud-dlp-sensitive-data-protection` with Cloud DLP inspection templates and Terraform policy tag bindings.
+- **Recommended Implementation**: Scaffold in `internal/data-platform/skills/cloud-dlp-sensitive-data-protection` (via `ag-hub create skill cloud-dlp-sensitive-data-protection -g data-platform`) with Cloud DLP inspection templates and Terraform policy tag bindings.
 
 #### 4. `data-mesh-contract-modeling`
 - **Architectural Need**: In a decentralized mesh, producer domains must provide guaranteed schema and SLA contracts to downstream consumer domains.
@@ -162,7 +162,7 @@ The following skills are not yet available in the hub catalog and are recommende
   - Formulating OpenDataContract / JSON Schema specifications describing dataset structure, semantics, and SLA terms.
   - Establishing schema evolution rules (backward, forward, full compatibility) enforced during CI/CD.
   - Defining automated producer-consumer contract verification hooks before merging changes.
-- **Recommended Implementation**: Scaffold in `internal/skills/data-mesh-contract-modeling` with schema definition templates and contract linting utilities.
+- **Recommended Implementation**: Scaffold in `internal/data-platform/skills/data-mesh-contract-modeling` (via `ag-hub create skill data-mesh-contract-modeling -g data-platform`) with schema definition templates and contract linting utilities.
 
 #### 5. `vpc-service-controls-data-perimeters`
 - **Architectural Need**: Preventing data exfiltration across corporate boundaries while allowing authorized cross-domain mesh interoperability.
@@ -170,4 +170,4 @@ The following skills are not yet available in the hub catalog and are recommende
   - Designing VPC-SC service perimeters encompassing BigQuery, Cloud Storage, and Dataplex.
   - Configuring dry-run perimeter audit logging to detect violations prior to enforcement.
   - Architecting cross-project perimeter bridges and directional ingress/egress rules for inter-domain data sharing.
-- **Recommended Implementation**: Scaffold in `internal/skills/vpc-service-controls-data-perimeters` with Terraform `google_access_context_manager` blueprints and troubleshooting runbooks.
+- **Recommended Implementation**: Scaffold in `internal/data-platform/skills/vpc-service-controls-data-perimeters` (via `ag-hub create skill vpc-service-controls-data-perimeters -g data-platform`) with Terraform `google_access_context_manager` blueprints and troubleshooting runbooks.

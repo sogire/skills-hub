@@ -1,6 +1,6 @@
 ---
 name: skills-gaps-creator
-description: Guides the agent in creating a new, specialized internal skill based on an identified gap (from a cluster role definition or an ad-hoc requirement). Conducts a rigorous 'Grill Me' interview to confirm scope, anti-scope, and typology group, solicits authoritative documentation (web links or local files), synthesizes best practices, and authors a complete, verified skill in internal/<typology>/<skill-name>/.
+description: Guides the agent in creating a new, specialized internal skill based on an identified gap (from a cluster role definition or an ad-hoc requirement). Conducts a rigorous 'Grill Me' interview to confirm scope, anti-scope, and typology group, solicits authoritative documentation (web links or local files), synthesizes best practices, and authors a complete, verified skill in internal/<typology>/skills/<skill-name>/.
 ---
 
 # Skills Gaps Creator: Specialized Skill Authoring Assistant
@@ -27,7 +27,7 @@ Activate this skill whenever:
 flowchart TD
     A["Phase 1: Gap Ingestion & Triage<br>(From cluster markdown or user prompt)"] --> B["Phase 2: 'Grill Me' Clarification Interview<br>(Scope, anti-scope, triggers, doc links, typology)"]
     B --> C["Phase 3: Documentation Ingestion & Research<br>(Read web URLs, local specs, API docs)"]
-    C --> D["Phase 4: Progressive Disclosure Authoring<br>(internal/&lt;typology&gt;/&lt;name&gt;/SKILL.md + assets)"]
+    C --> D["Phase 4: Progressive Disclosure Authoring<br>(internal/&lt;typology&gt;/skills/&lt;name&gt;/SKILL.md + assets)"]
     D --> E["Phase 5: Hub Validation & Optional Cluster Sync<br>(ag-hub info, test enable, cluster JSON update)"]
 ```
 
@@ -75,9 +75,9 @@ To prevent bloated, vague, or overlapping skills, the agent **must** conduct an 
 
 #### Gate 5: Typology & Group Organization
 - Which **typology or domain group** should this skill belong to?
-  - `hub-tools/`: Hub automation, authoring, and management assistants.
-  - Domain typologies: `data-platform/`, `security/`, `mlops/`, `devops/`, etc.
-  - General fallback: `skills/` (if untyped or exploratory).
+  - `hub-tools/`: Hub automation, authoring, and management assistants (`internal/hub-tools/skills/`).
+  - Domain typologies: `data-platform/`, `security/`, `mlops/`, `devops/`, etc. (`internal/<typology>/skills/`).
+  - Starter templates: `templates/` (`internal/templates/skills/`).
 - Quick scaffolding via CLI:
   ```bash
   python3 bin/ag-hub create skill <skill-name> -g <typology>
@@ -101,10 +101,10 @@ Once reference URLs or local files are identified:
 
 ### Phase 4: Progressive Disclosure Authoring & Packaging
 
-Scaffold the skill inside `internal/<typology>/<skill-name>/` (or run `ag-hub create skill <name> -g <typology>`) following the Antigravity skill architecture:
+Scaffold the skill inside `internal/<typology>/skills/<skill-name>/` (or run `ag-hub create skill <name> -g <typology>`) following the Antigravity skill architecture:
 
 ```text
-internal/<typology>/<skill_name>/
+internal/<typology>/skills/<skill_name>/
 ├── SKILL.md          # Required: Main instruction file with YAML frontmatter
 ├── references/       # Recommended: Deep API reference, parameter guides, manuals
 ├── scripts/          # Optional: Python or shell helper scripts

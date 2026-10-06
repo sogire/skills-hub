@@ -63,7 +63,7 @@ Explore the hub's catalog across both `internal/` and `external/` repositories t
    ```bash
    ag-hub list
    # Or inspect internal typology and external directories directly:
-   # ls internal/ (e.g. internal/hub-tools/, internal/skills/, internal/<typology>/)
+   # ls internal/ (e.g. internal/templates/, internal/hub-tools/, internal/<typology>/)
    # ls external/*/skills/ (or respective submodule skill directories)
    ```
 2. **Search for Domain Keywords**:
@@ -71,7 +71,7 @@ Explore the hub's catalog across both `internal/` and `external/` repositories t
 3. **Categorize Candidates by Competency**:
    - Group discovered skills into 4 to 6 logical architectural pillars (e.g., *Topology & Storage*, *Governance & Lineage*, *Security & Zero-Trust*, *FinOps & Cost Optimization*, *Data Pipelines*, *Modernization*).
 4. **Identify Candidate Plugins**:
-   - Check `internal/plugins/` or external plugin definitions for bundled rule sets that apply to the role (e.g., `googlecloud-data`).
+   - Check `internal/<typology>/plugins/` (or `internal/templates/plugins/`) or external plugin definitions for bundled rule sets that apply to the role (e.g., `googlecloud-data`).
 
 ---
 
@@ -86,7 +86,7 @@ A comprehensive cluster design must not only map existing skills, but also ident
    - **Skill Identifier**: Recommended kebab-case name (e.g., `gcp-analytics-hub-data-sharing`, `dataplex-data-quality-autodq`).
    - **Architectural Need**: Why the role cannot operate autonomously without this capability.
    - **Key Capabilities**: 3–4 specific technical tasks the skill should automate or guide.
-   - **Implementation Blueprint**: Recommended approach to author the skill in `internal/<typology>/<name>/SKILL.md` (e.g. `internal/data-platform/<name>/`, `internal/hub-tools/`, or general `internal/skills/<name>/`).
+   - **Implementation Blueprint**: Recommended approach to author the skill in `internal/<typology>/skills/<name>/SKILL.md` (e.g. `internal/data-platform/skills/<name>/`, `internal/hub-tools/skills/<name>/`, or `internal/templates/skills/<name>/`).
 
 ---
 
@@ -158,7 +158,7 @@ The [`<role-name>`](./<role-name>.json) cluster bundles **<N> skills** and **<M>
 
 | Missing Skill | Critical Enterprise Capability | Recommended Implementation Path |
 | :--- | :--- | :--- |
-| **`<missing-skill-id>`** | <Description of required capabilities> | Scaffold in `internal/<typology>/<missing-skill-id>` (or `ag-hub create skill <id> -g <group>`) with <templates/tools>. |
+| **`<missing-skill-id>`** | <Description of required capabilities> | Scaffold in `internal/<typology>/skills/<missing-skill-id>` (or `ag-hub create skill <id> -g <group>`) with <templates/tools>. |
 
 ### Gap Details & Blueprint Specifications
 <Detailed breakdown for each missing skill including Architectural Need, Key Capabilities, and Recommended Implementation Blueprint.>
@@ -188,4 +188,4 @@ Always verify the newly generated cluster using `ag-hub`:
    ```
 
 3. **Update Documentation**:
-   - Add the new cluster to the Predefined Clusters table in [`README.md`](../../README.md).
+   - Add the new cluster to the Predefined Clusters table in [`README.md`](../../../../README.md).
