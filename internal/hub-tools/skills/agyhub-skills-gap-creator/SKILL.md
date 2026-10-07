@@ -1,9 +1,9 @@
 ---
-name: skills-gaps-creator
+name: agyhub-skills-gap-creator
 description: Guides the agent in creating a new, specialized internal skill based on an identified gap (from a cluster role definition or an ad-hoc requirement). Conducts a rigorous 'Grill Me' interview to confirm scope, anti-scope, and typology group, solicits authoritative documentation (web links or local files), synthesizes best practices, and authors a complete, verified skill in internal/<typology>/skills/<skill-name>/.
 ---
 
-# Skills Gaps Creator: Specialized Skill Authoring Assistant
+# Agyhub Skills Gap Creator: Specialized Skill Authoring Assistant
 
 This skill equips an agent to act as a **Skill Engineer** within the Antigravity Skills Hub. It provides a structured, rigorous methodology for transforming an identified capability gap—whether documented in a cluster role specification (`clusters/<role-name>.md`) or requested on-demand by a user—into a production-grade, highly targeted, and verified internal skill.
 
@@ -28,7 +28,7 @@ flowchart TD
     A["Phase 1: Gap Ingestion & Triage<br>(From cluster markdown or user prompt)"] --> B["Phase 2: 'Grill Me' Clarification Interview<br>(Scope, anti-scope, triggers, doc links, typology)"]
     B --> C["Phase 3: Documentation Ingestion & Research<br>(Read web URLs, local specs, API docs)"]
     C --> D["Phase 4: Progressive Disclosure Authoring<br>(internal/&lt;typology&gt;/skills/&lt;name&gt;/SKILL.md + assets)"]
-    D --> E["Phase 5: Hub Validation & Optional Cluster Sync<br>(ag-hub info, test enable, cluster JSON update)"]
+    D --> E["Phase 5: Hub Validation & Optional Cluster Sync<br>(agyhub info, test enable, cluster JSON update)"]
 ```
 
 ---
@@ -80,7 +80,7 @@ To prevent bloated, vague, or overlapping skills, the agent **must** conduct an 
   - Starter templates: `templates/` (`internal/templates/skills/`).
 - Quick scaffolding via CLI:
   ```bash
-  python3 bin/ag-hub create skill <skill-name> -g <typology>
+  python3 bin/agyhub create skill <skill-name> -g <typology>
   ```
 
 ---
@@ -101,7 +101,7 @@ Once reference URLs or local files are identified:
 
 ### Phase 4: Progressive Disclosure Authoring & Packaging
 
-Scaffold the skill inside `internal/<typology>/skills/<skill-name>/` (or run `ag-hub create skill <name> -g <typology>`) following the Antigravity skill architecture:
+Scaffold the skill inside `internal/<typology>/skills/<skill-name>/` (or run `agyhub create skill <name> -g <typology>`) following the Antigravity skill architecture:
 
 ```text
 internal/<typology>/skills/<skill_name>/
@@ -165,19 +165,19 @@ description: >-
 
 After authoring the files:
 
-1. **Verify Discovery with `ag-hub`**:
+1. **Verify Discovery with `agyhub`**:
    ```bash
-   python3 bin/ag-hub list
-   python3 bin/ag-hub info <skill-name>
+   python3 bin/agyhub list
+   python3 bin/agyhub info <skill-name>
    ```
    *Confirm the skill appears under `internal/<typology>` and its documentation renders without errors.*
 
 2. **Test Workspace Activation**:
    ```bash
    TMP_DIR=$(mktemp -d)
-   python3 bin/ag-hub -w "$TMP_DIR" enable <skill-name>
-   python3 bin/ag-hub -w "$TMP_DIR" status
-   python3 bin/ag-hub -w "$TMP_DIR" disable <skill-name>
+   python3 bin/agyhub -w "$TMP_DIR" enable <skill-name>
+   python3 bin/agyhub -w "$TMP_DIR" status
+   python3 bin/agyhub -w "$TMP_DIR" disable <skill-name>
    rm -rf "$TMP_DIR"
    ```
 
@@ -185,7 +185,7 @@ After authoring the files:
    - If the skill was created to resolve a gap from a cluster (e.g., `gcp-data-enterprise-architect`):
      - Offer to add the new skill name to `clusters/<role-name>.json` under `"skills": [...]`.
      - Offer to update `clusters/<role-name>.md` to mark the gap as implemented and add it to the competency matrix.
-   - If the skill is general-purpose, it is immediately available for any cluster or workspace via `ag-hub enable <skill-name>`.
+   - If the skill is general-purpose, it is immediately available for any cluster or workspace via `agyhub enable <skill-name>`.
 
 ---
 
@@ -195,4 +195,4 @@ After authoring the files:
 - [ ] **Clear Anti-Scope**: Explicitly documents what the skill does *not* do to prevent overlap.
 - [ ] **Progressive Disclosure**: Bulky documentation is moved to `references/` rather than clogging the main `SKILL.md`.
 - [ ] **Zero-Pip Helper Scripts**: Any scripts in `scripts/` rely strictly on the Python Standard Library.
-- [ ] **Tested with `ag-hub`**: Verified using `ag-hub info <skill-name>` and test workspace enablement.
+- [ ] **Tested with `agyhub`**: Verified using `agyhub info <skill-name>` and test workspace enablement.

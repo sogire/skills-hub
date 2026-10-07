@@ -44,7 +44,7 @@ This document provides a comprehensive, centralized catalog of all skills, group
 
 ## Curated Clusters
 
-Skill clusters allow you to activate a curated subset of skills tailored for specific engineering personas or workflows across **multiple repositories** with a single command (`ag-hub enable -c <cluster>`).
+Skill clusters allow you to activate a curated subset of skills tailored for specific engineering personas or workflows across **multiple repositories** with a single command (`agyhub enable -c <cluster>`).
 
 | Predefined Cluster | Description | Skills Count | Key Technologies / Focus |
 | :--- | :--- | :--- | :--- |
@@ -59,10 +59,10 @@ Skill clusters allow you to activate a curated subset of skills tailored for spe
 
 ```bash
 # Activate this cluster in current workspace:
-ag-hub enable -c gcp-data-enterprise-architect
+agyhub enable -c gcp-data-enterprise-architect
 
 # Or activate globally across all workspaces:
-ag-hub enable -G -c gcp-data-enterprise-architect
+agyhub enable -G -c gcp-data-enterprise-architect
 ```
 
 > [!NOTE]
@@ -101,10 +101,10 @@ ag-hub enable -G -c gcp-data-enterprise-architect
 
 ```bash
 # Activate this cluster in current workspace:
-ag-hub enable -c data-engineer
+agyhub enable -c data-engineer
 
 # Or activate globally across all workspaces:
-ag-hub enable -G -c data-engineer
+agyhub enable -G -c data-engineer
 ```
 
 **Included Customizations:**
@@ -123,10 +123,10 @@ ag-hub enable -G -c data-engineer
 
 ```bash
 # Activate this cluster in current workspace:
-ag-hub enable -c science-researcher
+agyhub enable -c science-researcher
 
 # Or activate globally across all workspaces:
-ag-hub enable -G -c science-researcher
+agyhub enable -G -c science-researcher
 ```
 
 **Included Customizations:**
@@ -145,10 +145,10 @@ ag-hub enable -G -c science-researcher
 
 ```bash
 # Activate this cluster in current workspace:
-ag-hub enable -c agent-developer
+agyhub enable -c agent-developer
 
 # Or activate globally across all workspaces:
-ag-hub enable -G -c agent-developer
+agyhub enable -G -c agent-developer
 ```
 
 **Included Customizations:**
@@ -165,17 +165,17 @@ ag-hub enable -G -c agent-developer
 
 ## Available Groups & Sources
 
-The hub organizes tools into **`external/`** (read-only upstream submodules) and **`internal/`** (proprietary custom typologies). You can activate an entire group at once using `ag-hub enable -g <group>`.
+The hub organizes tools into **`external/`** (read-only upstream submodules) and **`internal/`** (proprietary custom typologies). You can activate an entire group at once using `agyhub enable -g <group>`.
 
 | Group Identifier | Provenance / Upstream | Skills Count | Description & Use Cases | Quick Enable Command |
 | :--- | :--- | :--- | :--- | :--- |
-| `external/agents-cli` (or `agents-cli`) | [google/agents-cli](https://github.com/google/agents-cli) | 7 | Google Agent Development Kit (ADK) agent authoring, scaffolding, testing, and deployment | `ag-hub enable -g agents-cli` |
-| `external/googlecloud-data` (or `googlecloud-data`) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | 37 | Data Agent Kit: BigQuery, dbt, Spark, Dataform, Airflow, Lakehouse catalogs | `ag-hub enable -g googlecloud-data` |
-| `external/deepmind-science` (or `deepmind-science`) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | 40 | DeepMind bioinformatics, protein structures (AlphaFold), PubMed, BLAST, chemistry | `ag-hub enable -g deepmind-science` |
-| `external/googlecloud-base` (or `googlecloud-base`) | [google/skills](https://github.com/google/skills) | 144 | Comprehensive Google Cloud Platform suite (AlloyDB, BigQuery, Vertex, SecOps, WAF, etc.) | `ag-hub enable -g googlecloud-base` |
-| `internal/hub-tools` (or `hub-tools`) | Local Typology | 3 | Meta-tooling skills (`cluster-role-creation`, `skills-gaps-creator`, `ag-hub-agent`) | `ag-hub enable -g hub-tools` |
-| `internal/templates` (or `templates`) | Local Typology | 1 | Starter templates for creating new skills, plugins, and rules | `ag-hub enable -g templates` |
-| `internal` | Local Typologies | 4+ | All proprietary custom skills, plugins, and rules across all internal typologies | `ag-hub enable -g internal` |
+| `external/agents-cli` (or `agents-cli`) | [google/agents-cli](https://github.com/google/agents-cli) | 7 | Google Agent Development Kit (ADK) agent authoring, scaffolding, testing, and deployment | `agyhub enable -g agents-cli` |
+| `external/googlecloud-data` (or `googlecloud-data`) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | 37 | Data Agent Kit: BigQuery, dbt, Spark, Dataform, Airflow, Lakehouse catalogs | `agyhub enable -g googlecloud-data` |
+| `external/deepmind-science` (or `deepmind-science`) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | 40 | DeepMind bioinformatics, protein structures (AlphaFold), PubMed, BLAST, chemistry | `agyhub enable -g deepmind-science` |
+| `external/googlecloud-base` (or `googlecloud-base`) | [google/skills](https://github.com/google/skills) | 144 | Comprehensive Google Cloud Platform suite (AlloyDB, BigQuery, Vertex, SecOps, WAF, etc.) | `agyhub enable -g googlecloud-base` |
+| `internal/hub-tools` (or `hub-tools`) | Local Typology | 3 | Meta-tooling skills (`agyhub-cluster-role-creation`, `agyhub-skills-gap-creator`, `agyhub-agent`) | `agyhub enable -g hub-tools` |
+| `internal/templates` (or `templates`) | Local Typology | 1 | Starter templates for creating new skills, plugins, and rules | `agyhub enable -g templates` |
+| `internal` | Local Typologies | 4+ | All proprietary custom skills, plugins, and rules across all internal typologies | `agyhub enable -g internal` |
 
 ### Subcategories in `external/googlecloud-base`
 
@@ -183,11 +183,11 @@ The large `googlecloud-base` repository is further divided into modular subcateg
 
 | Subcategory | Skills Count | Target Domain | Quick Enable Command |
 | :--- | :--- | :--- | :--- |
-| `cloud` | 125 | GCP Infrastructure, AI/ML, Databases, Security, Networking | `ag-hub enable -g cloud` |
-| `ads` | 14 | Google Ads API, Campaigns, Reporting | `ag-hub enable -g ads` |
-| `analytics` | 2 | Google Analytics 4 (GA4) Admin & Data APIs | `ag-hub enable -g analytics` |
-| `developers` | 2 | Developer knowledge retrieval & skill discovery | `ag-hub enable -g developers` |
-| `identity` | 1 | DPoP OAuth 2.0 token security | `ag-hub enable -g identity` |
+| `cloud` | 125 | GCP Infrastructure, AI/ML, Databases, Security, Networking | `agyhub enable -g cloud` |
+| `ads` | 14 | Google Ads API, Campaigns, Reporting | `agyhub enable -g ads` |
+| `analytics` | 2 | Google Analytics 4 (GA4) Admin & Data APIs | `agyhub enable -g analytics` |
+| `developers` | 2 | Developer knowledge retrieval & skill discovery | `agyhub enable -g developers` |
+| `identity` | 1 | DPoP OAuth 2.0 token security | `agyhub enable -g identity` |
 
 ---
 
@@ -197,11 +197,11 @@ Plugins bundle skills, rules, and optional MCP configurations into portable pack
 
 | Plugin Name | Source / Group | Description | Quick Enable Command |
 | :--- | :--- | :--- | :--- |
-| [`agents-cli`](external/agents-cli/plugin.json) | `external/agents-cli` | Scaffold, develop, evaluate, and deploy AI agents with Google ADK. Bundles skills for... | `ag-hub enable agents-cli` |
-| [`deepmind-science`](external/deepmind-science/plugin.json) | `external/deepmind-science` | Curated collection of agent skills for science tasks. | `ag-hub enable deepmind-science` |
-| [`google-cloud-developer`](external/googlecloud-base/plugins/cloud/google-cloud-developer/plugin.json) | `external/googlecloud-base/cloud` | Google Cloud guidance for coding agents: first-project onboarding, authentication and... | `ag-hub enable google-cloud-developer` |
-| [`googlecloud-data`](external/googlecloud-data/plugin.json) | `external/googlecloud-data` | This plugin provides a specialized suite of skills for data engineers and database pr... | `ag-hub enable googlecloud-data` |
-| [`template-plugin`](internal/templates/plugins/template-plugin/plugin.json) | `internal/templates` | A starter template plugin packaging skills, rules, and optional MCP configs into a bu... | `ag-hub enable template-plugin` |
+| [`agents-cli`](external/agents-cli/plugin.json) | `external/agents-cli` | Scaffold, develop, evaluate, and deploy AI agents with Google ADK. Bundles skills for... | `agyhub enable agents-cli` |
+| [`deepmind-science`](external/deepmind-science/plugin.json) | `external/deepmind-science` | Curated collection of agent skills for science tasks. | `agyhub enable deepmind-science` |
+| [`google-cloud-developer`](external/googlecloud-base/plugins/cloud/google-cloud-developer/plugin.json) | `external/googlecloud-base/cloud` | Google Cloud guidance for coding agents: first-project onboarding, authentication and... | `agyhub enable google-cloud-developer` |
+| [`googlecloud-data`](external/googlecloud-data/plugin.json) | `external/googlecloud-data` | This plugin provides a specialized suite of skills for data engineers and database pr... | `agyhub enable googlecloud-data` |
+| [`template-plugin`](internal/templates/plugins/template-plugin/plugin.json) | `internal/templates` | A starter template plugin packaging skills, rules, and optional MCP configs into a bu... | `agyhub enable template-plugin` |
 
 ---
 
@@ -517,9 +517,9 @@ Internal meta-skills for designing new role clusters and authoring gap skills.
 
 | Skill Name | Description | Path |
 | :--- | :--- | :--- |
-| [`ag-hub-agent`](internal/hub-tools/skills/ag-hub-agent/SKILL.md) | Expert guidance for AI agents to discover, inspect, enable, disable, configure, and troubleshoot Antigravity skills, clusters, groups, and plugins using the ag-hub CLI. | [`internal/hub-tools/skills/ag-hub-agent`](internal/hub-tools/skills/ag-hub-agent) |
-| [`cluster-role-creation`](internal/hub-tools/skills/cluster-role-creation/SKILL.md) | Guides the agent in designing, scoping, and generating new role-based skill clusters ... | [`internal/hub-tools/skills/cluster-role-creation`](internal/hub-tools/skills/cluster-role-creation) |
-| [`skills-gaps-creator`](internal/hub-tools/skills/skills-gaps-creator/SKILL.md) | Guides the agent in creating a new, specialized internal skill based on an identified... | [`internal/hub-tools/skills/skills-gaps-creator`](internal/hub-tools/skills/skills-gaps-creator) |
+| [`agyhub-agent`](internal/hub-tools/skills/agyhub-agent/SKILL.md) | Expert guidance for AI agents to discover, inspect, enable, disable, configure, and troubleshoot Antigravity skills, clusters, groups, and plugins using the agyhub CLI. | [`internal/hub-tools/skills/agyhub-agent`](internal/hub-tools/skills/agyhub-agent) |
+| [`agyhub-cluster-role-creation`](internal/hub-tools/skills/agyhub-cluster-role-creation/SKILL.md) | Guides the agent in designing, scoping, and generating new role-based skill clusters ... | [`internal/hub-tools/skills/agyhub-cluster-role-creation`](internal/hub-tools/skills/agyhub-cluster-role-creation) |
+| [`agyhub-skills-gap-creator`](internal/hub-tools/skills/agyhub-skills-gap-creator/SKILL.md) | Guides the agent in creating a new, specialized internal skill based on an identified... | [`internal/hub-tools/skills/agyhub-skills-gap-creator`](internal/hub-tools/skills/agyhub-skills-gap-creator) |
 
 ### internal/templates (Starter Templates)
 

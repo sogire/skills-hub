@@ -1,7 +1,7 @@
 # ==============================================================================
-# Antigravity Skills & Plugins Hub (ag-hub)
+# Antigravity Skills & Plugins Hub (agyhub)
 # ==============================================================================
-# ag-hub is built entirely using the Python 3 Standard Library.
+# agyhub is built entirely using the Python 3 Standard Library.
 # No third-party pip dependencies are required to run the CLI or manage skills.
 #
 # System Requirements:

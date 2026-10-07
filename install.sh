@@ -8,16 +8,17 @@
 # This script:
 #   1. Validates Python 3 (3.10+ recommended)
 #   2. Initializes and checks Git submodules (external repositories)
-#   3. Symlinks bin/ag-hub to ~/.local/bin/ag-hub
+#   3. Symlinks bin/agyhub to ~/.local/bin/agyhub
 #   4. Verifies PATH configuration
 # ==============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN_SRC="${SCRIPT_DIR}/bin/ag-hub"
+BIN_SRC="${SCRIPT_DIR}/bin/agyhub"
 TARGET_DIR="${HOME}/.local/bin"
-TARGET_LINK="${TARGET_DIR}/ag-hub"
+TARGET_LINK="${TARGET_DIR}/agyhub"
+LEGACY_LINK="${TARGET_DIR}/ag-hub"
 
 COLOR_GREEN="\033[32m"
 COLOR_CYAN="\033[36m"
@@ -55,9 +56,15 @@ if [ -f "${SCRIPT_DIR}/.gitmodules" ]; then
     fi
 fi
 
-# 3. Create ~/.local/bin and symlink ag-hub
+# 3. Create ~/.local/bin and symlink agyhub (strict cutover from ag-hub)
 mkdir -p "${TARGET_DIR}"
 chmod +x "${BIN_SRC}"
+
+# Remove legacy ag-hub symlink or binary if present
+if [ -L "${LEGACY_LINK}" ] || [ -f "${LEGACY_LINK}" ]; then
+    rm -f "${LEGACY_LINK}"
+    echo -e "${COLOR_YELLOW}!${COLOR_RESET} Removed legacy executable link: ${LEGACY_LINK}"
+fi
 
 if [ -L "${TARGET_LINK}" ] || [ -f "${TARGET_LINK}" ]; then
     rm -f "${TARGET_LINK}"
@@ -75,7 +82,7 @@ case ":${PATH}:" in
         ;;
     *)
         echo -e "${COLOR_YELLOW}! Notice:${COLOR_RESET} ${TARGET_DIR} is not currently in your shell's PATH."
-        echo "To run 'ag-hub' from anywhere, add this directory to your shell configuration:"
+        echo "To run 'agyhub' from anywhere, add this directory to your shell configuration:"
         echo ""
         echo "  # For Bash (~/.bashrc):"
         echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc && source ~/.bashrc"
@@ -88,8 +95,8 @@ esac
 
 echo -e "${COLOR_BOLD}=== Installation Complete! ===${COLOR_RESET}\n"
 echo "You can now run:"
-echo "  ag-hub list          # Overview of available skill suites and active skills"
-echo "  ag-hub list <query>  # Search 200+ skills by keyword"
-echo "  ag-hub enable -g ... # Enable a group into your project"
-echo "  ag-hub --help        # View all CLI commands"
+echo "  agyhub list          # Overview of available skill suites and active skills"
+echo "  agyhub list <query>  # Search 200+ skills by keyword"
+echo "  agyhub enable -g ... # Enable a group into your project"
+echo "  agyhub --help        # View all CLI commands"
 echo ""

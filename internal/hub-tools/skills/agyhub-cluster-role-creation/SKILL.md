@@ -1,5 +1,5 @@
 ---
-name: cluster-role-creation
+name: agyhub-cluster-role-creation
 description: Guides the agent in designing, scoping, and generating new role-based skill clusters for Antigravity skills-hub, including interactive role clarification interviews ("Grill Me" framework), catalog exploration, gap analysis, and generating both JSON manifests and comprehensive markdown documentation.
 ---
 
@@ -26,7 +26,7 @@ flowchart TD
     A["Phase 1: Role Discovery & Interview<br>('Grill Me' Framework)"] --> B["Phase 2: Catalog Exploration & Skill Mining<br>(Scan internal & external skills/plugins)"]
     B --> C["Phase 3: Catalog Gap Analysis<br>(Identify missing capabilities & blueprints)"]
     C --> D["Phase 4: Artifact Generation<br>(Generate clusters/&lt;name&gt;.json &amp; .md)"]
-    D --> E["Phase 5: Hub Validation & Verification<br>(ag-hub cluster info &amp; match testing)"]
+    D --> E["Phase 5: Hub Validation & Verification<br>(agyhub cluster info &amp; match testing)"]
 ```
 
 ---
@@ -61,7 +61,7 @@ Explore the hub's catalog across both `internal/` and `external/` repositories t
 
 1. **List All Hub Skills**:
    ```bash
-   ag-hub list
+   agyhub list
    # Or inspect internal typology and external directories directly:
    # ls internal/ (e.g. internal/templates/, internal/hub-tools/, internal/<typology>/)
    # ls external/*/skills/ (or respective submodule skill directories)
@@ -93,7 +93,7 @@ A comprehensive cluster design must not only map existing skills, but also ident
 ### Phase 4: Standardized Artifact Generation
 
 For every approved role, generate two companion files in `clusters/`:
-1. `clusters/<role-name>.json`: Machine-readable cluster manifest used by `ag-hub`.
+1. `clusters/<role-name>.json`: Machine-readable cluster manifest used by `agyhub`.
 2. `clusters/<role-name>.md`: Human-facing architectural blueprint and documentation.
 
 #### 1. Manifest Specification: `clusters/<role-name>.json`
@@ -158,7 +158,7 @@ The [`<role-name>`](./<role-name>.json) cluster bundles **<N> skills** and **<M>
 
 | Missing Skill | Critical Enterprise Capability | Recommended Implementation Path |
 | :--- | :--- | :--- |
-| **`<missing-skill-id>`** | <Description of required capabilities> | Scaffold in `internal/<typology>/skills/<missing-skill-id>` (or `ag-hub create skill <id> -g <group>`) with <templates/tools>. |
+| **`<missing-skill-id>`** | <Description of required capabilities> | Scaffold in `internal/<typology>/skills/<missing-skill-id>` (or `agyhub create skill <id> -g <group>`) with <templates/tools>. |
 
 ### Gap Details & Blueprint Specifications
 <Detailed breakdown for each missing skill including Architectural Need, Key Capabilities, and Recommended Implementation Blueprint.>
@@ -168,12 +168,12 @@ The [`<role-name>`](./<role-name>.json) cluster bundles **<N> skills** and **<M>
 
 ### Phase 5: Hub Validation & Verification
 
-Always verify the newly generated cluster using `ag-hub`:
+Always verify the newly generated cluster using `agyhub`:
 
 1. **Verify Cluster Discovery & Info**:
    ```bash
-   ag-hub cluster list
-   ag-hub cluster info <role-name>
+   agyhub cluster list
+   agyhub cluster info <role-name>
    ```
    *Confirm that all skills are properly found, grouped, and mapped to their source repositories.*
 
@@ -181,9 +181,9 @@ Always verify the newly generated cluster using `ag-hub`:
    ```bash
    # Test enabling the cluster in an isolated workspace
    TMP_DIR=$(mktemp -d)
-   ag-hub -w "$TMP_DIR" enable -c <role-name>
-   ag-hub -w "$TMP_DIR" status
-   ag-hub -w "$TMP_DIR" disable -c <role-name>
+   agyhub -w "$TMP_DIR" enable -c <role-name>
+   agyhub -w "$TMP_DIR" status
+   agyhub -w "$TMP_DIR" disable -c <role-name>
    rm -rf "$TMP_DIR"
    ```
 
