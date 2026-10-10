@@ -1,11 +1,15 @@
 ---
 name: agyhub-cluster-role-creation
-description: Guides the agent in designing, scoping, and generating new role-based skill clusters for Antigravity skills-hub, including interactive role clarification interviews ("Grill Me" framework), catalog exploration, gap analysis, and generating both JSON manifests and comprehensive markdown documentation.
+description: Guides the agent in designing, scoping, and generating new role-based skill clusters for Antigravity skills-hub, either as official hub clusters (in clusters/) or workspace-specific clusters (in .agents/clusters/), including interactive role clarification interviews ("Grill Me" framework), catalog exploration, gap analysis, and generating both JSON manifests and comprehensive markdown documentation.
 ---
 
 # Cluster Role Creation: Role-Based Skill Cluster Designer
 
-This skill equips an agent to act as a **Cluster Role Designer** for the Antigravity Skills Hub. It provides an end-to-end operational framework for defining new specialized roles, mining the hub's catalog for matching skills/plugins, identifying capability gaps, and producing both the machine-readable cluster JSON manifest and human-readable companion documentation.
+This skill equips an agent to act as a **Cluster Role Designer** for the Antigravity Skills Hub. It provides an end-to-end operational framework for defining new specialized roles, mining the hub's catalog (and workspace-local skills) for matching skills/plugins, identifying capability gaps, and producing both the machine-readable cluster JSON manifest and human-readable companion documentation.
+
+Clusters can be scoped as either:
+1. **Official Hub Clusters** (`clusters/<name>.json`): Universal, shared personas contributed to the central skills-hub catalog.
+2. **Workspace-Specific Clusters** (`<workspace>/.agents/clusters/<name>.json`): Project-specific, proprietary, or experimental personas scoped strictly to the current workspace without modifying the official catalog.
 
 ---
 
@@ -13,27 +17,45 @@ This skill equips an agent to act as a **Cluster Role Designer** for the Antigra
 
 Activate this skill whenever the user asks to:
 - Define a new professional role or persona (e.g., "Azure MLOps Engineer", "Cloud Security Architect", "FinOps Specialist", "Frontend Lead").
-- Create a new skill cluster in `clusters/` bundling relevant skills and plugins from internal and external sources.
+- Create a workspace-specific cluster role in `.agents/clusters/` for a specific project without altering the central skills-hub.
+- Create an official skill cluster in `clusters/` bundling relevant skills and plugins from internal and external sources.
 - Perform a catalog gap analysis to identify missing skills needed for a given technical domain.
-- Generate companion documentation (`clusters/<role-name>.md`) explaining role scope, competency breakdown, and catalog gaps.
+- Generate companion documentation (`<role-name>.md`) explaining role scope, competency breakdown, and catalog gaps.
+- Promote a proven workspace-local cluster to an official hub cluster.
 
 ---
 
-## The 5-Phase Cluster Design Lifecycle
+## The 6-Phase Cluster Design Lifecycle
 
 ```mermaid
 flowchart TD
-    A["Phase 1: Role Discovery & Interview<br>('Grill Me' Framework)"] --> B["Phase 2: Catalog Exploration & Skill Mining<br>(Scan internal & external skills/plugins)"]
+    A["Phase 1: Role Discovery & Scope Triage Interview<br>('Grill Me' Framework - Hub Official vs Workspace Local)"] --> B["Phase 2: Catalog Exploration & Skill Mining<br>(Scan hub catalog & workspace-local skills)"]
     B --> C["Phase 3: Catalog Gap Analysis<br>(Identify missing capabilities & blueprints)"]
-    C --> D["Phase 4: Artifact Generation<br>(Generate clusters/&lt;name&gt;.json &amp; .md)"]
-    D --> E["Phase 5: Hub Validation & Verification<br>(agyhub cluster info &amp; match testing)"]
+    C --> D["Phase 4: Scope-Aware Artifact Generation<br>(clusters/ vs .agents/clusters/)"]
+    D --> E["Phase 5: Validation & Verification<br>(agyhub cluster info & activation testing)"]
+    E --> F["Phase 6: Optional Promotion Pathway<br>(Graduate workspace cluster to official hub)"]
 ```
 
 ---
 
-### Phase 1: Interactive Role Discovery & Clarification Interview
+### Phase 1: Interactive Role Discovery & Scope Triage Interview
 
-Before selecting skills or generating cluster files, an agent **must** clarify any ambiguities about the role's scope, operational tier, and technical boundaries. Use interactive questioning tools (e.g., `ask_question`) or structured questions.
+Before selecting skills or generating cluster files, an agent **must** clarify any ambiguities about the role's scope, operational tier, target repository, and technical boundaries. Use interactive questioning tools (e.g., `ask_question`) or structured inquiries.
+
+#### Mandatory Gate 0: Scope Determination (Official Hub vs. Workspace Local)
+
+Ask the user:
+> **"Should this cluster role be created as an Official Hub Cluster (contributed to `clusters/` for universal use) or a Workspace-Specific Cluster (saved in your project's `.agents/clusters/`)?"**
+
+| Criterion | Official Hub Cluster (`clusters/`) | Workspace-Specific Cluster (`.agents/clusters/`) |
+| :--- | :--- | :--- |
+| **Applicability** | Universal engineering archetype (e.g., Data Engineer, Cloud Architect) | Project-specific, client-specific, or proprietary stack |
+| **Storage Location** | `<hub_dir>/clusters/<role-name>.json` | `<workspace_root>/.agents/clusters/<role-name>.json` |
+| **Documentation** | `<hub_dir>/clusters/<role-name>.md` | `<workspace_root>/.agents/clusters/<role-name>.md` |
+| **Hub Catalog Sync** | Added to `README.md` predefined clusters table | **Never** touches hub `README.md` or hub `clusters/` |
+| **Version Control** | Committed to the `skills-hub` repository | Committed to the project repository or ignored |
+
+*Rule of Thumb*: Default to **Workspace-Specific** if the command is run inside an external project workspace or if the persona includes proprietary project rules. Default to **Official Hub** if working directly on skills-hub to add canonical roles.
 
 #### Core Inquiry Axes
 
@@ -55,23 +77,22 @@ Before selecting skills or generating cluster files, an agent **must** clarify a
 
 ### Phase 2: Catalog Exploration & Skill Mining
 
-Explore the hub's catalog across both `internal/` and `external/` repositories to discover candidate skills and plugins.
+Explore the available skills and plugins across both the hub catalog and local workspace skills.
 
-#### Steps to Mine the Catalog
+#### Steps to Mine Skills
 
 1. **List All Hub Skills**:
    ```bash
    agyhub list
-   # Or inspect internal typology and external directories directly:
-   # ls internal/ (e.g. internal/templates/, internal/hub-tools/, internal/<typology>/)
-   # ls external/*/skills/ (or respective submodule skill directories)
    ```
-2. **Search for Domain Keywords**:
+2. **Inspect Workspace-Local Skills (for Workspace Clusters)**:
+   - Check `<workspace_root>/.agents/skills/` or project-specific skill directories for custom skills already present in the workspace.
+3. **Search for Domain Keywords**:
    - Search skill names and descriptions for domain-specific terms (e.g., `lakehouse`, `lineage`, `security`, `optimization`, `finops`, `dataplex`, `spanner`, `dbt`).
-3. **Categorize Candidates by Competency**:
+4. **Categorize Candidates by Competency**:
    - Group discovered skills into 4 to 6 logical architectural pillars (e.g., *Topology & Storage*, *Governance & Lineage*, *Security & Zero-Trust*, *FinOps & Cost Optimization*, *Data Pipelines*, *Modernization*).
-4. **Identify Candidate Plugins**:
-   - Check `internal/<typology>/plugins/` (or `internal/templates/plugins/`) or external plugin definitions for bundled rule sets that apply to the role (e.g., `googlecloud-data`).
+5. **Identify Candidate Plugins**:
+   - Check for active or available plugins (e.g., `googlecloud-data`). Note that bundled skills inside plugins will automatically be provided by the plugin.
 
 ---
 
@@ -86,17 +107,27 @@ A comprehensive cluster design must not only map existing skills, but also ident
    - **Skill Identifier**: Recommended kebab-case name (e.g., `gcp-analytics-hub-data-sharing`, `dataplex-data-quality-autodq`).
    - **Architectural Need**: Why the role cannot operate autonomously without this capability.
    - **Key Capabilities**: 3–4 specific technical tasks the skill should automate or guide.
-   - **Implementation Blueprint**: Recommended approach to author the skill in `internal/<typology>/skills/<name>/SKILL.md` (e.g. `internal/data-platform/skills/<name>/`, `internal/hub-tools/skills/<name>/`, or `internal/templates/skills/<name>/`).
+   - **Implementation Blueprint**:
+     - *If Official Hub*: Recommend scaffolding in `internal/<typology>/skills/<name>/SKILL.md` (or `agyhub create skill <name> -g <group>`).
+     - *If Workspace-Specific*: Recommend scaffolding in `<workspace_root>/.agents/skills/<name>/SKILL.md` for project isolation.
 
 ---
 
-### Phase 4: Standardized Artifact Generation
+### Phase 4: Scope-Aware Artifact Generation
 
-For every approved role, generate two companion files in `clusters/`:
-1. `clusters/<role-name>.json`: Machine-readable cluster manifest used by `agyhub`.
-2. `clusters/<role-name>.md`: Human-facing architectural blueprint and documentation.
+For every approved role, generate two companion files based on the target scope decided in Phase 1:
 
-#### 1. Manifest Specification: `clusters/<role-name>.json`
+#### Target File Paths
+
+- **Official Hub Cluster**:
+  - Manifest: `clusters/<role-name>.json`
+  - Documentation: `clusters/<role-name>.md`
+- **Workspace-Specific Cluster**:
+  - Manifest: `<workspace_root>/.agents/clusters/<role-name>.json`
+  - Documentation: `<workspace_root>/.agents/clusters/<role-name>.md`
+  *(Ensure `<workspace_root>/.agents/clusters/` directory exists before writing).*
+
+#### 1. Manifest Specification (`<role-name>.json`)
 
 ```json
 {
@@ -114,18 +145,17 @@ For every approved role, generate two companion files in `clusters/`:
 ```
 
 *Rules:*
-- File must be located at `clusters/<role-name>.json`.
-- Skill names must exactly match registered skill identifiers in the hub catalog.
+- Skill names must match registered skill identifiers in the hub catalog or workspace manifest.
 - If no plugins are needed, set `"plugins": []`.
 
-#### 2. Documentation Specification: `clusters/<role-name>.md`
+#### 2. Documentation Specification (`<role-name>.md`)
 
-The companion markdown file **must** include the following 3 canonical sections:
+The companion markdown file **must** include the following canonical sections:
 
 ```markdown
 # Role Blueprint: <Role Title>
 
-This document serves as the architectural reference and companion guide to the [`clusters/<role-name>.json`](./<role-name>.json) cluster definition.
+This document serves as the architectural reference and companion guide to the [`<role-name>.json`](./<role-name>.json) cluster definition.
 
 ---
 
@@ -158,7 +188,7 @@ The [`<role-name>`](./<role-name>.json) cluster bundles **<N> skills** and **<M>
 
 | Missing Skill | Critical Enterprise Capability | Recommended Implementation Path |
 | :--- | :--- | :--- |
-| **`<missing-skill-id>`** | <Description of required capabilities> | Scaffold in `internal/<typology>/skills/<missing-skill-id>` (or `agyhub create skill <id> -g <group>`) with <templates/tools>. |
+| **`<missing-skill-id>`** | <Description of required capabilities> | Scaffold in `internal/<typology>/skills/<missing-skill-id>` or `.agents/skills/<missing-skill-id>` |
 
 ### Gap Details & Blueprint Specifications
 <Detailed breakdown for each missing skill including Architectural Need, Key Capabilities, and Recommended Implementation Blueprint.>
@@ -166,26 +196,69 @@ The [`<role-name>`](./<role-name>.json) cluster bundles **<N> skills** and **<M>
 
 ---
 
-### Phase 5: Hub Validation & Verification
+### Phase 5: Validation & Verification
 
-Always verify the newly generated cluster using `agyhub`:
+Verify the newly generated cluster using `agyhub`:
 
-1. **Verify Cluster Discovery & Info**:
+#### For Workspace-Specific Clusters:
+1. **Verify Workspace Discovery**:
    ```bash
    agyhub cluster list
+   # Notice the [WORKSPACE] badge next to your cluster name
+   ```
+2. **Inspect Cluster Details**:
+   ```bash
+   agyhub cluster info <role-name>
+   # Confirm Source File points to .agents/clusters/<role-name>.json
+   ```
+3. **Verify Activation in Workspace**:
+   ```bash
+   agyhub enable -c <role-name>
+   agyhub status
+   ```
+4. **Governance & VCS Advice**:
+   - **DO NOT** edit the hub's `README.md` or commit anything to `clusters/`.
+   - **Team Sharing**: If other team members working on this project should have access to this cluster role, commit `.agents/clusters/` into the project repository.
+   - **Private Persona**: If this role is purely personal or temporary, add `.agents/clusters/` to the project's `.gitignore`.
+
+#### For Official Hub Clusters:
+1. **Verify Hub Discovery & Info**:
+   ```bash
+   agyhub cluster list
+   # Notice the [HUB] badge
    agyhub cluster info <role-name>
    ```
-   *Confirm that all skills are properly found, grouped, and mapped to their source repositories.*
-
 2. **Verify Temporary Workspace Activation**:
    ```bash
-   # Test enabling the cluster in an isolated workspace
    TMP_DIR=$(mktemp -d)
    agyhub -w "$TMP_DIR" enable -c <role-name>
    agyhub -w "$TMP_DIR" status
    agyhub -w "$TMP_DIR" disable -c <role-name>
    rm -rf "$TMP_DIR"
    ```
-
-3. **Update Documentation**:
+3. **Update Hub Catalog**:
    - Add the new cluster to the Predefined Clusters table in [`README.md`](../../../../README.md).
+
+---
+
+### Phase 6: Graduation / Promotion Pathway
+
+If a cluster role initially authored as a **Workspace-Specific Cluster** proves universally valuable across multiple engineering teams and projects, it can be promoted to an **Official Hub Cluster**:
+
+1. **Copy Artifacts to Hub**:
+   ```bash
+   cp .agents/clusters/<role-name>.json clusters/<role-name>.json
+   cp .agents/clusters/<role-name>.md clusters/<role-name>.md
+   ```
+2. **Remove Local Workspace Override**:
+   ```bash
+   rm .agents/clusters/<role-name>.json .agents/clusters/<role-name>.md
+   ```
+3. **Validate Hub Scope**:
+   ```bash
+   agyhub cluster list
+   # Confirms scope badge is now [HUB]
+   agyhub cluster info <role-name>
+   ```
+4. **Register in Hub Documentation**:
+   - Add the role to the Predefined Clusters table in `README.md`.

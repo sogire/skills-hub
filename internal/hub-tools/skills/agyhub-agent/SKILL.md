@@ -245,20 +245,32 @@ agyhub -w /path/to/project disable --all
 ### Playbook 6: Cluster Operations & Scaffolding
 
 ```bash
-# List all predefined clusters with active status:
+# List all clusters with active status and scope badges ([HUB] vs [WORKSPACE]):
 agyhub cluster list
 # or:
 agyhub clusters
 
-# Inspect cluster details and contained skills:
+# Inspect cluster details, contained skills, and source path:
 agyhub cluster info gcp-data-enterprise-architect
 agyhub cluster info data-engineer
 
-# Scaffold a new cluster manifest:
+# Scaffold a new official hub cluster manifest (in clusters/):
 agyhub create cluster mlops-platform
 
-# Scaffold a new skill in a specific typology:
+# Scaffold a workspace-specific cluster manifest (in .agents/clusters/):
+agyhub create cluster my-project-role --local
+# or:
+agyhub cluster create my-project-role --local
+
+# Enable/disable a cluster (works identically for [HUB] and [WORKSPACE] clusters):
+agyhub enable -c my-project-role
+agyhub disable -c my-project-role
+
+# Scaffold a new skill in a specific typology (in internal/<typology>/skills/):
 agyhub create skill my-tool -g data-platform
+
+# Scaffold a workspace-local skill (in .agents/skills/):
+agyhub create skill my-tool --local
 
 # Scaffold a new plugin in a specific typology:
 agyhub create plugin my-plugin -g data-platform
@@ -268,7 +280,7 @@ agyhub create rule my-rule -g data-platform
 ```
 
 > [!TIP]
-> To interactively design a new cluster with interview gates and companion documentation, use the companion skill [`agyhub-cluster-role-creation`](../agyhub-cluster-role-creation/SKILL.md). To author a missing skill, use [`agyhub-skills-gap-creator`](../agyhub-skills-gap-creator/SKILL.md).
+> To interactively design a new cluster (either official in `clusters/` or workspace-specific in `.agents/clusters/`) with interview gates and companion documentation, use the companion skill [`agyhub-cluster-role-creation`](../agyhub-cluster-role-creation/SKILL.md). To author a missing skill, use [`agyhub-skills-gap-creator`](../agyhub-skills-gap-creator/SKILL.md).
 
 ---
 

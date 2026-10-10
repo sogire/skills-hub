@@ -6,6 +6,7 @@ Manage, update, and selectively activate Antigravity skills and plugins in any w
 
 import argparse
 import configparser
+import datetime
 import json
 import os
 import re
@@ -96,6 +97,53 @@ def _match_group(filter_group: str, candidate_group: str) -> bool:
             return True
     return False
 
+def _clean_group_name(raw_group: str) -> str:
+    """Normalizes group string to clean name (e.g. internal/hub-tools -> hub-tools, external/agents-cli -> agents-cli)."""
+    g = raw_group.strip("/")
+    if g.startswith("internal/"):
+        g = g[len("internal/"):]
+    elif g.startswith("external/"):
+        g = g[len("external/"):]
+    return g.split("/")[0] if "/" in g else g
+
+def _determine_entry_name(
+    parent_dir: Path,
+    items_to_add: list[str],
+    cluster_context: str | None = None,
+    group_context: str | None = None,
+    all_catalog: dict | None = None,
+    existing_entry: dict | None = None
+) -> str:
+    """Determines the schema 'name' for a manifest entry based on context, groups, or skill name."""
+    if cluster_context:
+        return cluster_context
+    if group_context:
+        return _clean_group_name(group_context)
+
+    catalog = all_catalog or {}
+    all_items = set(items_to_add)
+    if existing_entry and "include_only" in existing_entry:
+        all_items.update(existing_entry.get("include_only") or [])
+
+    if len(all_items) == 1:
+        return list(all_items)[0]
+
+    groups = set()
+    for item in all_items:
+        if item in catalog and "group" in catalog[item]:
+            groups.add(_clean_group_name(catalog[item]["group"]))
+
+    if len(groups) == 1:
+        return list(groups)[0]
+
+    if existing_entry and existing_entry.get("name"):
+        curr_name = existing_entry["name"]
+        new_groups = set(_clean_group_name(catalog[item]["group"]) for item in items_to_add if item in catalog and "group" in catalog[item])
+        if len(new_groups) <= 1 and (not new_groups or curr_name in new_groups):
+            return curr_name
+
+    return "custom"
+
 class ClusterManager:
     def __init__(self, hub_dir: Path = DEFAULT_HUB_DIR, workspace_root: Path | None = None):
         self.hub_dir = hub_dir
@@ -174,7 +222,7 @@ class ClusterManager:
         clusters = self.load_clusters()
         return clusters.get(name)
 
-    def get_cluster_status(self, cluster_info: dict, active_skills: dict, active_plugins: dict) -> tuple[int, int, str]:
+    def get_cluster_status(self, cluster_info: dict, active_skills: dict, active_plugins: dict, skill_to_plugin: dict | None = None) -> tuple[int, int, str]:
         """Returns (active_count, total_count, status_label)"""
         skills = cluster_info.get("skills", [])
         plugins = cluster_info.get("plugins", [])
@@ -182,7 +230,16 @@ class ClusterManager:
         if total == 0:
             return 0, 0, "EMPTY"
 
-        active = sum(1 for s in skills if s in active_skills) + sum(1 for p in plugins if p in active_plugins)
+        active_skills_count = 0
+        for s in skills:
+            if s in active_skills:
+                active_skills_count += 1
+            elif skill_to_plugin and skill_to_plugin.get(s) in active_plugins:
+                active_skills_count += 1
+
+        active_plugins_count = sum(1 for p in plugins if p in active_plugins)
+        active = active_skills_count + active_plugins_count
+
         if active == total:
             status = "ACTIVE"
         elif active > 0:
@@ -253,6 +310,35 @@ class HubManager:
         except Exception:
             pass
         return modules
+
+    def get_plugin_skills_map(self, skills: dict | None = None, plugins: dict | None = None):
+        """Builds bidirectional mappings: skill_to_plugin and plugin_to_skills."""
+        if skills is None or plugins is None:
+            skills, plugins = self.get_available()
+
+        # Sort plugins by path depth descending so most specific (deepest) match first
+        sorted_plugins = sorted(
+            plugins.items(),
+            key=lambda item: len(str(item[1]["path"].resolve())),
+            reverse=True
+        )
+
+        skill_to_plugin = {}
+        plugin_to_skills = {p: [] for p in plugins}
+
+        for s_name, s_info in skills.items():
+            s_path = s_info["path"].resolve()
+            for p_name, p_info in sorted_plugins:
+                p_path = p_info["path"].resolve()
+                try:
+                    s_path.relative_to(p_path)
+                    skill_to_plugin[s_name] = p_name
+                    plugin_to_skills[p_name].append(s_name)
+                    break
+                except ValueError:
+                    continue
+
+        return skill_to_plugin, plugin_to_skills
 
     def get_available(self):
         """Discovers all skills and plugins across standalone folders and submodules."""
@@ -351,27 +437,33 @@ class HubManager:
                     "group": group_prefix
                 }
 
-            # Check plugins/ subdirectory in submodule
+            # Check plugins/ subdirectory in submodule (recursive discovery)
             sub_plugins_dir = sub_path / "plugins"
             if sub_plugins_dir.exists():
-                for item in sorted(sub_plugins_dir.iterdir()):
-                    if item.is_dir():
-                        if (item / "plugin.json").exists():
-                            plugins[item.name] = {
-                                "path": item,
-                                "parent": item.parent,
-                                "desc": get_plugin_description(item),
-                                "group": group_prefix
-                            }
+                for plugin_file in sorted(sub_plugins_dir.glob("**/plugin.json")):
+                    rel = plugin_file.relative_to(sub_plugins_dir)
+                    # Skip hidden dirs and third-party manifests (.claude-plugin, .codex-plugin, etc.)
+                    if any(part.startswith(".") for part in rel.parts):
+                        continue
+                    p_dir = plugin_file.parent
+                    if p_dir.name in ("plugin", "plugins"):
+                        p_name = p_dir.parent.name
+                        rel_parent = p_dir.parent.parent.relative_to(sub_plugins_dir)
+                    else:
+                        p_name = p_dir.name
+                        rel_parent = p_dir.parent.relative_to(sub_plugins_dir)
+
+                    if p_name not in plugins:
+                        if str(rel_parent) != ".":
+                            p_group = f"{group_prefix}/{rel_parent}"
                         else:
-                            for subitem in sorted(item.iterdir()):
-                                if subitem.is_dir() and (subitem / "plugin.json").exists():
-                                    plugins[subitem.name] = {
-                                        "path": subitem,
-                                        "parent": subitem.parent,
-                                        "desc": get_plugin_description(subitem),
-                                        "group": f"{group_prefix}/{item.name}"
-                                    }
+                            p_group = group_prefix
+                        plugins[p_name] = {
+                            "path": p_dir,
+                            "parent": p_dir.parent,
+                            "desc": get_plugin_description(p_dir),
+                            "group": p_group
+                        }
 
             # Check skills/ subdirectory in submodule
             sub_skills_dir = sub_path / "skills"
@@ -494,6 +586,8 @@ class HubManager:
         target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
         target_names = list(names or [])
+        cluster_context = clusters[0] if (clusters and len(clusters) == 1) else None
+        group_context = group if group else None
 
         if clusters:
             cm = ClusterManager(hub_dir=self.hub_dir, workspace_root=workspace_root)
@@ -531,44 +625,107 @@ class HubManager:
         scope_tag = f" {COLOR_MAGENTA}[GLOBAL]{COLOR_RESET}" if is_global else ""
         manifest_rel = "~/.gemini/config/" if is_global else ".agents/"
 
-        enabled_count = 0
+        active_skills, active_plugins = self.get_active(workspace_root=workspace_root, is_global=is_global)
+        skill_to_plugin, plugin_to_skills = self.get_plugin_skills_map(skills=all_skills, plugins=all_plugins)
+
+        target_skills = []
+        target_plugins = []
         for name in target_names:
-            if name in all_skills:
-                item_info = all_skills[name]
-                src_path = item_info["path"]
-                parent_dir = item_info["parent"]
-
-                if as_symlink:
-                    skills_dir.mkdir(parents=True, exist_ok=True)
-                    link_path = skills_dir / name
-                    if link_path.exists() or link_path.is_symlink():
-                        link_path.unlink()
-                    link_path.symlink_to(src_path)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked skill '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}{scope_tag}")
-                else:
-                    self._update_manifest(skills_json, parent_dir, name, add=True)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled skill '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in {manifest_rel}skills.json{scope_tag}")
-                enabled_count += 1
-
-            elif name in all_plugins:
-                item_info = all_plugins[name]
-                src_path = item_info["path"]
-                parent_dir = item_info["parent"]
-
-                if as_symlink:
-                    plugins_dir.mkdir(parents=True, exist_ok=True)
-                    link_path = plugins_dir / name
-                    if link_path.exists() or link_path.is_symlink():
-                        link_path.unlink()
-                    link_path.symlink_to(src_path)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked plugin '{COLOR_BOLD}{name}{COLOR_RESET}' -> {link_path}{scope_tag}")
-                else:
-                    self._update_manifest(plugins_json, parent_dir, name, add=True)
-                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled plugin '{COLOR_BOLD}{name}{COLOR_RESET}' [{item_info['group']}] in {manifest_rel}plugins.json{scope_tag}")
-                enabled_count += 1
-
+            if name in all_plugins:
+                if name not in target_plugins:
+                    target_plugins.append(name)
+            elif name in all_skills:
+                if name not in target_skills:
+                    target_skills.append(name)
             else:
                 print(f"{COLOR_RED}✗ Unknown skill or plugin:{COLOR_RESET} '{name}'")
+
+        if not target_skills and not target_plugins:
+            print("No valid skills or plugins found to enable.")
+            return
+
+        effective_active_plugins = set(active_plugins.keys()) | set(target_plugins)
+        enabled_count = 0
+
+        # 1. Enable plugins first
+        for p_name in target_plugins:
+            item_info = all_plugins[p_name]
+            src_path = item_info["path"]
+            parent_dir = item_info["parent"]
+
+            if as_symlink:
+                plugins_dir.mkdir(parents=True, exist_ok=True)
+                link_path = plugins_dir / p_name
+                if link_path.exists() or link_path.is_symlink():
+                    link_path.unlink()
+                link_path.symlink_to(src_path)
+                print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked plugin '{COLOR_BOLD}{p_name}{COLOR_RESET}' -> {link_path}{scope_tag}")
+            else:
+                self._update_manifest(
+                    plugins_json,
+                    parent_dir,
+                    p_name,
+                    add=True,
+                    cluster_context=cluster_context,
+                    group_context=group_context,
+                    all_catalog=all_plugins
+                )
+                print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled plugin '{COLOR_BOLD}{p_name}{COLOR_RESET}' [{item_info['group']}] in {manifest_rel}plugins.json{scope_tag}")
+            enabled_count += 1
+
+            # Prune any bundled skills of this plugin that were already active as individual entries
+            bundled = plugin_to_skills.get(p_name, [])
+            for s_bundled in bundled:
+                if s_bundled in active_skills:
+                    if as_symlink:
+                        link_path = skills_dir / s_bundled
+                        if link_path.exists() or link_path.is_symlink():
+                            link_path.unlink()
+                    else:
+                        self._update_manifest(skills_json, None, s_bundled, add=False, all_catalog=all_skills)
+                    print(f"{COLOR_DIM}  Pruned duplicate individual skill '{s_bundled}' (now covered by plugin '{p_name}'){COLOR_RESET}")
+
+        # 2. Filter target skills covered by active/enabled plugins
+        skills_to_enable = []
+        for s_name in target_skills:
+            parent_plug = skill_to_plugin.get(s_name)
+            if parent_plug and parent_plug in effective_active_plugins:
+                print(f"{COLOR_DIM}  Skill '{s_name}' is automatically provided by active plugin '{parent_plug}' (skipped duplicate mount){COLOR_RESET}")
+                enabled_count += 1
+            else:
+                skills_to_enable.append(s_name)
+
+        if as_symlink:
+            for s_name in skills_to_enable:
+                item_info = all_skills[s_name]
+                src_path = item_info["path"]
+                skills_dir.mkdir(parents=True, exist_ok=True)
+                link_path = skills_dir / s_name
+                if link_path.exists() or link_path.is_symlink():
+                    link_path.unlink()
+                link_path.symlink_to(src_path)
+                print(f"{COLOR_GREEN}✓{COLOR_RESET} Symlinked skill '{COLOR_BOLD}{s_name}{COLOR_RESET}' -> {link_path}{scope_tag}")
+                enabled_count += 1
+        else:
+            by_parent = {}
+            for s_name in skills_to_enable:
+                p_dir = all_skills[s_name]["parent"]
+                by_parent.setdefault(p_dir, []).append(s_name)
+
+            for p_dir, s_names in by_parent.items():
+                self._update_manifest(
+                    skills_json,
+                    p_dir,
+                    s_names,
+                    add=True,
+                    cluster_context=cluster_context,
+                    group_context=group_context,
+                    all_catalog=all_skills
+                )
+                for s_name in s_names:
+                    grp = all_skills[s_name]["group"]
+                    print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled skill '{COLOR_BOLD}{s_name}{COLOR_RESET}' [{grp}] in {manifest_rel}skills.json{scope_tag}")
+                    enabled_count += 1
 
         if configure_permissions and enabled_count > 0:
             paths_to_grant = [self.hub_dir]
@@ -591,6 +748,7 @@ class HubManager:
                 print(f"{COLOR_GREEN}✓{COLOR_RESET} Configured Antigravity permission: {COLOR_BOLD}{r}{COLOR_RESET}")
 
     def disable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, clusters: list[str] | None = None, disable_all: bool = False, is_global: bool = False, clean_permissions: bool = False):
+        all_skills, all_plugins = self.get_available()
         target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
         target_names = list(names or [])
@@ -615,15 +773,13 @@ class HubManager:
             active_skills, active_plugins = self.get_active(workspace_root, is_global=is_global)
             if is_global:
                 # In global mode, only target hub-managed items to preserve external system plugins
-                all_hub_skills, all_hub_plugins = self.get_available()
-                target_names = [s for s in active_skills if s in all_hub_skills] + [p for p in active_plugins if p in all_hub_plugins]
+                target_names = [s for s in active_skills if s in all_skills] + [p for p in active_plugins if p in all_plugins]
             else:
                 target_names = list(set(list(active_skills.keys()) + list(active_plugins.keys())))
             if not target_names:
                 print(f"{COLOR_YELLOW}No hub customizations currently active in {scope_str}.{COLOR_RESET}")
                 return
         elif group:
-            all_skills, all_plugins = self.get_available()
             matching = [
                 s for s, info in all_skills.items()
                 if _match_group(group, info["group"])
@@ -641,12 +797,12 @@ class HubManager:
         for name in target_names:
             removed = False
             if skills_json.exists():
-                if self._update_manifest(skills_json, None, name, add=False):
+                if self._update_manifest(skills_json, None, name, add=False, all_catalog=all_skills):
                     print(f"{COLOR_YELLOW}Removed{COLOR_RESET} skill '{name}' from {manifest_rel}skills.json")
                     removed = True
 
             if plugins_json.exists():
-                if self._update_manifest(plugins_json, None, name, add=False):
+                if self._update_manifest(plugins_json, None, name, add=False, all_catalog=all_plugins):
                     print(f"{COLOR_YELLOW}Removed{COLOR_RESET} plugin '{name}' from {manifest_rel}plugins.json")
                     removed = True
 
@@ -666,7 +822,7 @@ class HubManager:
                     print(f"{COLOR_YELLOW}Removed{COLOR_RESET} symlink {plugin_symlink}")
                     removed = True
 
-            if not removed and not group:
+            if not removed and not group and not clusters:
                 print(f"{COLOR_DIM}Item '{name}' was not active in {scope_str}.{COLOR_RESET}")
 
         if clean_permissions:
@@ -678,8 +834,17 @@ class HubManager:
                 for r in revoked:
                     print(f"{COLOR_YELLOW}Revoked Antigravity permission:{COLOR_RESET} {COLOR_BOLD}{r}{COLOR_RESET}")
 
-    def _update_manifest(self, manifest_file: Path, parent_dir: Path | None, item_name: str, add: bool = True) -> bool:
-        """Updates or removes items in skills.json or plugins.json."""
+    def _update_manifest(
+        self,
+        manifest_file: Path,
+        parent_dir: Path | None,
+        item_name: str | list[str],
+        add: bool = True,
+        cluster_context: str | None = None,
+        group_context: str | None = None,
+        all_catalog: dict | None = None
+    ) -> bool:
+        """Updates or removes items in skills.json or plugins.json, maintaining name and date schema."""
         data = {"entries": []}
         if manifest_file.exists():
             try:
@@ -689,37 +854,87 @@ class HubManager:
 
         entries = data.get("entries", [])
         modified = False
+        items = [item_name] if isinstance(item_name, str) else list(item_name)
 
         if add and parent_dir is not None:
             resolved_parent = str(parent_dir.resolve())
-            entry_match = None
-            for e in entries:
+            entry_index = None
+            for idx, e in enumerate(entries):
                 if str(Path(e.get("path", "")).resolve()) == resolved_parent:
-                    entry_match = e
+                    entry_index = idx
                     break
 
-            if entry_match:
-                inc = entry_match.setdefault("include_only", [])
-                if item_name not in inc:
-                    inc.append(item_name)
+            if entry_index is not None:
+                entry_match = entries[entry_index]
+                inc = list(entry_match.get("include_only") or [])
+                items_added = False
+                for itm in items:
+                    if itm not in inc:
+                        inc.append(itm)
+                        items_added = True
+                if items_added:
                     inc.sort()
                     modified = True
+
+                entry_name = _determine_entry_name(
+                    parent_dir=parent_dir,
+                    items_to_add=items,
+                    cluster_context=cluster_context,
+                    group_context=group_context,
+                    all_catalog=all_catalog,
+                    existing_entry=entry_match
+                )
+                entry_date = entry_match.get("date") or datetime.date.today().isoformat()
+
+                if entry_match.get("name") != entry_name or entry_match.get("date") != entry_date:
+                    modified = True
+
+                new_entry = {
+                    "name": entry_name,
+                    "date": entry_date,
+                    "path": entry_match.get("path", resolved_parent),
+                    "include_only": inc
+                }
+                entries[entry_index] = new_entry
             else:
+                entry_name = _determine_entry_name(
+                    parent_dir=parent_dir,
+                    items_to_add=items,
+                    cluster_context=cluster_context,
+                    group_context=group_context,
+                    all_catalog=all_catalog
+                )
+                entry_date = datetime.date.today().isoformat()
                 entries.append({
-                    "path": str(parent_dir.resolve()),
-                    "include_only": [item_name]
+                    "name": entry_name,
+                    "date": entry_date,
+                    "path": resolved_parent,
+                    "include_only": sorted(list(set(items)))
                 })
                 modified = True
             data["entries"] = entries
 
         elif not add:
+            items_to_remove = set(items)
             new_entries = []
             for e in entries:
                 inc = e.get("include_only")
-                if inc is not None and item_name in inc:
-                    inc.remove(item_name)
-                    modified = True
-                if inc is None or len(inc) > 0:
+                if inc is not None:
+                    orig_len = len(inc)
+                    new_inc = [x for x in inc if x not in items_to_remove]
+                    if len(new_inc) != orig_len:
+                        modified = True
+                    if len(new_inc) > 0:
+                        e_name = e.get("name") or _determine_entry_name(Path(e.get("path", "")), new_inc, all_catalog=all_catalog)
+                        e_date = e.get("date") or datetime.date.today().isoformat()
+                        new_e = {
+                            "name": e_name,
+                            "date": e_date,
+                            "path": e.get("path", ""),
+                            "include_only": sorted(new_inc)
+                        }
+                        new_entries.append(new_e)
+                else:
                     new_entries.append(e)
             data["entries"] = new_entries
 
@@ -745,17 +960,15 @@ class HubManager:
 
     def _save_cli_settings(self, settings: dict) -> None:
         """Atomically saves settings to CLI_SETTINGS_FILE."""
-        CLI_SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp_file = CLI_SETTINGS_FILE.with_suffix(f".tmp.{os.getpid()}")
         try:
+            CLI_SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            tmp_file = CLI_SETTINGS_FILE.with_suffix(f".tmp.{os.getpid()}")
             with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=2, ensure_ascii=False)
                 f.write("\n")
             tmp_file.replace(CLI_SETTINGS_FILE)
         except Exception as e:
-            if tmp_file.exists():
-                tmp_file.unlink(missing_ok=True)
-            raise e
+            print(f"{COLOR_YELLOW}Warning: Could not save permissions to {CLI_SETTINGS_FILE}: {e}{COLOR_RESET}", file=sys.stderr)
 
     def _grant_read_permissions(self, paths: list[Path] | None = None) -> list[str]:
         """Ensures read_file permissions for the given paths in ~/.gemini/antigravity-cli/settings.json."""
@@ -879,7 +1092,7 @@ class HubManager:
 
         print()
 
-    def scaffold(self, item_type: str, name: str, group: str | None = None):
+    def scaffold(self, item_type: str, name: str, group: str | None = None, is_local: bool = False, workspace_root: Path | None = None):
         clean_group = "templates"
         if group:
             clean_group = group.strip("/")
@@ -887,7 +1100,12 @@ class HubManager:
                 clean_group = clean_group[len("internal/"):]
 
         if item_type == "skill":
-            target = self.hub_dir / "internal" / clean_group / "skills" / name
+            if is_local:
+                target = (workspace_root or find_workspace_root()) / ".agents" / "skills" / name
+                target_scope = "workspace (.agents/skills)"
+            else:
+                target = self.hub_dir / "internal" / clean_group / "skills" / name
+                target_scope = f"hub (internal/{clean_group}/skills)"
             if target.exists():
                 print(f"{COLOR_RED}Error:{COLOR_RESET} Skill '{name}' already exists at {target}")
                 return
@@ -906,7 +1124,7 @@ description: Describe what {name} does and when the agent should activate it.
 ## Workflow
 1. 
 """, encoding="utf-8")
-            print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new skill '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
+            print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new {target_scope} skill '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
 
         elif item_type == "plugin":
             target = self.hub_dir / "internal" / clean_group / "plugins" / name
@@ -943,7 +1161,12 @@ Guidelines and coding standards for {rule_title}.
             print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new rule '{COLOR_BOLD}{rule_file}{COLOR_RESET}' at {target}")
 
         elif item_type == "cluster":
-            target_dir = self.hub_dir / "clusters"
+            if is_local:
+                target_dir = (workspace_root or find_workspace_root()) / ".agents" / "clusters"
+                target_scope = "workspace (.agents/clusters)"
+            else:
+                target_dir = self.hub_dir / "clusters"
+                target_scope = "hub (clusters)"
             target_dir.mkdir(parents=True, exist_ok=True)
             target = target_dir / f"{name}.json"
             if target.exists():
@@ -956,7 +1179,7 @@ Guidelines and coding standards for {rule_title}.
                 "plugins": []
             }
             target.write_text(json.dumps(boilerplate, indent=2) + "\n", encoding="utf-8")
-            print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new cluster '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
+            print(f"{COLOR_GREEN}✓{COLOR_RESET} Created new {target_scope} cluster '{COLOR_BOLD}{name}{COLOR_RESET}' at {target}")
             print(f"Edit {target} to add skill names to the cluster.")
 
     def add_repo(self, url: str, name: str | None = None, branch: str = "main"):
@@ -1059,6 +1282,7 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
     all_skills, all_plugins = manager.get_available()
     active_skills, active_plugins = manager.get_workspace_active(workspace_root)
     glob_skills, glob_plugins = manager.get_global_active()
+    skill_to_plugin, _ = manager.get_plugin_skills_map(skills=all_skills, plugins=all_plugins)
 
     print(f"\n{COLOR_BOLD}Antigravity Hub:{COLOR_RESET} {manager.hub_dir}")
     print(f"{COLOR_BOLD}Current Workspace:{COLOR_RESET} {workspace_root}\n")
@@ -1162,12 +1386,22 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
         for name, info in sorted(items.items()):
             in_ws = name in active_skills
             in_glob = name in glob_skills
+            parent_p = skill_to_plugin.get(name)
+            via_ws = parent_p and parent_p in active_plugins
+            via_glob = parent_p and parent_p in glob_plugins
+
             if in_ws and in_glob:
                 badge = f"{COLOR_GREEN}[BOTH ({active_skills[name]}/{glob_skills[name]})]{COLOR_RESET}"
             elif in_ws:
                 badge = f"{COLOR_GREEN}[WORKSPACE ({active_skills[name]})]{COLOR_RESET}"
             elif in_glob:
                 badge = f"{COLOR_MAGENTA}[GLOBAL ({glob_skills[name]})]{COLOR_RESET}   "
+            elif via_ws and via_glob:
+                badge = f"{COLOR_GREEN}[BOTH (plugin)]{COLOR_RESET}      "
+            elif via_ws:
+                badge = f"{COLOR_GREEN}[WORKSPACE (plugin)]{COLOR_RESET} "
+            elif via_glob:
+                badge = f"{COLOR_MAGENTA}[GLOBAL (plugin)]{COLOR_RESET}    "
             else:
                 badge = f"{COLOR_DIM}[                   ]{COLOR_RESET}"
             desc = f" - {COLOR_DIM}{info['desc']}{COLOR_RESET}" if info['desc'] else ""
@@ -1194,6 +1428,7 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
 
 def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = False):
     all_skills, all_plugins = manager.get_available()
+    skill_to_plugin, _ = manager.get_plugin_skills_map(skills=all_skills, plugins=all_plugins)
 
     if is_global:
         active_skills, active_plugins = manager.get_global_active()
@@ -1208,7 +1443,11 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
         print(f"{COLOR_CYAN}{COLOR_BOLD}Active Global Skills ({len(active_skills)}):{COLOR_RESET}")
         for s, mode in sorted(active_skills.items()):
             grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
-            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+            parent_p = skill_to_plugin.get(s)
+            dup_warn = ""
+            if parent_p and parent_p in active_plugins:
+                dup_warn = f" {COLOR_YELLOW}[DUPLICATE: also provided by active global plugin '{parent_p}']{COLOR_RESET}"
+            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}{dup_warn}")
 
         if active_plugins:
             print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Global Plugins ({len(active_plugins)}):{COLOR_RESET}")
@@ -1232,7 +1471,11 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
         print(f"{COLOR_CYAN}{COLOR_BOLD}Active Workspace Skills ({len(ws_skills)}):{COLOR_RESET}")
         for s, mode in sorted(ws_skills.items()):
             grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
-            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+            parent_p = skill_to_plugin.get(s)
+            dup_warn = ""
+            if parent_p and parent_p in ws_plugins:
+                dup_warn = f" {COLOR_YELLOW}[DUPLICATE: also provided by active plugin '{parent_p}']{COLOR_RESET}"
+            print(f"  {COLOR_GREEN}✓{COLOR_RESET} {s:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}{dup_warn}")
 
         if ws_plugins:
             print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Workspace Plugins ({len(ws_plugins)}):{COLOR_RESET}")
@@ -1241,11 +1484,13 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
                 print(f"  {COLOR_GREEN}✓{COLOR_RESET} {p:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
 
     if glob_skills or glob_plugins:
-        print(f"\n{COLOR_MAGENTA}{COLOR_BOLD}Active Global Skills ({len(glob_skills)}) [Inherited by all workspaces]:{COLOR_RESET}")
-        for s, mode in sorted(glob_skills.items()):
-            grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
-            print(f"  {COLOR_MAGENTA}🌐{COLOR_RESET} {s:<32} {COLOR_DIM}(via global {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+        if glob_skills:
+            print(f"\n{COLOR_MAGENTA}{COLOR_BOLD}Active Global Skills ({len(glob_skills)}) [Inherited by all workspaces]:{COLOR_RESET}")
+            for s, mode in sorted(glob_skills.items()):
+                grp = f" [{all_skills[s]['group']}]" if s in all_skills else ""
+                print(f"  {COLOR_MAGENTA}🌐{COLOR_RESET} {s:<32} {COLOR_DIM}(via global {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
         if glob_plugins:
+            print(f"\n{COLOR_MAGENTA}{COLOR_BOLD}Active Global Plugins ({len(glob_plugins)}) [Inherited by all workspaces]:{COLOR_RESET}")
             for p, mode in sorted(glob_plugins.items()):
                 grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
                 print(f"  {COLOR_MAGENTA}🌐{COLOR_RESET} {p:<32} {COLOR_DIM}(via global {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
@@ -1258,7 +1503,7 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
         check_skills = glob_skills if is_global else ws_skills
         check_plugins = glob_plugins if is_global else ws_plugins
         for c_name, c_info in sorted(clusters.items()):
-            act, tot, status = cm.get_cluster_status(c_info, check_skills, check_plugins)
+            act, tot, status = cm.get_cluster_status(c_info, check_skills, check_plugins, skill_to_plugin=skill_to_plugin)
             if status == "ACTIVE":
                 matched_active.append((c_name, act, tot))
             elif status == "PARTIAL":
@@ -1274,10 +1519,12 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
     print()
 
 
-def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = "list", name: str | None = None, is_global: bool = False, configure_permissions: bool = True, clean_permissions: bool = False):
+def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = "list", name: str | None = None, is_global: bool = False, configure_permissions: bool = True, clean_permissions: bool = False, is_local: bool = False):
     cm = ClusterManager(hub_dir=manager.hub_dir, workspace_root=workspace_root)
     clusters = cm.load_clusters()
     active_skills, active_plugins = manager.get_active(workspace_root=workspace_root, is_global=is_global)
+    all_skills, all_plugins = manager.get_available()
+    skill_to_plugin, _ = manager.get_plugin_skills_map(skills=all_skills, plugins=all_plugins)
 
     if action in ("list", "ls") or action is None:
         print(f"\n{COLOR_BOLD}Antigravity Hub Clusters:{COLOR_RESET} {manager.hub_dir}")
@@ -1289,7 +1536,7 @@ def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = 
             return
 
         for c_name, c_info in sorted(clusters.items()):
-            act, tot, status = cm.get_cluster_status(c_info, active_skills, active_plugins)
+            act, tot, status = cm.get_cluster_status(c_info, active_skills, active_plugins, skill_to_plugin=skill_to_plugin)
             if status == "ACTIVE":
                 badge = f"{COLOR_GREEN}[ACTIVE ({act}/{tot})]{COLOR_RESET}"
             elif status == "PARTIAL":
@@ -1297,14 +1544,29 @@ def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = 
             else:
                 badge = f"{COLOR_DIM}[INACTIVE (0/{tot})]{COLOR_RESET}"
 
+            src = c_info.get("source", "")
+            hub_clusters_path = str(manager.hub_dir / "clusters")
+            hub_internal_clusters_path = str(manager.hub_dir / "internal" / "clusters")
+            if src.startswith(hub_clusters_path) or src.startswith(hub_internal_clusters_path):
+                scope_badge = f"{COLOR_MAGENTA}[HUB]{COLOR_RESET}      "
+            else:
+                scope_badge = f"{COLOR_CYAN}[WORKSPACE]{COLOR_RESET}"
+
             desc = f" - {COLOR_DIM}{c_info['description']}{COLOR_RESET}" if c_info.get('description') else ""
-            print(f"  {badge:<28} {COLOR_BOLD}{c_name:<24}{COLOR_RESET}{desc}")
+            print(f"  {badge:<28} {scope_badge} {COLOR_BOLD}{c_name:<28}{COLOR_RESET}{desc}")
 
         print(f"\n{COLOR_DIM}Tips:{COLOR_RESET}")
-        print(f"  Inspect a cluster:  {COLOR_BOLD}agyhub cluster info <name>{COLOR_RESET}")
-        print(f"  Enable a cluster:   {COLOR_BOLD}agyhub enable -c <name>{COLOR_RESET} (or {COLOR_BOLD}agyhub cluster enable <name>{COLOR_RESET})")
-        print(f"  Disable a cluster:  {COLOR_BOLD}agyhub disable -c <name>{COLOR_RESET}")
-        print(f"  Create new cluster: {COLOR_BOLD}agyhub create cluster <name>{COLOR_RESET}\n")
+        print(f"  Inspect a cluster:        {COLOR_BOLD}agyhub cluster info <name>{COLOR_RESET}")
+        print(f"  Enable a cluster:         {COLOR_BOLD}agyhub enable -c <name>{COLOR_RESET} (or {COLOR_BOLD}agyhub cluster enable <name>{COLOR_RESET})")
+        print(f"  Disable a cluster:        {COLOR_BOLD}agyhub disable -c <name>{COLOR_RESET}")
+        print(f"  Create hub cluster:       {COLOR_BOLD}agyhub create cluster <name>{COLOR_RESET}")
+        print(f"  Create workspace cluster: {COLOR_BOLD}agyhub create cluster <name> --local{COLOR_RESET}\n")
+
+    elif action in ("create", "new"):
+        if not name:
+            print(f"{COLOR_RED}Please specify a cluster name.{COLOR_RESET} Example: agyhub cluster create my-role")
+            return
+        manager.scaffold("cluster", name, is_local=is_local, workspace_root=workspace_root)
 
     elif action in ("info", "show", "describe"):
         if not name:
@@ -1315,8 +1577,7 @@ def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = 
             return
 
         c_info = clusters[name]
-        act, tot, status = cm.get_cluster_status(c_info, active_skills, active_plugins)
-        all_skills, all_plugins = manager.get_available()
+        act, tot, status = cm.get_cluster_status(c_info, active_skills, active_plugins, skill_to_plugin=skill_to_plugin)
 
         print(f"\n{COLOR_CYAN}{COLOR_BOLD}Cluster:{COLOR_RESET}     {COLOR_BOLD}{name}{COLOR_RESET}")
         print(f"{COLOR_BOLD}Description:{COLOR_RESET} {c_info.get('description', 'N/A')}")
@@ -1328,11 +1589,27 @@ def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = 
             print(f"\n{COLOR_BOLD}Included Skills ({len(skills)}):{COLOR_RESET}")
             for s in skills:
                 is_act = s in active_skills
-                stat_badge = f"{COLOR_GREEN}✓ active{COLOR_RESET}" if is_act else f"{COLOR_DIM}○ inactive{COLOR_RESET}"
+                parent_p = skill_to_plugin.get(s)
+                via_plugin = parent_p and parent_p in active_plugins
+                if is_act:
+                    stat_badge = f"{COLOR_GREEN}✓ active{COLOR_RESET}"
+                elif via_plugin:
+                    stat_badge = f"{COLOR_GREEN}✓ active (via plugin:{parent_p}){COLOR_RESET}"
+                else:
+                    stat_badge = f"{COLOR_DIM}○ inactive{COLOR_RESET}"
                 info = all_skills.get(s, {})
-                grp = f" [{info.get('group', 'unknown')}]" if info else f" {COLOR_RED}[NOT FOUND IN CATALOG]{COLOR_RESET}"
-                desc = f" - {COLOR_DIM}{info.get('desc', '')}{COLOR_RESET}" if info.get('desc') else ""
-                print(f"  {stat_badge:<20} {COLOR_BOLD}{s:<36}{COLOR_RESET}{grp}{desc}")
+                local_dir = workspace_root / ".agents" / "skills" / s
+                if info:
+                    grp = f" [{info.get('group', 'unknown')}]"
+                    desc = f" - {COLOR_DIM}{info.get('desc', '')}{COLOR_RESET}" if info.get('desc') else ""
+                elif local_dir.exists():
+                    local_desc = get_skill_description(local_dir)
+                    grp = f" {COLOR_CYAN}[workspace/local]{COLOR_RESET}"
+                    desc = f" - {COLOR_DIM}{local_desc}{COLOR_RESET}" if local_desc else ""
+                else:
+                    grp = f" {COLOR_RED}[NOT FOUND IN CATALOG]{COLOR_RESET}"
+                    desc = ""
+                print(f"  {stat_badge:<40} {COLOR_BOLD}{s:<36}{COLOR_RESET}{grp}{desc}")
 
         plugins = c_info.get("plugins", [])
         if plugins:
@@ -1452,8 +1729,9 @@ def main():
 
     # cluster
     p_cluster = subparsers.add_parser("cluster", aliases=["clusters"], parents=[common_sub], help="Manage predefined skill clusters")
-    p_cluster.add_argument("cluster_action", choices=["list", "ls", "info", "show", "describe", "enable", "disable"], nargs="?", default="list", help="Cluster action (default: list)")
-    p_cluster.add_argument("cluster_name", nargs="?", default=None, help="Cluster name for info, enable, or disable")
+    p_cluster.add_argument("cluster_action", choices=["list", "ls", "info", "show", "describe", "enable", "disable", "create", "new"], nargs="?", default="list", help="Cluster action (default: list)")
+    p_cluster.add_argument("cluster_name", nargs="?", default=None, help="Cluster name for info, enable, disable, or create")
+    p_cluster.add_argument("--local", action="store_true", dest="is_local", help="Target local workspace (.agents/clusters) instead of official hub clusters")
     p_cluster.add_argument("--no-permissions", dest="configure_permissions", action="store_false", default=True, help="Skip automatically configuring Antigravity read permissions")
     p_cluster.add_argument("--clean-permissions", action="store_true", help="Revoke Antigravity read permissions if no active customizations remain")
 
@@ -1492,10 +1770,11 @@ def main():
     p_add_repo.add_argument("--branch", "-b", default="main", help="Branch to track (default: main)")
 
     # create
-    p_create = subparsers.add_parser("create", help="Create a new skill, plugin, rule, or cluster template in the hub")
+    p_create = subparsers.add_parser("create", parents=[common_sub], help="Create a new skill, plugin, rule, or cluster template")
     p_create.add_argument("type", choices=["skill", "plugin", "rule", "cluster"], help="Type to create")
     p_create.add_argument("name", help="Name of the skill, plugin, rule, or cluster")
     p_create.add_argument("--group", "-g", default=None, help="Typology group for internal items (default: templates; e.g. hub-tools, data-platform)")
+    p_create.add_argument("--local", action="store_true", dest="is_local", help="Create inside local workspace (.agents/skills or .agents/clusters) rather than hub")
 
     args = parser.parse_args()
 
@@ -1508,7 +1787,7 @@ def main():
     elif args.command == "status":
         cmd_status(manager, workspace_root, is_global=is_global)
     elif args.command in ("cluster", "clusters"):
-        cmd_cluster(manager, workspace_root, action=args.cluster_action, name=args.cluster_name, is_global=is_global, configure_permissions=getattr(args, "configure_permissions", True), clean_permissions=getattr(args, "clean_permissions", False))
+        cmd_cluster(manager, workspace_root, action=args.cluster_action, name=args.cluster_name, is_global=is_global, configure_permissions=getattr(args, "configure_permissions", True), clean_permissions=getattr(args, "clean_permissions", False), is_local=getattr(args, "is_local", False))
     elif args.command in ("info", "show", "describe"):
         manager.info(args.name)
     elif args.command in ("enable", "add"):
@@ -1522,7 +1801,7 @@ def main():
     elif args.command == "add-repo":
         manager.add_repo(args.url, name=args.name, branch=args.branch)
     elif args.command == "create":
-        manager.scaffold(args.type, args.name, group=getattr(args, "group", None))
+        manager.scaffold(args.type, args.name, group=getattr(args, "group", None), is_local=getattr(args, "is_local", False), workspace_root=workspace_root)
     else:
         parser.print_help()
 

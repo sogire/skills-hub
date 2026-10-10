@@ -190,15 +190,18 @@ agyhub disable -c data-engineer
 # or:
 agyhub cluster disable data-engineer
 
-# Create a new custom cluster template
+# Create a new official hub cluster template (in clusters/)
 agyhub create cluster ml-ops
+
+# Create a workspace-specific cluster template (in .agents/clusters/)
+agyhub create cluster my-project-role --local
 ```
 
 #### Predefining Custom Clusters (JSON & YAML)
 Clusters are configured via simple JSON files (or standard YAML) with zero external dependencies. You can place cluster definitions in:
-- **Hub-wide clusters**: `clusters/<name>.json` or `internal/clusters/<name>.json`
+- **Hub-wide official clusters**: `clusters/<name>.json` or `internal/clusters/<name>.json`
 - **Catalog file**: `clusters.json` in the hub root
-- **Workspace-local clusters**: `<workspace>/.agents/clusters/<name>.json`
+- **Workspace-local clusters**: `<workspace>/.agents/clusters/<name>.json` (with companion `<name>.md`)
 
 Example definition (`clusters/data-engineer.json`):
 ```json
@@ -216,14 +219,14 @@ Example definition (`clusters/data-engineer.json`):
 }
 ```
 
-#### Companion Role Documentation (`clusters/<name>.md`)
+#### Companion Role Documentation (`clusters/<name>.md` or `.agents/clusters/<name>.md`)
 Clusters can be accompanied by human-readable markdown guides (e.g. [`clusters/gcp-data-enterprise-architect.md`](clusters/gcp-data-enterprise-architect.md)) documenting:
 1. **Role Definition & Core Architectural Pillars** (with Mermaid architecture topology).
 2. **Skill Breakdown by Competency** (matrix of skills, architectural rationale, and provenance).
-3. **Missing Skills Analysis (Catalog Gaps)** (roadmaps for authoring missing skills in `internal/<typology>/`).
+3. **Missing Skills Analysis (Catalog Gaps)** (roadmaps for authoring missing skills in `internal/<typology>/` or `.agents/skills/`).
 
 > [!TIP]
-> **Need help creating clusters?** Enable the internal skill [`agyhub-cluster-role-creation`](internal/hub-tools/skills/agyhub-cluster-role-creation/SKILL.md) (`agyhub enable agyhub-cluster-role-creation`) to have an agent interview you, explore the catalog, identify missing skills, and automatically generate both the JSON manifest and Markdown blueprint.
+> **Need help creating clusters?** Enable the internal skill [`agyhub-cluster-role-creation`](internal/hub-tools/skills/agyhub-cluster-role-creation/SKILL.md) (`agyhub enable agyhub-cluster-role-creation`) to have an agent interview you, determine scope (official in `clusters/` vs. workspace-specific in `.agents/clusters/`), explore the catalog, identify missing skills, and automatically generate both the JSON manifest and Markdown blueprint.
 >
 > **Need to build a missing skill or resolve a role gap?** Enable the internal skill [`agyhub-skills-gap-creator`](internal/hub-tools/skills/agyhub-skills-gap-creator/SKILL.md) (`agyhub enable agyhub-skills-gap-creator`) as an independent, standalone task anytime. An agent will grill you on boundaries, ingest documentation links (web URLs or local files), and author a complete, verified skill under `internal/<typology>/<name>/` (e.g. `internal/data-platform/<name>/`).
 
@@ -414,12 +417,18 @@ agyhub create skill my-specialized-tool -g data-platform
 # Scaffold in default templates typology (skills-hub/internal/templates/skills/<name>)
 agyhub create skill my-specialized-tool
 
+# Scaffold a workspace-local skill directly in the active project (.agents/skills/<name>)
+agyhub create skill my-project-tool --local
+
 # Scaffold a new plugin in a specific typology (skills-hub/internal/<typology>/plugins/<name>)
 agyhub create plugin my-specialized-plugin -g data-platform
 
 # Scaffold a new rule in a specific typology (skills-hub/internal/<typology>/rules/<name>.md)
 agyhub create rule my-team-standards -g data-platform
 
-# Scaffold a new cluster definition in skills-hub/clusters/<name>.json
+# Scaffold a new official hub cluster definition in skills-hub/clusters/<name>.json
 agyhub create cluster my-project-team
+
+# Scaffold a workspace-specific cluster definition in .agents/clusters/<name>.json
+agyhub create cluster my-local-role --local
 ```
