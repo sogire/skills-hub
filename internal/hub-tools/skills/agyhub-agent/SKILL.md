@@ -68,11 +68,17 @@ flowchart TD
 - **Workspace Scope (Default)**: Target directory `.agents/` takes precedence over machine-wide settings.
 - **Global Scope (`-G` / `--global`)**: Registers skills in `~/.gemini/config/skills.json`. Global customizations are automatically inherited by all current and future Antigravity workspaces.
 
-### 4. Automatic Antigravity Permissions
-- Enabling skills or plugins automatically configures `read_file(<hub_path>)` in `~/.gemini/antigravity-cli/settings.json`.
-- This ensures Antigravity agents can inspect skills, instructions, scripts, and reference files without triggering interactive permission prompts when working in external workspaces.
-- To bypass automatic permission configuration (e.g. CI environments), pass `--no-permissions`.
-- To clean up permissions when resetting a workspace, pass `--clean-permissions` to `agyhub disable`.
+### 4. Non-Workspace File Permissions & Tool Guidance
+- When customizations are enabled in an external workspace, `agyhub` uses zero-copy references pointing directly to the hub repository (e.g. `<hub_dir>`).
+- Because AI agents and developer tools (Antigravity IDE, Cursor, Claude Code, etc.) operate with workspace-scoped permissions, reading files outside the active workspace may trigger permission approval prompts.
+- **Recommended One-Time Setup in Antigravity IDE**:
+  Go to **Settings → Permissions → File Permissions** and add **File Reads** for your hub directory:
+  ```
+  /path/to/skills-hub
+  ```
+  This grants read access across all your workspaces so skills and plugins load seamlessly without prompt interruptions.
+- Whenever customizations are enabled in an external workspace, `agyhub` displays an informative path notice with this reminder.
+- To suppress this notice in automated pipelines or CI environments, pass `--no-permissions`.
 
 ---
 
@@ -207,7 +213,7 @@ agyhub enable -G -c gcp-data-enterprise-architect
 # Enable with symlinks instead of manifest:
 agyhub enable --symlink -c gcp-data-enterprise-architect
 
-# Enable without modifying Antigravity permissions (e.g. CI / automated pipelines):
+# Enable and suppress non-workspace file read notice:
 agyhub enable --no-permissions -c gcp-data-enterprise-architect
 ```
 
@@ -229,9 +235,6 @@ agyhub disable -g agents-cli
 
 # Reset workspace: remove ALL active customizations in current project:
 agyhub disable --all
-
-# Reset workspace AND revoke external hub read permissions from Antigravity settings:
-agyhub disable --all --clean-permissions
 
 # Reset global customizations (preserves core system plugins like Chrome DevTools):
 agyhub disable -G --all

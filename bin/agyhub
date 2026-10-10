@@ -20,7 +20,6 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent if _SCRIPT_DIR.name == "bin" else _SCRIPT_DIR
 DEFAULT_HUB_DIR = Path(os.environ.get("AG_HUB_DIR", _REPO_ROOT)).resolve()
 GLOBAL_CONFIG_DIR = Path(os.environ.get("AG_GLOBAL_CONFIG_DIR", Path.home() / ".gemini" / "config")).resolve()
-CLI_SETTINGS_FILE = Path(os.environ.get("AG_CLI_SETTINGS_FILE", Path.home() / ".gemini" / "antigravity-cli" / "settings.json")).resolve()
 
 # ANSI Color codes for clean output
 COLOR_RESET = "\033[0m"
@@ -726,26 +725,14 @@ class HubManager:
                     grp = all_skills[s_name]["group"]
                     print(f"{COLOR_GREEN}✓{COLOR_RESET} Enabled skill '{COLOR_BOLD}{s_name}{COLOR_RESET}' [{grp}] in {manifest_rel}skills.json{scope_tag}")
                     enabled_count += 1
-
-        if configure_permissions and enabled_count > 0:
-            paths_to_grant = [self.hub_dir]
-            for name in target_names:
-                if name in all_skills:
-                    src = all_skills[name]["path"]
-                    try:
-                        src.resolve().relative_to(self.hub_dir.resolve())
-                    except ValueError:
-                        paths_to_grant.append(src)
-                elif name in all_plugins:
-                    src = all_plugins[name]["path"]
-                    try:
-                        src.resolve().relative_to(self.hub_dir.resolve())
-                    except ValueError:
-                        paths_to_grant.append(src)
-
-            new_grants = self._grant_read_permissions(paths_to_grant)
-            for r in new_grants:
-                print(f"{COLOR_GREEN}✓{COLOR_RESET} Configured Antigravity permission: {COLOR_BOLD}{r}{COLOR_RESET}")
+        ws = workspace_root or find_workspace_root()
+        if configure_permissions and enabled_count > 0 and (is_global or ws.resolve() != self.hub_dir.resolve()):
+            print(f"\n{COLOR_CYAN}💡 Note on Non-Workspace File Reads:{COLOR_RESET}")
+            print(f"   Zero-copy customizations reference files located in:")
+            print(f"   {COLOR_BOLD}{self.hub_dir.resolve()}{COLOR_RESET}")
+            print(f"   If your AI tool or editor (Antigravity, Cursor, etc.) restricts non-workspace reads,")
+            print(f"   ensure this directory is added to your tool's allowed \"File Reads\" / trusted paths:")
+            print(f"   • Antigravity IDE: Settings → Permissions → File Permissions → Add File Read")
 
     def disable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, clusters: list[str] | None = None, disable_all: bool = False, is_global: bool = False, clean_permissions: bool = False):
         all_skills, all_plugins = self.get_available()
@@ -826,13 +813,8 @@ class HubManager:
                 print(f"{COLOR_DIM}Item '{name}' was not active in {scope_str}.{COLOR_RESET}")
 
         if clean_permissions:
-            active_skills, active_plugins = self.get_active(workspace_root=workspace_root, is_global=is_global)
-            if active_skills or active_plugins:
-                print(f"{COLOR_YELLOW}Note: Retained Antigravity hub permissions because other customizations remain active in this scope.{COLOR_RESET}")
-            else:
-                revoked = self._revoke_read_permissions([self.hub_dir])
-                for r in revoked:
-                    print(f"{COLOR_YELLOW}Revoked Antigravity permission:{COLOR_RESET} {COLOR_BOLD}{r}{COLOR_RESET}")
+            # Deprecated no-op: agyhub leaves tool permissions to the user's IDE/editor settings.
+            pass
 
     def _update_manifest(
         self,
@@ -946,83 +928,13 @@ class HubManager:
                 manifest_file.parent.mkdir(parents=True, exist_ok=True)
                 manifest_file.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         return modified
-
-    def _load_cli_settings(self) -> dict:
-        """Loads ~/.gemini/antigravity-cli/settings.json safely."""
-        if not CLI_SETTINGS_FILE.exists():
-            return {}
-        try:
-            with open(CLI_SETTINGS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"{COLOR_YELLOW}Warning: Could not read {CLI_SETTINGS_FILE}: {e}{COLOR_RESET}", file=sys.stderr)
-            return {}
-
-    def _save_cli_settings(self, settings: dict) -> None:
-        """Atomically saves settings to CLI_SETTINGS_FILE."""
-        try:
-            CLI_SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
-            tmp_file = CLI_SETTINGS_FILE.with_suffix(f".tmp.{os.getpid()}")
-            with open(tmp_file, "w", encoding="utf-8") as f:
-                json.dump(settings, f, indent=2, ensure_ascii=False)
-                f.write("\n")
-            tmp_file.replace(CLI_SETTINGS_FILE)
-        except Exception as e:
-            print(f"{COLOR_YELLOW}Warning: Could not save permissions to {CLI_SETTINGS_FILE}: {e}{COLOR_RESET}", file=sys.stderr)
-
     def _grant_read_permissions(self, paths: list[Path] | None = None) -> list[str]:
-        """Ensures read_file permissions for the given paths in ~/.gemini/antigravity-cli/settings.json."""
-        if paths is None:
-            targets = [self.hub_dir.resolve()]
-        else:
-            targets = [p.resolve() for p in paths]
-
-        settings = self._load_cli_settings()
-        perms = settings.setdefault("permissions", {})
-        if not isinstance(perms, dict):
-            perms = {}
-            settings["permissions"] = perms
-        allow_list = perms.setdefault("allow", [])
-        if not isinstance(allow_list, list):
-            allow_list = []
-            perms["allow"] = allow_list
-
-        newly_granted = []
-        for p in targets:
-            rule = f"read_file({p})"
-            if rule not in allow_list:
-                allow_list.append(rule)
-                newly_granted.append(rule)
-
-        if newly_granted:
-            self._save_cli_settings(settings)
-        return newly_granted
+        """Deprecated: retained for backward compatibility."""
+        return []
 
     def _revoke_read_permissions(self, paths: list[Path] | None = None) -> list[str]:
-        """Removes read_file permissions for the given paths from ~/.gemini/antigravity-cli/settings.json."""
-        if paths is None:
-            targets = [self.hub_dir.resolve()]
-        else:
-            targets = [p.resolve() for p in paths]
-
-        settings = self._load_cli_settings()
-        perms = settings.get("permissions")
-        if not isinstance(perms, dict):
-            return []
-        allow_list = perms.get("allow")
-        if not isinstance(allow_list, list):
-            return []
-
-        revoked = []
-        for p in targets:
-            rule = f"read_file({p})"
-            if rule in allow_list:
-                allow_list.remove(rule)
-                revoked.append(rule)
-
-        if revoked:
-            self._save_cli_settings(settings)
-        return revoked
+        """Deprecated: retained for backward compatibility."""
+        return []
 
     def update_repos(self, targets: list[str] | None = None, check_only: bool = False):
         """Fetches and pulls upstream updates for git submodules."""
@@ -1453,7 +1365,8 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
             print(f"\n{COLOR_CYAN}{COLOR_BOLD}Active Global Plugins ({len(active_plugins)}):{COLOR_RESET}")
             for p, mode in sorted(active_plugins.items()):
                 grp = f" [{all_plugins[p]['group']}]" if p in all_plugins else ""
-                print(f"  {COLOR_GREEN}✓{COLOR_RESET} {p:<32} {COLOR_DIM}(via {mode}){COLOR_RESET}{COLOR_DIM}{grp}{COLOR_RESET}")
+        if active_skills or active_plugins:
+            print(f"\n{COLOR_DIM}💡 Global customizations reference '{manager.hub_dir}'. Ensure this path has File Read permission in your editor/tool.{COLOR_RESET}")
         print()
         return
 
@@ -1516,6 +1429,9 @@ def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = Fals
                 print(f"  {COLOR_GREEN}✓{COLOR_RESET} {COLOR_BOLD}{c_name:<24}{COLOR_RESET} ({act}/{tot} active)")
             for c_name, act, tot in matched_partial:
                 print(f"  {COLOR_YELLOW}◐{COLOR_RESET} {c_name:<24} ({act}/{tot} active)")
+
+    if workspace_root.resolve() != manager.hub_dir.resolve() and (ws_skills or ws_plugins):
+        print(f"\n{COLOR_DIM}💡 Active customizations reference '{manager.hub_dir}'. Ensure this path has File Read permission in your editor/tool.{COLOR_RESET}")
     print()
 
 
@@ -1732,8 +1648,8 @@ def main():
     p_cluster.add_argument("cluster_action", choices=["list", "ls", "info", "show", "describe", "enable", "disable", "create", "new"], nargs="?", default="list", help="Cluster action (default: list)")
     p_cluster.add_argument("cluster_name", nargs="?", default=None, help="Cluster name for info, enable, disable, or create")
     p_cluster.add_argument("--local", action="store_true", dest="is_local", help="Target local workspace (.agents/clusters) instead of official hub clusters")
-    p_cluster.add_argument("--no-permissions", dest="configure_permissions", action="store_false", default=True, help="Skip automatically configuring Antigravity read permissions")
-    p_cluster.add_argument("--clean-permissions", action="store_true", help="Revoke Antigravity read permissions if no active customizations remain")
+    p_cluster.add_argument("--no-permissions", dest="configure_permissions", action="store_false", default=True, help="Suppress non-workspace file read notice")
+    p_cluster.add_argument("--clean-permissions", action="store_true", help="Deprecated no-op (retained for backward compatibility)")
 
     # enable
     p_enable = subparsers.add_parser("enable", aliases=["add"], parents=[common_sub], help="Enable skills, plugins, or clusters in workspace or globally")
@@ -1741,7 +1657,7 @@ def main():
     p_enable.add_argument("--cluster", "-c", action="append", default=[], help="Enable all skills in specified cluster (can be repeated)")
     p_enable.add_argument("--group", "-g", default=None, help="Enable all skills from a specific group/repository (e.g. agents-cli, deepmind-science)")
     p_enable.add_argument("--symlink", "-s", action="store_true", help="Use symlinks instead of .agents/skills.json manifest")
-    p_enable.add_argument("--no-permissions", dest="configure_permissions", action="store_false", default=True, help="Skip automatically configuring Antigravity read permissions in ~/.gemini/antigravity-cli/settings.json")
+    p_enable.add_argument("--no-permissions", dest="configure_permissions", action="store_false", default=True, help="Suppress non-workspace file read notice")
 
     # disable
     p_disable = subparsers.add_parser("disable", aliases=["rm"], parents=[common_sub], help="Disable skills, plugins, or clusters in workspace or globally")
@@ -1749,7 +1665,7 @@ def main():
     p_disable.add_argument("--cluster", "-c", action="append", default=[], help="Disable all skills in specified cluster (can be repeated)")
     p_disable.add_argument("--group", "-g", default=None, help="Disable all skills from a specific group/repository")
     p_disable.add_argument("--all", "-a", action="store_true", help="Disable all active customizations in target scope")
-    p_disable.add_argument("--clean-permissions", action="store_true", help="Revoke Antigravity read permissions from ~/.gemini/antigravity-cli/settings.json if no active customizations remain")
+    p_disable.add_argument("--clean-permissions", action="store_true", help="Deprecated no-op (retained for backward compatibility)")
 
     # info / show / describe
     p_info = subparsers.add_parser("info", aliases=["show", "describe"], help="Display documentation and instructions for a skill or plugin")

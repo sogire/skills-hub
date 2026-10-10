@@ -329,14 +329,24 @@ agyhub disable -G --all
    You can target any workspace directory from anywhere without `cd`:
    ```bash
    # Enable skills in another project
-   agyhub -w ~/local_projects/my-data-pipeline enable -c gcp-data-enterprise-architect
+   agyhub -w /path/to/my-data-pipeline enable -c gcp-data-enterprise-architect
 
    # Check active status of another project
-   agyhub -w ~/local_projects/my-agent status
+   agyhub -w /path/to/my-agent status
 
    # Reset customizations in another project
-   agyhub -w ~/local_projects/my-agent disable --all
+   agyhub -w /path/to/my-agent disable --all
    ```
+
+> [!TIP]
+> **Working with External Workspaces & File Permissions**
+>
+> Because `agyhub` uses a **zero-copy** model, customizations enabled in an external project point directly to your skills hub repository (e.g., `/path/to/skills-hub`).
+>
+> If your AI editor or agent (Antigravity IDE, Cursor, Claude Code, etc.) restricts non-workspace file reads:
+> - **Antigravity IDE**: Go to **Settings → Permissions → File Permissions → Add File Read** and add your `skills-hub` path (e.g. `/path/to/skills-hub`) once.
+>
+> This grants global file read access across all your workspaces, so all skills, instructions, and scripts load seamlessly without individual permission prompts.
 
 ---
 
