@@ -1570,7 +1570,7 @@ def cmd_cluster(manager: HubManager, workspace_root: Path, action: str | None = 
 
     elif action in ("info", "show", "describe"):
         if not name:
-            print(f"{COLOR_RED}Please specify a cluster name.{COLOR_RESET} Example: agyhub cluster info data-engineer")
+            print(f"{COLOR_RED}Please specify a cluster name.{COLOR_RESET} Example: agyhub cluster info gcp-data-enterprise-architect")
             return
         if name not in clusters:
             print(f"{COLOR_RED}Unknown cluster:{COLOR_RESET} '{name}'. Available: {', '.join(sorted(clusters.keys()))}")

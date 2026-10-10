@@ -65,10 +65,7 @@ skills-hub/
 │
 ├── clusters/                      # [Curated Skill Clusters across Internal & External sources]
 │   ├── gcp-data-enterprise-architect.json # Lakehouse, Data Mesh, Governance, Lineage, FinOps, Security
-│   ├── gcp-data-enterprise-architect.md   # Architectural blueprint & role documentation
-│   ├── data-engineer.json         # BigQuery, dbt, Spark, Dataform
-│   ├── science-researcher.json    # AlphaFold, PubMed, ChEMBL, UniProt, Clinical Trials
-│   └── agent-developer.json       # ADK code, eval, deploy, workflow, template-skill
+│   └── gcp-data-enterprise-architect.md   # Architectural blueprint & role documentation
 │
 └── bin/
     └── agyhub                     # CLI tool (symlinked to ~/.local/bin/agyhub)
@@ -174,21 +171,20 @@ agyhub cluster list
 agyhub clusters
 
 # Inspect a cluster's skills and status
-agyhub cluster info data-engineer
-agyhub cluster info science-researcher
+agyhub cluster info gcp-data-enterprise-architect
 
 # Activate a cluster in current workspace
-agyhub enable -c data-engineer
+agyhub enable -c gcp-data-enterprise-architect
 # or:
-agyhub cluster enable data-engineer
+agyhub cluster enable gcp-data-enterprise-architect
 
 # Activate multiple clusters or combine clusters with individual skills:
-agyhub enable -c data-engineer -c agent-developer accidental-data-loss-prevention
+agyhub enable -c gcp-data-enterprise-architect accidental-data-loss-prevention
 
 # Deactivate a cluster from current workspace
-agyhub disable -c data-engineer
+agyhub disable -c gcp-data-enterprise-architect
 # or:
-agyhub cluster disable data-engineer
+agyhub cluster disable gcp-data-enterprise-architect
 
 # Create a new official hub cluster template (in clusters/)
 agyhub create cluster ml-ops
@@ -203,16 +199,14 @@ Clusters are configured via simple JSON files (or standard YAML) with zero exter
 - **Catalog file**: `clusters.json` in the hub root
 - **Workspace-local clusters**: `<workspace>/.agents/clusters/<name>.json` (with companion `<name>.md`)
 
-Example definition (`clusters/data-engineer.json`):
+Example definition (`clusters/example-role.json`):
 ```json
 {
-  "name": "data-engineer",
-  "description": "GCP Data Engineering and ETL toolset (BigQuery, dbt, Spark, Dataform)",
+  "name": "example-role",
+  "description": "Example curated skill cluster bundling external and internal skills",
   "skills": [
     "bigquery-sql",
     "dbt-bigquery",
-    "gcp-spark",
-    "dataform-bigquery",
     "bigquery-optimization"
   ],
   "plugins": []
@@ -283,7 +277,7 @@ Antigravity natively supports machine-wide customizations loaded into **every** 
 agyhub enable -G accidental-data-loss-prevention
 
 # Enable a cluster globally across all workspaces
-agyhub enable -G -c agent-developer
+agyhub enable -G -c gcp-data-enterprise-architect
 
 # Enable an entire group globally (e.g., all 7 Agent Development Kit tools everywhere)
 agyhub enable -G -g agents-cli
@@ -298,7 +292,7 @@ agyhub status
 agyhub disable -G google-agents-cli-scaffold
 
 # Disable an entire cluster globally
-agyhub disable -G -c agent-developer
+agyhub disable -G -c gcp-data-enterprise-architect
 
 # Disable an entire group globally
 agyhub disable -G -g agents-cli
@@ -320,7 +314,7 @@ agyhub disable -G --all
    By default, `agyhub` executes strictly in the **current working directory** where you invoke it (`cwd`), creating or modifying `.agents/` right there:
    ```bash
    cd ~/my-monorepo/packages/backend
-   agyhub enable -c data-engineer   # Configures ~/my-monorepo/packages/backend/.agents/
+   agyhub enable -c gcp-data-enterprise-architect   # Configures ~/my-monorepo/packages/backend/.agents/
    ```
 
 2. **Search for Git / Agents Root (`-r` / `--find-root`)**:
@@ -328,14 +322,14 @@ agyhub disable -G --all
    ```bash
    cd ~/my-monorepo/packages/backend/src/controllers
    agyhub status -r                 # Automatically targets ~/my-monorepo
-   agyhub enable -r -c data-engineer
+   agyhub enable -r -c gcp-data-enterprise-architect
    ```
 
 3. **Explicit Workspace Target (`-w` / `--workspace`)**:
    You can target any workspace directory from anywhere without `cd`:
    ```bash
    # Enable skills in another project
-   agyhub -w ~/local_projects/my-data-pipeline enable -c data-engineer
+   agyhub -w ~/local_projects/my-data-pipeline enable -c gcp-data-enterprise-architect
 
    # Check active status of another project
    agyhub -w ~/local_projects/my-agent status
@@ -400,7 +394,7 @@ If your workflow requires direct file-system symlinks in `.agents/skills/` inste
 agyhub enable --symlink bigquery-sql
 
 # Symlink an entire cluster
-agyhub enable --symlink -c data-engineer
+agyhub enable --symlink -c gcp-data-enterprise-architect
 
 # Symlink an entire group
 agyhub enable --symlink -g agents-cli

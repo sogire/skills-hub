@@ -92,7 +92,7 @@ When invoking `agyhub` from agent tools, follow these operational rules:
 - Coding agents should avoid using `cd` in commands because subshells may not preserve state.
 - Always use the `-w` / `--workspace` flag to target a project directory:
   ```bash
-  agyhub -w /path/to/project enable -c data-engineer
+  agyhub -w /path/to/project enable -c gcp-data-enterprise-architect
   agyhub -w /path/to/project status
   ```
 - Alternatively, use `-r` / `--find-root` to auto-detect the `.git` or `.agents` workspace root if running from a deep subdirectory.
@@ -106,7 +106,7 @@ When invoking `agyhub` from agent tools, follow these operational rules:
 
 ### Rule 4: Match Granularity to Scope
 - **Individual Skills** (`agyhub enable <name>`): Use for precise, targeted tasks (e.g. `bigquery-sql`).
-- **Clusters** (`agyhub enable -c <cluster>`): Use when supporting a full engineering role or multi-tool persona (e.g. `data-engineer`, `gcp-data-enterprise-architect`).
+- **Clusters** (`agyhub enable -c <cluster>`): Use when supporting a full engineering role or multi-tool persona (e.g. `gcp-data-enterprise-architect`).
 - **Groups** (`agyhub enable -g <group>`): Use when a project requires an entire upstream repository (e.g. `agents-cli`, `googlecloud-data`, `deepmind-science`, `cloud`).
 
 ### Rule 5: Keep Global Scope Minimal
@@ -185,12 +185,12 @@ Activate individual skills, clusters, or entire groups:
 agyhub enable bigquery-sql dbt-bigquery
 
 # Enable a curated role cluster:
-agyhub enable -c data-engineer
+agyhub enable -c gcp-data-enterprise-architect
 # or:
-agyhub cluster enable data-engineer
+agyhub cluster enable gcp-data-enterprise-architect
 
 # Enable multiple clusters and individual skills together:
-agyhub enable -c data-engineer -c agent-developer accidental-data-loss-prevention
+agyhub enable -c gcp-data-enterprise-architect accidental-data-loss-prevention
 
 # Enable an entire repository group:
 agyhub enable -g agents-cli
@@ -198,17 +198,17 @@ agyhub enable -g googlecloud-data
 agyhub enable -g deepmind-science
 
 # Enable in a remote project workspace:
-agyhub -w /path/to/project enable -c data-engineer
+agyhub -w /path/to/project enable -c gcp-data-enterprise-architect
 
 # Enable globally machine-wide:
 agyhub enable -G accidental-data-loss-prevention
-agyhub enable -G -c agent-developer
+agyhub enable -G -c gcp-data-enterprise-architect
 
 # Enable with symlinks instead of manifest:
-agyhub enable --symlink -c data-engineer
+agyhub enable --symlink -c gcp-data-enterprise-architect
 
 # Enable without modifying Antigravity permissions (e.g. CI / automated pipelines):
-agyhub enable --no-permissions -c data-engineer
+agyhub enable --no-permissions -c gcp-data-enterprise-architect
 ```
 
 ---
@@ -220,9 +220,9 @@ agyhub enable --no-permissions -c data-engineer
 agyhub disable bigquery-sql
 
 # Disable an entire cluster:
-agyhub disable -c data-engineer
+agyhub disable -c gcp-data-enterprise-architect
 # or:
-agyhub cluster disable data-engineer
+agyhub cluster disable gcp-data-enterprise-architect
 
 # Disable an entire group:
 agyhub disable -g agents-cli
@@ -252,7 +252,6 @@ agyhub clusters
 
 # Inspect cluster details, contained skills, and source path:
 agyhub cluster info gcp-data-enterprise-architect
-agyhub cluster info data-engineer
 
 # Scaffold a new official hub cluster manifest (in clusters/):
 agyhub create cluster mlops-platform
