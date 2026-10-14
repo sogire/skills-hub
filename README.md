@@ -65,7 +65,9 @@ skills-hub/
 │
 ├── clusters/                      # [Curated Skill Clusters across Internal & External sources]
 │   ├── gcp-data-enterprise-architect.json # Lakehouse, Data Mesh, Governance, Lineage, FinOps, Security
-│   └── gcp-data-enterprise-architect.md   # Architectural blueprint & role documentation
+│   ├── gcp-data-enterprise-architect.md   # Architectural blueprint & role documentation
+│   ├── bq-sql-optimizer.json      # Offline BQ job telemetry analysis, SQL grouping, anti-patterns & tuning
+│   └── bq-sql-optimizer.md        # Companion blueprint & catalog gap analysis for BQ SQL optimization
 │
 └── bin/
     └── agyhub                     # CLI tool (symlinked to ~/.local/bin/agyhub)

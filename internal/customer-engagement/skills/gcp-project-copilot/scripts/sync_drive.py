@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from typing import Dict, List, Optional, Set, Tuple
@@ -193,6 +194,7 @@ def load_manifest(
         data["root_folder_name"] = root_folder_name
       data.setdefault("folders", {})
       data.setdefault("documents", {})
+      data.setdefault("assets", {})
       return data
   return {
       "root_folder_id": root_folder_id,
@@ -201,6 +203,7 @@ def load_manifest(
       "last_synced_at": None,
       "folders": {},
       "documents": {},
+      "assets": {},
   }
 
 
@@ -556,6 +559,73 @@ def get_canonical_doc_url(doc_id: str, cwd: str) -> str:
   return f"https://docs.google.com/document/d/{doc_id}/edit"
 
 
+def rasterize_svg_to_png(abs_svg: str, abs_png: str) -> bool:
+  """Rasterize an SVG file to a 2x HiDPI PNG (144 DPI, white background)."""
+  magick_bin = shutil.which("magick") or shutil.which("convert")
+  rsvg_bin = shutil.which("rsvg-convert")
+  if magick_bin:
+    cmd_svg = [magick_bin, "-density", "144", "-background", "white", abs_svg, abs_png]
+  elif rsvg_bin:
+    cmd_svg = [rsvg_bin, "-z", "2", "-f", "png", "-o", abs_png, abs_svg]
+  else:
+    return False
+  proc_svg = subprocess.run(
+      cmd_svg,
+      capture_output=True,
+      text=True,
+      check=False,
+  )
+  return proc_svg.returncode == 0 and os.path.isfile(abs_png)
+
+
+def ensure_png_for_svgs(
+    project_dir: str, force: bool = False, dry_run: bool = False
+) -> None:
+  """Ensure every .svg diagram under project/ has an up-to-date companion .png in the same folder."""
+  for dirpath, dirnames, filenames in os.walk(project_dir):
+    dirnames[:] = sorted(
+        d for d in dirnames if not d.startswith(".") and d != "__pycache__"
+    )
+    for fn in sorted(filenames):
+      if not fn.lower().endswith(".svg") or fn.startswith("."):
+        continue
+      abs_svg = os.path.join(dirpath, fn)
+      abs_png = os.path.splitext(abs_svg)[0] + ".png"
+      rel_png = os.path.relpath(abs_png, project_dir)
+      needs_render = force or (not os.path.isfile(abs_png))
+      if not needs_render:
+        try:
+          if os.path.getmtime(abs_svg) > os.path.getmtime(abs_png):
+            needs_render = True
+        except OSError:
+          needs_render = True
+      if needs_render:
+        if dry_run:
+          print(f"[DryRun PNG Render] {rel_png}")
+        else:
+          if rasterize_svg_to_png(abs_svg, abs_png):
+            print(f"[PNG Rendered] {rel_png}")
+
+
+def find_local_svg_images(base_dir: str, markdown_text: str) -> List[Tuple[str, str]]:
+  """Return list of (markdown_target, abs_svg_path) for local .svg images in markdown_text."""
+  img_pattern = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
+  found: List[Tuple[str, str]] = []
+  seen = set()
+  for match in img_pattern.finditer(markdown_text):
+    target = match.group(1).strip()
+    if target.startswith(("http://", "https://", "data:")):
+      continue
+    clean_target = target.split("#")[0].split("?")[0]
+    if not clean_target.lower().endswith(".svg"):
+      continue
+    abs_svg = os.path.normpath(os.path.join(base_dir, clean_target))
+    if os.path.isfile(abs_svg) and (target, abs_svg) not in seen:
+      seen.add((target, abs_svg))
+      found.append((target, abs_svg))
+  return found
+
+
 def sync_document(
     workspace_root: str,
     project_dir: str,
@@ -569,7 +639,18 @@ def sync_document(
   processed_md, resolved_links = preprocess_markdown_for_gdocs(
       workspace_root, project_dir, rel_path, manifest
   )
-  content_hash = hashlib.sha256(processed_md.encode("utf-8")).hexdigest()
+  abs_path = os.path.join(project_dir, rel_path)
+  base_dir = os.path.dirname(abs_path)
+  local_svgs = find_local_svg_images(base_dir, processed_md)
+
+  hasher = hashlib.sha256(processed_md.encode("utf-8"))
+  for _, abs_svg in local_svgs:
+    try:
+      with open(abs_svg, "rb") as sf:
+        hasher.update(sf.read())
+    except OSError:
+      pass
+  content_hash = hasher.hexdigest()
 
   rel_dir = os.path.dirname(rel_path)
   parent_folder_id = (
@@ -587,28 +668,56 @@ def sync_document(
 
   if dry_run:
     action = "Update" if existing else "Import"
-    fake_doc_id = f"DRYRUN_DOC_{doc_title}"
+    dry_doc_id = (
+        existing["id"]
+        if (existing and existing.get("id"))
+        else f"DRYRUN_DOC_{doc_title}"
+    )
+    dry_doc_url = (
+        existing["url"]
+        if (existing and existing.get("url"))
+        else f"https://docs.google.com/document/d/{dry_doc_id}/edit"
+    )
     manifest["documents"][rel_path] = {
-        "id": fake_doc_id,
+        "id": dry_doc_id,
         "title": doc_title,
         "parent_folder": rel_dir,
         "parent_folder_id": parent_folder_id,
-        "url": f"https://docs.google.com/document/d/{fake_doc_id}/edit",
+        "url": dry_doc_url,
         "sha256": content_hash,
     }
     print(
         f"[DryRun Doc {action}] {rel_path} (title='{doc_title}', "
-        f"parent={parent_folder_id}, links_rewritten={len(resolved_links)})"
+        f"parent={parent_folder_id}, links_rewritten={len(resolved_links)}, "
+        f"svg_diagrams={len(local_svgs)})"
     )
     return
 
-  abs_path = os.path.join(project_dir, rel_path)
   tmp_md_path = os.path.join(
       os.path.dirname(abs_path), f"{doc_title}-gdoc-tmp.md"
   )
+  tmp_png_paths: List[str] = []
   try:
+    gdoc_md = processed_md
+    # Stage 2x HiDPI PNGs inside base_dir (same directory as tmp_md_path) so
+    # ../diagrams/<doc-stem>/*.svg paths work with gdocs without ../ traversal errors
+    safe_doc = re.sub(r"[^a-zA-Z0-9-]+", "-", doc_title).strip("-")
+    for idx, (svg_target, abs_svg) in enumerate(local_svgs, start=1):
+      svg_stem = os.path.splitext(os.path.basename(abs_svg))[0]
+      safe_stem = re.sub(r"[^a-zA-Z0-9-]+", "-", svg_stem).strip("-")
+      tmp_png_name = f"{safe_doc}-{idx}-{safe_stem}-gdoc-tmp.png"
+      tmp_png = os.path.join(base_dir, tmp_png_name)
+      companion_png = os.path.splitext(abs_svg)[0] + ".png"
+      if os.path.isfile(companion_png):
+        shutil.copy2(companion_png, tmp_png)
+        tmp_png_paths.append(tmp_png)
+        gdoc_md = gdoc_md.replace(f"({svg_target})", f"(./{tmp_png_name})")
+      elif rasterize_svg_to_png(abs_svg, tmp_png):
+        tmp_png_paths.append(tmp_png)
+        gdoc_md = gdoc_md.replace(f"({svg_target})", f"(./{tmp_png_name})")
+
     with open(tmp_md_path, "w", encoding="utf-8") as f:
-      f.write(processed_md)
+      f.write(gdoc_md)
 
     if existing and existing.get("id"):
       doc_id = existing["id"]
@@ -682,12 +791,140 @@ def sync_document(
   finally:
     if os.path.exists(tmp_md_path):
       os.remove(tmp_md_path)
+    for tmp_png in tmp_png_paths:
+      if os.path.exists(tmp_png):
+        os.remove(tmp_png)
+
+
+def collect_asset_files(project_dir: str) -> List[str]:
+  """Return all diagram and spec asset files (.svg, .png, .jpg, .jpeg, .json) under project/."""
+  asset_exts = {".svg", ".png", ".jpg", ".jpeg", ".json"}
+  assets: List[str] = []
+  for dirpath, dirnames, filenames in os.walk(project_dir):
+    dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d != "__pycache__")
+    for fn in sorted(filenames):
+      if "-gdoc-tmp." in fn or fn.startswith("."):
+        continue
+      ext = os.path.splitext(fn)[1].lower()
+      if ext in asset_exts:
+        rel = os.path.relpath(os.path.join(dirpath, fn), project_dir)
+        assets.append(rel)
+  return assets
+
+
+def sync_asset_file(
+    workspace_root: str,
+    project_dir: str,
+    rel_path: str,
+    manifest: Dict,
+    manifest_path: str,
+    force: bool = False,
+    dry_run: bool = False,
+) -> None:
+  """Upload or update a raw diagram/spec file (.svg, .json, .png) in Google Drive."""
+  abs_path = os.path.join(project_dir, rel_path)
+  with open(abs_path, "rb") as f:
+    content_hash = hashlib.sha256(f.read()).hexdigest()
+
+  rel_dir = os.path.dirname(rel_path)
+  parent_folder_id = (
+      manifest["root_folder_id"]
+      if rel_dir == ""
+      else manifest["folders"][rel_dir]["id"]
+  )
+  file_name = os.path.basename(rel_path)
+  manifest.setdefault("assets", {})
+  existing = manifest["assets"].get(rel_path)
+
+  if existing and existing.get("id") and not force:
+    if existing.get("sha256") == content_hash:
+      print(f"[Asset Up-to-Date] {rel_path} -> {existing['id']}")
+      return
+
+  if dry_run:
+    action = "Update" if existing else "Upload"
+    dry_id = (
+        existing["id"]
+        if (existing and existing.get("id"))
+        else f"DRYRUN_ASSET_{file_name}"
+    )
+    manifest["assets"][rel_path] = {
+        "id": dry_id,
+        "name": file_name,
+        "parent_folder": rel_dir,
+        "parent_folder_id": parent_folder_id,
+        "url": f"https://drive.google.com/file/d/{dry_id}/view",
+        "sha256": content_hash,
+    }
+    print(f"[DryRun Asset {action}] {rel_path} (parent={parent_folder_id})")
+    return
+
+  file_id: Optional[str] = existing.get("id") if existing else None
+  if not file_id:
+    children = list_drive_children(parent_folder_id, cwd=workspace_root)
+    for child in children:
+      c_name = child.get("name") or child.get("Name")
+      c_id = child.get("id") or child.get("ID")
+      c_mime = child.get("mimeType") or child.get("MimeType") or child.get("Type")
+      if c_name == file_name and c_id and ("folder" not in str(c_mime).lower()):
+        file_id = c_id
+        break
+
+  if file_id:
+    print(f"[Asset Update] {rel_path} -> {file_id}")
+    run_cli(
+        [GDRIVE_BIN, "mutate", "update", file_id, abs_path, "--json"],
+        cwd=workspace_root,
+    )
+  else:
+    print(f"[Asset Upload] {rel_path} -> folder {parent_folder_id}")
+    proc = run_cli(
+        [
+            GDRIVE_BIN,
+            "mutate",
+            "upload",
+            abs_path,
+            "--parent",
+            parent_folder_id,
+            "--json",
+        ],
+        cwd=workspace_root,
+    )
+    file_id = extract_id_from_output(proc.stdout + "\n" + proc.stderr)
+    if not file_id:
+      children = list_drive_children(parent_folder_id, cwd=workspace_root)
+      for child in children:
+        c_name = child.get("name") or child.get("Name")
+        c_id = child.get("id") or child.get("ID")
+        if c_name == file_name and c_id:
+          file_id = c_id
+          break
+    if not file_id:
+      raise RuntimeError(
+          f"Could not extract File ID after upload for {rel_path}:\n{proc.stdout}\n{proc.stderr}"
+      )
+
+  file_url = f"https://drive.google.com/file/d/{file_id}/view"
+  manifest["assets"][rel_path] = {
+      "id": file_id,
+      "name": file_name,
+      "parent_folder": rel_dir,
+      "parent_folder_id": parent_folder_id,
+      "url": file_url,
+      "sha256": content_hash,
+      "updated_at": (
+          datetime.datetime.now(datetime.timezone.utc)
+          .replace(microsecond=0)
+          .isoformat()
+      ),
+  }
+  save_manifest(manifest_path, manifest)
 
 
 def update_specs_project_registry(
     specs_project_path: str, manifest: Dict
 ) -> bool:
-  """Update Section 2.2 (Subfolders & Native Google Docs tables) in specs/specs_project.md."""
+  """Update Section 2.2 (Subfolders, Native Google Docs, and Assets tables) in specs/specs_project.md."""
   if not os.path.exists(specs_project_path):
     return False
 
@@ -697,6 +934,7 @@ def update_specs_project_registry(
   root_name = manifest.get("root_folder_name") or "20 Project"
   folders = manifest.get("folders", {})
   documents = manifest.get("documents", {})
+  assets = manifest.get("assets", {})
 
   # Build Table A: Synchronized Drive Subfolders
   folder_lines = [
@@ -714,24 +952,6 @@ def update_specs_project_registry(
     folder_lines.append(
         f"| `{rel_dir}/` | [`{f_id}`]({f_url}) | {parent_label} |"
     )
-
-  # Build Table B: Synchronized Native Google Docs
-  def doc_display_sort_key(rel_path: str) -> Tuple[int, int, str]:
-    if rel_path.startswith("common/"):
-      common_display_order = {
-          "common/meetings_registry.md": 1,
-          "common/project_members.md": 2,
-          "common/project_glossary.md": 3,
-          "common/project_questions-log.md": 4,
-          "common/project_challenges.md": 5,
-      }
-      return (1, common_display_order.get(rel_path, 9), rel_path)
-    if rel_path.startswith("meetings/"):
-      sub_order = 1 if "_questions-log_" in rel_path else 2
-      return (2, sub_order, rel_path)
-    if rel_path.startswith("topics/"):
-      return (3, 1, rel_path)
-    return (4, 1, rel_path)
 
   # Sort meetings grouped by folder, with questions-log before challenges
   def doc_table_key(rel_path: str) -> Tuple[int, str, int, str]:
@@ -775,9 +995,27 @@ def update_specs_project_registry(
         f"| {layer_label} | [`{rel_path}`](../project/{rel_path}) | [{d_title}]({d_url}) |"
     )
 
-  replacement_block = (
-      "\n".join(folder_lines) + "\n\n" + "\n".join(doc_lines) + "\n"
-  )
+  sections = ["\n".join(folder_lines), "\n".join(doc_lines)]
+
+  if assets:
+    sorted_assets = sorted(assets.keys())
+    asset_lines = [
+        f"#### C. Synchronized Diagram & Spec Assets ({len(sorted_assets)} Files)",
+        "",
+        "| Parent Folder | Local Asset Path (`project/...`) | Synchronized Google Drive File |",
+        "| :--- | :--- | :--- |",
+    ]
+    for rel_path in sorted_assets:
+      a_info = assets[rel_path]
+      a_name = a_info.get("name") or os.path.basename(rel_path)
+      a_url = a_info.get("url", "")
+      a_parent = a_info.get("parent_folder", os.path.dirname(rel_path))
+      asset_lines.append(
+          f"| `{a_parent}/` | [`{rel_path}`](../project/{rel_path}) | [`{a_name}`]({a_url}) |"
+      )
+    sections.append("\n".join(asset_lines))
+
+  replacement_block = "\n\n".join(sections) + "\n"
 
   pattern = re.compile(
       r"(#### A\. Synchronized Drive Subfolders.*?)(?=\n## 3\.|\Z)",
@@ -797,7 +1035,7 @@ def update_specs_project_registry(
 
 def main() -> int:
   parser = argparse.ArgumentParser(
-      description="Synchronize local project/ folder with Google Drive as native Google Docs."
+      description="Synchronize local project/ folder with Google Drive as native Google Docs and Drive assets."
   )
   parser.add_argument(
       "--workspace",
@@ -831,6 +1069,15 @@ def main() -> int:
       action="store_true",
       help="Skip automatic update of Section 2.2 in specs/specs_project.md",
   )
+  parser.add_argument(
+      "--file",
+      "-f",
+      default=None,
+      help=(
+          "Optional single Markdown or asset file path (relative to workspace or project/) "
+          "to synchronize instead of all documents"
+      ),
+  )
   args = parser.parse_args()
 
   workspace_root = resolve_workspace_root(args.workspace)
@@ -851,10 +1098,13 @@ def main() -> int:
   )
   manifest = load_manifest(manifest_path, root_folder_id, root_folder_name)
 
-  # 1. Discover all directories under project/ in top-down order
+  # 1. Discover all directories under project/ (including diagrams/ and specs/) in top-down order
   rel_dirs: List[str] = []
   for dirpath, dirnames, _ in os.walk(project_dir):
-    dirnames.sort()
+    dirnames[:] = sorted(
+        d for d in dirnames
+        if not d.startswith(".") and d != "__pycache__"
+    )
     rel = os.path.relpath(dirpath, project_dir)
     if rel != ".":
       rel_dirs.append(rel)
@@ -877,8 +1127,36 @@ def main() -> int:
         dry_run=args.dry_run,
     )
 
-  # 2. Collect and sync all Markdown files in topological dependency order
+  # 2. Ensure companion .png files exist for all .svg diagrams, then collect Markdown & asset files
+  ensure_png_for_svgs(project_dir, force=args.force, dry_run=args.dry_run)
   ordered_files = collect_ordered_markdown_files(project_dir)
+  asset_files = collect_asset_files(project_dir)
+
+  if args.file:
+    candidate = os.path.abspath(args.file)
+    if not os.path.exists(candidate):
+      candidate = os.path.abspath(os.path.join(project_dir, args.file))
+    rel_target = os.path.relpath(candidate, project_dir)
+    if rel_target in ordered_files:
+      ordered_files = [rel_target]
+      doc_stem = os.path.splitext(os.path.basename(rel_target))[0]
+      asset_files = [
+          a for a in asset_files
+          if f"/diagrams/{doc_stem}/" in f"/{a}"
+      ]
+    elif rel_target in asset_files:
+      ordered_files = []
+      selected = [rel_target]
+      if rel_target.lower().endswith(".svg"):
+        companion_png = os.path.splitext(rel_target)[0] + ".png"
+        if companion_png in asset_files:
+          selected.append(companion_png)
+      asset_files = selected
+    else:
+      raise RuntimeError(
+          f"Target file '{args.file}' (resolved to '{rel_target}') not found in project/"
+      )
+
   print(f"\n=== Phase 2: Synchronizing {len(ordered_files)} Markdown Documents ===")
   for rel_path in ordered_files:
     sync_document(
@@ -891,7 +1169,20 @@ def main() -> int:
         dry_run=args.dry_run,
     )
 
-  # 3. Auto-update Section 2.2 in specs/specs_project.md
+  if asset_files:
+    print(f"\n=== Phase 3: Synchronizing {len(asset_files)} Diagram & Spec Assets ===")
+    for rel_path in asset_files:
+      sync_asset_file(
+          workspace_root,
+          project_dir,
+          rel_path,
+          manifest,
+          manifest_path,
+          force=args.force,
+          dry_run=args.dry_run,
+      )
+
+  # 4. Auto-update Section 2.2 in specs/specs_project.md
   if not args.dry_run and not args.no_update_specs:
     update_specs_project_registry(specs_project_path, manifest)
 

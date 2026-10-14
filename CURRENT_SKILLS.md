@@ -13,6 +13,7 @@ This document provides a comprehensive, centralized catalog of all skills, group
   - [2. data-engineer](#2-data-engineer)
   - [3. science-researcher](#3-science-researcher)
   - [4. agent-developer](#4-agent-developer)
+  - [5. bq-sql-optimizer](#5-bq-sql-optimizer)
 - [Available Groups & Sources](#available-groups--sources)
   - [Subcategories in external/googlecloud-base](#subcategories-in-externalgooglecloud-base)
 - [Bundled Plugins](#bundled-plugins)
@@ -35,7 +36,7 @@ This document provides a comprehensive, centralized catalog of all skills, group
 | Metric | Count | Details |
 | :--- | :--- | :--- |
 | **Total Skills** | **232** | Across all internal typologies and upstream submodules |
-| **Curated Clusters** | **4** | Role-tailored skill bundles combining internal & external tools |
+| **Curated Clusters** | **5** | Role-tailored skill bundles combining internal & external tools |
 | **Bundled Plugins** | **5** | Ready-to-use Antigravity plugins |
 | **Upstream Submodules** | **4** | Google Cloud Platform, DeepMind Science, Google ADK |
 | **Internal Typologies** | **2+** | Hub meta-tooling and starter templates (extensible) |
@@ -52,6 +53,7 @@ Skill clusters allow you to activate a curated subset of skills tailored for spe
 | [`data-engineer`](#2-data-engineer) | GCP Data Engineering and ETL toolset (BigQuery, dbt, Spark, Dataform) | 5 skills | BigQuery, dbt, Spark, Dataform, BigQuery Optimization |
 | [`science-researcher`](#3-science-researcher) | DeepMind bioinformatics, protein structure, and biomedical research tools | 5 skills | AlphaFold, PubMed, ChEMBL, UniProt, Clinical Trials |
 | [`agent-developer`](#4-agent-developer) | Google Agent Development Kit (ADK) agent authoring, testing, eval, and deployment | 5 skills | ADK code, eval, deploy, workflow, template-skill |
+| [`bq-sql-optimizer`](#5-bq-sql-optimizer) | BigQuery SQL & Slot Cost Optimizer: Offline job telemetry analysis (CSV/Sheets), SQL similarity grouping, anti-pattern classification, query refactoring, and partitioning/clustering DDL tuning | 12 skills | BigQuery SQL Tuning, Slot FinOps, Partitioning/Clustering DDL, Anti-Patterns |
 
 ### 1. gcp-data-enterprise-architect
 
@@ -160,6 +162,38 @@ agyhub enable -G -c agent-developer
 | Skill | [`google-agents-cli-deploy`](external/agents-cli/skills/google-agents-cli-deploy/SKILL.md) | `external/agents-cli` | This skill should be used when the user wants to "deploy an agent", "deploy my ADK ag... |
 | Skill | [`google-agents-cli-workflow`](external/agents-cli/skills/google-agents-cli-workflow/SKILL.md) | `external/agents-cli` | This skill should be used when the user wants to "develop an agent", "build an agent ... |
 | Skill | [`template-skill`](internal/templates/skills/template-skill/SKILL.md) | `internal/templates` | A template skill showing the standard structure and best practices for authoring Anti... |
+
+### 5. bq-sql-optimizer
+
+**Description**: BigQuery SQL & Slot Cost Optimizer: Offline job telemetry analysis (CSV/Sheets), SQL similarity grouping, anti-pattern classification, query refactoring, and partitioning/clustering DDL tuning
+
+```bash
+# Activate this cluster in current workspace:
+agyhub enable -c bq-sql-optimizer
+
+# Or activate globally across all workspaces:
+agyhub enable -G -c bq-sql-optimizer
+```
+
+> [!NOTE]
+> For detailed architectural rationale, pillar breakdown, and capability matrices, see the companion guide: [`clusters/bq-sql-optimizer.md`](clusters/bq-sql-optimizer.md).
+
+**Included Customizations:**
+
+| Type | Name | Provenance | Description |
+| :--- | :--- | :--- | :--- |
+| Skill | [`bigquery-sql`](external/googlecloud-data/skills/bigquery-sql/SKILL.md) | `external/googlecloud-data` | Provides BigQuery SQL query optimization techniques, execution best practices, and pe... |
+| Skill | [`bigquery-optimization`](external/googlecloud-base/skills/cloud/bigquery-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Provides workflows to optimize BigQuery environments (capacity planning, editions), s... |
+| Skill | [`bigquery-slot-cost-optimizer`](external/googlecloud-base/skills/cloud/bigquery-slot-cost-optimizer/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes Google Cloud BigQuery slot consumption, query costs, and execution bottlenec... |
+| Skill | [`bigquery-observability`](external/googlecloud-base/skills/cloud/bigquery-observability/SKILL.md) | `external/googlecloud-base/cloud` | Provides data-retrieval best practices, tool selection guidance, and performant SQL q... |
+| Skill | [`bigquery-troubleshooting`](external/googlecloud-base/skills/cloud/bigquery-troubleshooting/SKILL.md) | `external/googlecloud-base/cloud` | Provides diagnostic workflows and step-by-step root-cause analysis procedures for act... |
+| Skill | [`datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes the downstream impact (blast radius) when a BigQuery table or view is broken... |
+| Skill | [`datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary/SKILL.md) | `external/googlecloud-base/cloud` | Summarizes Google Cloud Data Lineage graphs to help users debug data quality issues a... |
+| Skill | [`dbt-bigquery`](external/googlecloud-data/skills/dbt-bigquery/SKILL.md) | `external/googlecloud-data` | Expert guidance for creating, modifying, and optimizing dbt pipelines for BigQuery. U... |
+| Skill | [`dataform-bigquery`](external/googlecloud-data/skills/dataform-bigquery/SKILL.md) | `external/googlecloud-data` | Expertise in generating clean, correct, and efficient Dataform pipeline code for BigQ... |
+| Skill | [`google-cloud-waf-cost-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-cost-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Evaluates Google Cloud workloads for cost efficiency and FinOps alignment using the G... |
+| Skill | [`google-cloud-waf-performance-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-performance-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Generates performance-focused guidance for Google Cloud workloads based on the design... |
+| Skill | [`accidental-data-loss-prevention`](external/googlecloud-data/skills/accidental-data-loss-prevention/SKILL.md) | `external/googlecloud-data` | **STOP AND VERIFY**: Before running any command or tool that results in irreversible ... |
 
 ---
 

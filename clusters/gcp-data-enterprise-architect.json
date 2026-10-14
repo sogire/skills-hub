@@ -22,7 +22,9 @@
     "gcp-dataflow",
     "dbt-sf-to-bq-translator",
     "gcs-security-assessment",
-    "accidental-data-loss-prevention"
+    "accidental-data-loss-prevention",
+    "gcp-project-copilot",
+    "gcp-architecture-diagram"
   ],
   "plugins": [
     "googlecloud-data"

@@ -60,9 +60,13 @@ Every customer engagement workspace is powered by **two project-specific configu
     │
     └── topics/                                   # LAYER 3: Deep-Dive Topic Workstreams (Created Lazily per Domain)
         └── <topic-slug>/                         # Matches domain slug in specs/specs_project.md
-            └── docs/
-                ├── sources/
-                └── output/
+            ├── docs/                             # Deep-dive Markdown deliverables (<doc-stem>.md)
+            └── diagrams/                         # Per-document architecture diagrams & JSON specs
+                └── <doc-stem>/                   # Matches Markdown filename stem
+                    ├── *.svg                     # Official GCP Reference Architecture vector diagrams
+                    ├── *.png                     # Companion 2x HiDPI (144 DPI) PNGs for Slides/Docs
+                    └── specs/
+                        └── *.json                # Declarative JSON topology specs
 ```
 
 ---
@@ -165,14 +169,17 @@ Whenever synchronizing `<workspace-root>/project/` with Google Drive:
    # Execute live synchronization from the workspace to Google Drive
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
 
+   # Or synchronize a single Markdown document and its diagrams/<doc-stem>/ folder:
+   python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/topics/<topic-slug>/docs/<doc-stem>.md
+
    # Or preview actions first without modifying Google Drive:
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --dry-run
    ```
-   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder, topologically sorts all `.md` files (`topics/` $\to$ `meetings/` $\to$ `common/`), rewrites internal `.md` links to Google Docs URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), saves `specs/gdrive_sync_manifest.json`, and refreshes Section 2.2 in `specs/specs_project.md`.
+   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder (including `diagrams/<doc-stem>/` and `diagrams/<doc-stem>/specs/`), ensures every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`, topologically sorts all `.md` files (`topics/` $\to$ `meetings/` $\to$ `common/`), rewrites internal `.md` links to Google Docs URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), uploads/updates standalone `.svg`, `.png`, and `.json` assets in `diagrams/`, saves `specs/gdrive_sync_manifest.json`, and refreshes Section 2.2 in `specs/specs_project.md`.
 
 ### Workflow 5: Promote a Domain Challenge into a Deep-Dive Topic Workstream (`project/topics/`)
 
-1. Create `<workspace>/project/topics/<topic-slug>/docs/` matching the domain's slug in `specs/specs_project.md`.
+1. Create `<workspace>/project/topics/<topic-slug>/docs/` matching the domain's slug in `specs/specs_project.md`, and store any architecture diagrams and JSON specs for `<doc-stem>.md` under `<workspace>/project/topics/<topic-slug>/diagrams/<doc-stem>/` (`*.svg`, `*.png`, and `specs/*.json`).
 2. Author the deep-dive architectural analysis Markdown document addressing the domain's questions from `project_questions-log.md` and challenges from `project_challenges.md`.
 3. Convert the plain-text slug in Section 3 of `specs/specs_project.md` and `**Deep-Dive Deliverables:**` in `project/common/project_challenges.md` into active relative links pointing to the new deliverable, then execute **Workflow 4** (`sync_drive.py`).
 

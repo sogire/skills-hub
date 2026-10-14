@@ -1,0 +1,198 @@
+{
+  "theme": "classic",
+  "layout": "vertical",
+  "zones": [
+    {
+      "id": "central_services",
+      "label": "Central services",
+      "color": "blue",
+      "row": 0,
+      "col": 0,
+      "layout": "horizontal",
+      "subzones": [
+        {
+          "id": "management",
+          "label": "Management",
+          "color": "amber",
+          "layout": "horizontal",
+          "cards": [
+            {
+              "id": "iam",
+              "title": "Access Control",
+              "subtitle": "IAM",
+              "icon": "iam"
+            },
+            {
+              "id": "dataplex_policies",
+              "title": "Data Policies",
+              "subtitle": "Dataplex",
+              "icon": "dataplex"
+            },
+            {
+              "id": "platform_iac",
+              "title": "Platform Solutions",
+              "subtitle": "Service Catalog",
+              "icon": "service_catalog"
+            }
+          ]
+        },
+        {
+          "id": "discovery_governance",
+          "label": "Data product discovery & observability",
+          "color": "amber",
+          "layout": "horizontal",
+          "cards": [
+            {
+              "id": "knowledge_catalog",
+              "title": "Data Catalog",
+              "subtitle": "Knowledge Catalog",
+              "icon": "knowledge_catalog"
+            },
+            {
+              "id": "analytics_hub",
+              "title": "Data Marketplace",
+              "subtitle": "Analytics Hub",
+              "icon": "analytics_hub"
+            },
+            {
+              "id": "cloud_monitoring",
+              "title": "Observability",
+              "subtitle": "Cloud Monitoring",
+              "icon": "cloud_monitoring"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mesh_domains_row",
+      "transparent": true,
+      "row": 1,
+      "col": 0,
+      "layout": "horizontal",
+      "subzones": [
+        {
+          "id": "data_producers",
+          "label": "Data producers",
+          "color": "blue",
+          "layout": "vertical",
+          "subzones": [
+            {
+              "id": "domain_1",
+              "label": "Data domain 1 (Purchasing — Projects 2845 / 3145)",
+              "color": "amber",
+              "layout": "horizontal",
+              "cards": [
+                {
+                  "id": "d1_ingest",
+                  "title": "Batch & ELT",
+                  "subtitle": "Dataform",
+                  "icon": "dataform"
+                },
+                {
+                  "id": "d1_storage",
+                  "title": "Domain Storage",
+                  "subtitle": "BigQuery",
+                  "icon": "bigquery"
+                },
+                {
+                  "id": "d1_interface",
+                  "title": "Data Product",
+                  "subtitle": "Gold Interface",
+                  "icon": "bigquery"
+                }
+              ]
+            },
+            {
+              "id": "domain_2",
+              "label": "Data domain 2 (Streaming & Unstructured)",
+              "color": "coral",
+              "layout": "horizontal",
+              "cards": [
+                {
+                  "id": "d2_ingest",
+                  "title": "Stream Ingestion",
+                  "subtitle": "Dataflow",
+                  "icon": "dataflow"
+                },
+                {
+                  "id": "d2_storage",
+                  "title": "Object Lake",
+                  "subtitle": "Cloud Storage",
+                  "icon": "cloud_storage"
+                },
+                {
+                  "id": "d2_interface",
+                  "title": "Consumption API",
+                  "subtitle": "BigLake / PubSub",
+                  "icon": "pubsub"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data_consumers",
+          "label": "Data consumers",
+          "color": "blue",
+          "layout": "vertical",
+          "subzones": [
+            {
+              "id": "consumer_bi",
+              "label": "Consumer domain A (Finance & BI)",
+              "color": "amber",
+              "layout": "horizontal",
+              "cards": [
+                {
+                  "id": "c1_linked",
+                  "title": "Linked Dataset",
+                  "subtitle": "BigQuery",
+                  "icon": "bigquery"
+                },
+                {
+                  "id": "c1_looker",
+                  "title": "BI & Semantic",
+                  "subtitle": "Looker",
+                  "icon": "looker"
+                }
+              ]
+            },
+            {
+              "id": "consumer_ai",
+              "label": "Consumer domain B (AI Agents & Data Science)",
+              "color": "amber",
+              "layout": "horizontal",
+              "cards": [
+                {
+                  "id": "c2_agent",
+                  "title": "Data Agent",
+                  "subtitle": "Gemini / ADK",
+                  "icon": "agents"
+                },
+                {
+                  "id": "c2_vertex",
+                  "title": "ML & Notebooks",
+                  "subtitle": "Vertex AI",
+                  "icon": "vertex_ai"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "d1_ingest", "to": "d1_storage", "step": 1 },
+    { "from": "d1_storage", "to": "d1_interface" },
+    { "from": "d2_ingest", "to": "d2_storage", "step": 2 },
+    { "from": "d2_storage", "to": "d2_interface" },
+    { "from": "d1_interface", "to": "knowledge_catalog", "style": "dashed", "label": "Register metadata", "from_side": "top", "to_side": "bottom" },
+    { "from": "d1_interface", "to": "analytics_hub", "step": 3, "label": "Publish listing", "from_side": "top", "to_side": "bottom" },
+    { "from": "analytics_hub", "to": "c1_linked", "step": 4, "label": "Zero-copy subscribe", "from_side": "bottom", "to_side": "top" },
+    { "from": "c1_linked", "to": "c1_looker" },
+    { "from": "d1_interface", "to": "c1_linked", "style": "dashed" },
+    { "from": "d2_interface", "to": "c2_agent", "step": 5 },
+    { "from": "c2_agent", "to": "c2_vertex" }
+  ]
+}

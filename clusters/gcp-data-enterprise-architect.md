@@ -108,6 +108,8 @@ The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) clus
 | **Ingestion & Pipelines** | `gcp-data-pipelines` | Architecture patterns for batch and real-time ingestion, Cloud Composer orchestration, and Pub/Sub. | `data-engineer` |
 | | `gcp-dataflow` | Apache Beam / Dataflow stream processing architecture, autoscaling, and exactly-once processing. | `google-cloud-skills` |
 | **Modernization & Translation** | `dbt-sf-to-bq-translator` | Automated migration rules, SQL dialect conversion, and dbt models from Snowflake to BigQuery. | `data-engineer` |
+| **Customer Engagement & Diagrams** | `gcp-project-copilot` | End-to-end customer architecture workspace management, meeting synthesis, and Google Docs synchronization. | `internal/customer-engagement` |
+| | `gcp-architecture-diagram` | Generates official Google Cloud Reference Architecture `.svg` diagrams from declarative JSON specs or Mermaid flowcharts. | `internal/customer-engagement` |
 | **Plugin** | `googlecloud-data` | Bundled plugin providing ready-to-run rules and data engineering standards for Google Cloud. | `external/googlecloud-data` |
 
 ---

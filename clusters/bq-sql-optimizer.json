@@ -1,0 +1,19 @@
+{
+  "name": "bq-sql-optimizer",
+  "description": "BigQuery SQL & Slot Cost Optimizer: Offline job telemetry analysis (CSV/Sheets), SQL similarity grouping, anti-pattern classification, query refactoring, and partitioning/clustering DDL tuning",
+  "skills": [
+    "bigquery-sql",
+    "bigquery-optimization",
+    "bigquery-slot-cost-optimizer",
+    "bigquery-observability",
+    "bigquery-troubleshooting",
+    "datalineage-bigquery-asset-impact-analysis",
+    "datalineage-summary",
+    "dbt-bigquery",
+    "dataform-bigquery",
+    "google-cloud-waf-cost-optimization",
+    "google-cloud-waf-performance-optimization",
+    "accidental-data-loss-prevention"
+  ],
+  "plugins": []
+}
