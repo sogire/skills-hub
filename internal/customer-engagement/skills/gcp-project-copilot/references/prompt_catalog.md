@@ -94,4 +94,5 @@ Use the gcp-project-copilot skill to evaluate and answer question(s) <D#-Q##> (o
 ## 9. Synchronize Local `project/` (or `project/questions/`) Hierarchy with Google Drive
 ```text
 Use the gcp-project-copilot skill to synchronize all new or modified folders and Markdown documents in @project (or only `project/questions/`) with Google Drive, and refresh the synchronized registry in @specs/specs_project.md.
+
 ```

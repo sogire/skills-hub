@@ -29,7 +29,7 @@ description: >-
   1. **Setting up or scaffolding a customer workspace**: Creating the `specs/` and `project/{common,meetings,topics,questions}` hierarchy and initializing `specs/specs_project.md`, `specs/gdrive_sync_manifest.json`, and the 5 living master documents via [`scripts/init_workspace.py`](./scripts/init_workspace.py).
   2. **Customizing `specs/specs_project.md` or `specs/gdrive_sync_manifest.json`**: Helping the user configure or update customer identity, Google Drive Folder URLs/IDs, Canonical Architectural Domains (`D1..Dn`), or ASR speaker aliases.
   3. **Analyzing customer meeting notes**: Extracting technical questions, architectural challenges, stakeholder rosters, and glossary terms from Google Meet notes (`https://docs.google.com/document/d/<DOC_ID>`).
-  4. **Answering one or more technical questions (or a domain/session group)**: Analyzing relevant Google Cloud skills available in the workspace to evaluate selected questions (`[D#-Q##]` / `[P1-Q##]`), saving an individual structured answer per question in `project/questions/` using [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md), and optionally synchronizing `project/questions/` with Google Drive.
+  4. **Answering one or more technical questions (or a domain/session group) and/or generating 1-slide question summary prompts**: Analyzing relevant Google Cloud skills available in the workspace to evaluate selected questions (`[D#-Q##]` / `[P1-Q##]`), saving an individual structured answer per question in `project/questions/` using [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md), and synchronizing `project/questions/` with Google Drive.
   5. **Promoting a domain challenge into a deep-dive workstream**: Creating architectural evaluations and slide guides under `project/topics/<topic-slug>/docs/`.
   6. **Synchronizing the workspace with Google Drive**: Running [`scripts/sync_drive.py`](./scripts/sync_drive.py) from the workspace to mirror folders, import/update native Google Docs, and refresh Section 2.2 of `specs/specs_project.md`.
 - **Do NOT activate when (Anti-Scope)**:
@@ -72,7 +72,8 @@ Every customer engagement workspace is powered by **two project-specific configu
     │                   └── *.json                # Declarative JSON topology specs
     │
     └── questions/                                # LAYER 4: Individual Technical Question Evaluations (Created Lazily)
-        └── <DOMAIN_ID>-Q<NN>_<question-slug>.md  # One individual structured answer file per question (template_answers_to_questions.md)
+        ├── <DOMAIN_ID>-Q<NN>_<question-slug>.md  # One individual structured answer file per question (template_answers_to_questions.md)
+
 ```
 
 ---
@@ -223,6 +224,7 @@ When the user asks to answer one or more technical questions (e.g., `D3-Q14`, `D
     # Or sync the full project/ hierarchy (including updated links in common/project_questions-log.md):
     python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
     ```
+
 
 ---
 
