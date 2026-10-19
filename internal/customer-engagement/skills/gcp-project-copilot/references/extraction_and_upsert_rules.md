@@ -57,6 +57,7 @@ Outputs are divided into **two scopes** so that session-specific discussions are
 | **2. Customer Glossary (`glossary`)** | [`template_glossary.md`](../resources/templates/template_glossary.md) | **No** *(Project-level only)* | **Yes** (`project/common/project_glossary.md`) |
 | **3. Technical Questions Log (`questions-log`)** | [`template_questions-log.md`](../resources/templates/template_questions-log.md) | **Yes** (`YYYYMMDD_questions-log_<slug>.md`) | **Yes** (`project/common/project_questions-log.md`) |
 | **4. Topics & Challenges (`challenges`)** | [`template_challenges.md`](../resources/templates/template_challenges.md) | **Yes** (`YYYYMMDD_challenges_<slug>.md`) | **Yes** (`project/common/project_challenges.md`) |
+| **5. Technical Question Answers (`questions`)** | [`template_answers_to_questions.md`](../resources/templates/template_answers_to_questions.md) | **No** *(Per-question in `project/questions/`)* | **Yes** (`project/questions/<DOMAIN_ID>-Q<NN>_<slug>.md`, linked from `project_questions-log.md`) |
 
 ---
 
@@ -167,13 +168,14 @@ Outputs are divided into **two scopes** so that session-specific discussions are
 
 ### Rule 4.5: Evolve `project/common/project_challenges.md`
 - `project_challenges.md` is a **living architectural synthesis**, not a raw concatenation of meeting files.
+- **Trailing Session Date Attribution (`(Dates: `[YYYY-MM-DD]`)`)**: In `project/common/project_challenges.md`, **never** place session dates at the beginning of a bullet point. Always place session date tags at the **end of each bullet paragraph** in the format `(Dates: `[YYYY-MM-DD]`)` for single-session items or `(Dates: `[YYYY-MM-DD]`, `[YYYY-MM-DD]`)` when an item spans multiple sessions.
 - When a meeting addresses an **existing topic section** (`D1..Dn`), preserve the **4-subsection role-attributed structure**:
   1. **Sessions Covered**: Append the new meeting date and link to the topic's `**Sessions Covered:**` metadata line.
   2. **Deep-Dive Deliverables**: If a corresponding folder exists under `project/topics/<topic-slug>/`, link it under `**Deep-Dive Deliverables:**`.
-  3. **1. Customer Current State, Implementations & Ambitions (`{{CUSTOMER_NAME}}`-Led)**: Merge newly presented customer architectures, implementations, or evolving business objectives (tagged with `[YYYY-MM-DD]`).
-  4. **2. Core Architectural Challenges & Friction Points**: Merge newly uncovered nuances, edge cases, or constraints (tagged with `[YYYY-MM-DD]`) without deleting still-valid challenges from earlier sessions.
-  5. **3. Google Cloud Architectural Solutions & Recommendations (`Google-Led`)**: Expand with newly presented GCP reference architectures, patterns, or architectural decisions (tagged with `[YYYY-MM-DD]`).
-  6. **4. Proposed Exploration Roadmap & Action Items (`Owner-Attributed`)**: Update the owner-tagged roadmap bullets (`[Google Cloud — <Name>]`, `[{{CUSTOMER_NAME}} — <Name>]`, `[Joint — <Names>]`)—adding newly agreed action items and marking previously proposed items if completed or superseded.
+  3. **1. Customer Current State, Implementations & Ambitions (`{{CUSTOMER_NAME}}`-Led)**: Merge newly presented customer architectures, implementations, or evolving business objectives, appending `(Dates: `[YYYY-MM-DD]`)` at the end of the paragraph.
+  4. **2. Core Architectural Challenges & Friction Points**: Merge newly uncovered nuances, edge cases, or constraints without deleting still-valid challenges from earlier sessions, appending `(Dates: `[YYYY-MM-DD]`)` (or adding the new date to `(Dates: `[YYYY-MM-DD]`, `[YYYY-MM-DD]`)`) at the end of the paragraph.
+  5. **3. Google Cloud Architectural Solutions & Recommendations (`Google-Led`)**: Expand with newly presented GCP reference architectures, patterns, or architectural decisions, appending `(Dates: `[YYYY-MM-DD]`)` at the end of the paragraph.
+  6. **4. Proposed Exploration Roadmap & Action Items (`Owner-Attributed`)**: Update the owner-tagged roadmap bullets (`[Google Cloud — <Name>]`, `[{{CUSTOMER_NAME}} — <Name>]`, `[Joint — <Names>]`)—adding newly agreed action items, marking previously proposed items if completed or superseded, and placing `(Dates: `[YYYY-MM-DD]`)` at the end of the paragraph.
 
 ### Rule 4.6: Atomic 4-File Propagation for Newly Approved Domains (`D(n+1)`)
 When the user approves a new domain `D(n+1)` during **Step 1.4**:
@@ -182,4 +184,26 @@ When the user approves a new domain `D(n+1)` during **Step 1.4**:
 3. **`project/common/project_questions-log.md`**: Add a `D(n+1)` row to the top `Project Question Summary` table (setting prior session counts to `0`) and append `# D(n+1). <Canonical Domain Name>` at the end of the file.
 4. **`project/common/project_challenges.md`**: Add a `D(n+1)` row to the `Architectural Challenge Overview` table and append `# D(n+1). <Canonical Domain Name>` (using the 4-subsection template) at the end of the file.
 5. **Lazy `project/topics/<new-slug>/` Folder Creation**: Do **not** create an empty directory under `project/topics/` when registering `D(n+1)`. Only create `project/topics/<new-slug>/docs/` when a deep-dive deliverable is actually generated.
+
+---
+
+## 5. Technical Question Evaluation & Answering Rules (`project/questions/`)
+
+- **Template**: [`resources/templates/template_answers_to_questions.md`](../resources/templates/template_answers_to_questions.md)
+- **Execution Rules**:
+  1. **Individual Answer File Per Question (`project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md`)**:
+     - Whether the user selects a single question (e.g., `D3-Q14`), multiple questions (`D3-Q14, D3-Q15`), or a domain/session group (e.g., all questions in `D3`), always generate **one individual Markdown file per question** inside `<workspace>/project/questions/` by default.
+  2. **Workspace Skill Discovery & Grounding**:
+     - Before writing the evaluation, inspect all relevant Google Cloud skills available in the workspace (e.g., `bigquery-sql`, `bigquery-optimization`, `bigquery-basics`, `bigquery-slot-cost-optimizer`, `bigquery-observability`, `iam-helper-for-policy-management`, `google-cloud-waf-security`, `gcp-spark`, `dataform-bigquery`, `dbt-bigquery`, `retrieving-developer-knowledge`, etc.).
+     - Read the matching skills' `SKILL.md` and `references/*.md` files, and verify exact IAM permissions, quotas, and DDL/API capabilities against official Google Cloud documentation.
+  3. **Mandatory 6-Section Template Structure**:
+     - **Top Metadata Table**: Must include `Customer / Project`, `Question ID` (`[D#-Q##]`), the verbatim **`Question` phrase**, `Canonical Domain`, `Asked By`, `Source Session & Log` (portable relative links), and `Date Answered` *(do not list skills in the top metadata table)*.
+     - **Section 1 — Executive Summary & Solution Matrix**: Concise summary and comparison matrix mapping requirements to Google Cloud controls, architectural layers, and enforcement mechanisms.
+     - **Section 2 — Technical Evaluation & Multi-Layer Google Cloud Controls**: Detailed breakdown (`Control A`, `Control B`, ...) with architectural explanations and production-ready code snippets (SQL DDL, IAM v2 Deny Policies, CLI commands, or configuration blocks).
+     - **Section 3 — IAM Permissions, Security Guardrails & Platform Caveats**: Permission & enforcement matrix plus `> [!IMPORTANT]` callouts on platform edge cases.
+     - **Section 4 — Summary Recommendation & Next Steps for `{{CUSTOMER_NAME}}`**: Prioritized recommendation (`> [!TIP]`), owner-attributed next steps, and relative links to `../common/project_questions-log.md` and `../common/project_challenges.md`.
+     - **Section 5 — Google Cloud Documentation Reference Links**: Official `https://docs.cloud.google.com/...` URLs referenced in the evaluation.
+     - **Section 6 — Skills Employed**: Table documenting each workspace skill employed and its technical contribution to the evaluation.
+  4. **Cross-Linking in `project_questions-log.md`**:
+     - Append `* **Answer:** [<Short Title>](../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md)` under the answered question in `project/common/project_questions-log.md` (and `../../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` in the corresponding `project/meetings/YYYY-MM-DD_<slug>/YYYYMMDD_questions-log_<slug>.md`).
 

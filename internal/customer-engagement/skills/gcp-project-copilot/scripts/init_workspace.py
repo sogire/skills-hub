@@ -7,13 +7,14 @@ Capabilities:
    - `project/common/`
    - `project/meetings/`
    - `project/topics/`
+   - `project/questions/`
 2. Renders and customizes `specs/specs_project.md` and `specs/gdrive_sync_manifest.json`
    using CLI flags (accepting either full Google Drive URLs or raw Folder IDs).
 3. Supports `--update-config` to update customer identity or Google Drive folder
    IDs/URLs in an existing `specs/specs_project.md` and `specs/gdrive_sync_manifest.json`
    while preserving existing domains (`D1..Dn`), ASR aliases, and `project/common/` files.
 4. Supports `--discover-drive` to query the Root Project Drive Folder via `gdrive`
-   and pre-populate existing `common/`, `meetings/`, and `topics/` folder IDs.
+   and pre-populate existing `common/`, `meetings/`, `topics/`, and `questions/` folder IDs.
 5. Initializes the 5 living master documents in `project/common/` (`meetings_registry.md`,
    `project_members.md`, `project_glossary.md`, `project_questions-log.md`,
    `project_challenges.md`) and optional `GEMINI.md` workspace rules.
@@ -62,7 +63,7 @@ def format_drive_folder_url(folder_id: str) -> str:
 def discover_drive_subfolders(
     root_folder_id: str, cwd: str
 ) -> Dict[str, Dict[str, str]]:
-  """Inspect root_folder_id in Google Drive to find existing common/meetings/topics folders."""
+  """Inspect root_folder_id in Google Drive to find existing common/meetings/topics/questions folders."""
   discovered: Dict[str, Dict[str, str]] = {}
   if not root_folder_id or root_folder_id.startswith("{{"):
     return discovered
@@ -93,7 +94,7 @@ def discover_drive_subfolders(
       c_mime = item.get("mimeType") or item.get("MimeType") or item.get("Type")
       c_id = item.get("id") or item.get("ID")
       if (
-          c_name in ("common", "meetings", "topics")
+          c_name in ("common", "meetings", "topics", "questions")
           and c_id
           and ("folder" in str(c_mime).lower())
       ):
@@ -108,8 +109,11 @@ def discover_drive_subfolders(
   return discovered
 
 
-def build_replacements(args: argparse.Namespace) -> Dict[str, str]:
-  """Build template placeholder dictionary from CLI arguments."""
+def build_replacements(
+    args: argparse.Namespace,
+    discovered_folders: Optional[Dict[str, Dict[str, str]]] = None,
+) -> Dict[str, str]:
+  """Build template placeholder dictionary from CLI arguments and discovered folders."""
   today = datetime.date.today().isoformat()
   customer_name = args.customer_name or "Customer"
   customer_domain = (
@@ -133,6 +137,7 @@ def build_replacements(args: argparse.Namespace) -> Dict[str, str]:
       or "{{DELIVERABLES_FOLDER_ID}}"
   )
   root_name = args.root_folder_name or "20 Project"
+  folders = discovered_folders or {}
 
   return {
       "{{CUSTOMER_NAME}}": customer_name,
@@ -160,6 +165,18 @@ def build_replacements(args: argparse.Namespace) -> Dict[str, str]:
       "{{DRIVE_ROOT_FOLDER_ID}}": root_id,
       "{{MEETING_NOTES_FOLDER_ID}}": notes_id,
       "{{DELIVERABLES_FOLDER_ID}}": deliverables_id,
+      "{{COMMON_FOLDER_ID}}": (
+          folders.get("common", {}).get("id") or "{{COMMON_FOLDER_ID}}"
+      ),
+      "{{MEETINGS_FOLDER_ID}}": (
+          folders.get("meetings", {}).get("id") or "{{MEETINGS_FOLDER_ID}}"
+      ),
+      "{{QUESTIONS_FOLDER_ID}}": (
+          folders.get("questions", {}).get("id") or "{{QUESTIONS_FOLDER_ID}}"
+      ),
+      "{{TOPICS_FOLDER_ID}}": (
+          folders.get("topics", {}).get("id") or "{{TOPICS_FOLDER_ID}}"
+      ),
       "{{YYYY-MM-DD}}": today,
       "{{YYYYMMDD}}": today.replace("-", ""),
       "{{TOTAL_COUNT}}": "0",
@@ -174,6 +191,50 @@ def build_replacements(args: argparse.Namespace) -> Dict[str, str]:
       "{{COUNT_6}}": "2",
       "{{TOTAL_QUESTIONS}}": "0",
       "{{Q_COUNT}}": "0",
+      "{{COUNT_D1}}": "0",
+      "{{COUNT_D2}}": "0",
+      "{{COUNT_D3}}": "0",
+      "{{COUNT_D4}}": "0",
+      "{{COUNT_D5}}": "0",
+      "{{COUNT_D6}}": "0",
+      "{{COUNT_D7}}": "0",
+      "{{COUNT_P1}}": "0",
+      "{{STAKEHOLDER_FULL_NAME}}": "Customer Lead Architect",
+      "{{CUSTOMER_LEAD_NAME}}": "Customer Lead Architect",
+      "{{HANDLE}}": "customer.lead",
+      "{{DATA_ENGINEER_NAME}}": "Customer Senior Data Engineer",
+      "{{ENGINEER_HANDLE}}": "data.engineer",
+      "{{ARCHITECT_FULL_NAME}}": "Google Cloud Solution Architect",
+      "{{GOOGLE_ARCHITECT_NAME}}": "Google Cloud Solution Architect",
+      "{{GOOGLE_HANDLE}}": "google.architect",
+      "{{PARTNER_FULL_NAME}}": "External Partner Specialist",
+      "{{PARTNER_CONSULTANT_NAME}}": "External Partner Specialist",
+      "{{PARTNER_HANDLE}}": "partner.specialist",
+      "{{ASR_VARIANT_1}}": "Variant 1",
+      "{{ASR_VARIANT_2}}": "Variant 2",
+      "{{MEETING_TITLE}}": "Initial Architecture Kickoff",
+      "{{MEETING_DOC_TITLE}}": "Initial Architecture Kickoff Notes",
+      "{{MEETING_SLUG}}": "initial-architecture-kickoff",
+      "{{DOC_ID}}": "TBD_DOC_ID",
+      "{{DOMAIN_ROLE}}": "Domain Data Steward",
+      "{{DOMAIN_ROLE_ALIAS}}": "Data Steward",
+      "{{ERP_SYSTEM}}": "Core ERP",
+      "{{MASTER_DATA_SYSTEM}}": "Master Data Management (MDM)",
+      "{{MASTER_DATA_ALIAS}}": "MDM",
+      "{{COMPLIANCE_STANDARD}}": "Enterprise Security & Compliance Standard",
+      "{{QUESTION_TEXT_D1_1}}": "Pending initial meeting analysis.",
+      "{{QUESTION_TEXT_D2_1}}": "Pending initial meeting analysis.",
+      "{{QUESTION_TEXT_P1_1}}": "Pending initial meeting analysis.",
+      "{{FIRST_NAME}}": "Stakeholder",
+      "{{LAST_NAME_UPPER}}": "NAME",
+      "{{HH:MM:SS}}": "00:00:00",
+      "{{TRANSCRIPT_TAB_ID}}": "t.0",
+      "{{HEADING_ID}}": "h.0",
+      "{{PARTICIPANTS_LIST}}": f"{customer_name} & Google Cloud Architecture Team",
+      "{{CUSTOMER_PRESENTERS}}": f"{customer_name} Architecture Team",
+      "{{GOOGLE_PRESENTERS}}": "Google Cloud Architecture Team",
+      "{{TOPIC_1_TITLE}}": "Data Mesh, Data Products & Platform Framework",
+      "{{TOPIC_2_TITLE}}": "Analytics Hub, Data Sharing & Access Management",
   }
 
 
@@ -329,9 +390,11 @@ def init_or_update_manifest(
   if old_root_id and old_root_id != root_id and not args.keep_manifest_entries:
     manifest["folders"] = {}
     manifest["documents"] = {}
+    manifest["assets"] = {}
   else:
     manifest.setdefault("folders", {})
     manifest.setdefault("documents", {})
+    manifest.setdefault("assets", {})
 
   if args.discover_drive and root_id and not root_id.startswith("{{"):
     discovered = discover_drive_subfolders(root_id, cwd=workspace_root)
@@ -364,6 +427,17 @@ def write_gemini_rules(workspace_root: str, force: bool = False) -> None:
 
 ## 3. Official Stakeholder Directory Separation
 - Maintain speech-to-text (ASR) phonetic aliases and transcript variants **exclusively** in Section 5 of [`specs/specs_project.md`](./specs/specs_project.md). Never include ASR misspellings in [`project/common/project_members.md`](./project/common/project_members.md), which is a clean, customer-facing stakeholder directory.
+
+## 4. Strict Separation of "Customer As-Is / Ideas" vs. "Google-Recommended Target Architecture"
+- Never automatically inject tools mentioned by customer stakeholders during discovery (e.g., `Apigee`, `Apache Hudi`, `Neo4j`, custom proxies) into the Google-recommended target architecture diagram or critical path.
+- Document customer-mentioned tools strictly in the **Customer Current State** or **Alternatives / Edge-Case Notes** sections, and explicitly explain when the Google-recommended architecture simplifies or replaces them.
+
+## 5. Minimal-Hop & Native GCP Integration First (Anti-Overengineering Rule)
+- Always default to native Google Cloud service-to-service integrations and identity propagation (e.g., native OAuth 2.0 `On-Behalf-Of` passthrough from **Gemini Enterprise** $\\rightarrow$ **Google Cloud MCP Server / BigQuery Data Agent** $\\rightarrow$ **BigQuery** `SESSION_USER()`).
+- Never insert intermediate API gateways (e.g., `Apigee`), custom middleware, or extra data movement hops between native Google Cloud services unless crossing an external/non-GCP trust boundary (such as calling an on-premises ERP/ALM REST API) or solving a requirement that native GCP IAM/OAuth cannot satisfy.
+
+## 6. Mermaid Diagram Syntax Safety in Markdown Deliverables
+- Never use semicolons (`;`) or HTML tags (`<br>`) inside Mermaid `sequenceDiagram` notes or `flowchart` labels, as semicolons act as statement terminators in Mermaid and break rendering.
 """
   with open(gemini_path, "w", encoding="utf-8") as f:
     f.write(content)
@@ -463,7 +537,7 @@ def main() -> int:
   parser.add_argument(
       "--discover-drive",
       action="store_true",
-      help="Query Google Drive to auto-discover existing common/, meetings/, and topics/ subfolders",
+      help="Query Google Drive to auto-discover existing common/, meetings/, topics/, and questions/ subfolders",
   )
   parser.add_argument(
       "--keep-manifest-entries",
@@ -487,6 +561,7 @@ def main() -> int:
       os.path.join(workspace_root, "project", "common"),
       os.path.join(workspace_root, "project", "meetings"),
       os.path.join(workspace_root, "project", "topics"),
+      os.path.join(workspace_root, "project", "questions"),
   ]
   for d in dirs_to_create:
     os.makedirs(d, exist_ok=True)
@@ -497,9 +572,7 @@ def main() -> int:
       workspace_root, "specs", "gdrive_sync_manifest.json"
   )
 
-  replacements = build_replacements(args)
-
-  # 2. Create or update specs/specs_project.md
+  # 2. Create or update specs/specs_project.md and specs/gdrive_sync_manifest.json
   if os.path.exists(specs_project_path) and not args.force:
     if any([
         args.update_config,
@@ -516,7 +589,15 @@ def main() -> int:
       update_existing_specs_project(specs_project_path, args)
     else:
       print(f"[Exists] {specs_project_path} (use --update-config or --force)")
+    manifest = init_or_update_manifest(
+        manifest_path, specs_project_path, args, workspace_root
+    )
+    replacements = build_replacements(args, manifest.get("folders", {}))
   else:
+    manifest = init_or_update_manifest(
+        manifest_path, specs_project_path, args, workspace_root
+    )
+    replacements = build_replacements(args, manifest.get("folders", {}))
     rendered_specs = render_clean_master_doc(
         "template_specs_project.md", replacements
     )
@@ -524,12 +605,7 @@ def main() -> int:
       f.write(rendered_specs)
     print(f"[Created] {specs_project_path}")
 
-  # 3. Initialize or update specs/gdrive_sync_manifest.json
-  init_or_update_manifest(
-      manifest_path, specs_project_path, args, workspace_root
-  )
-
-  # 4. Initialize the 5 master files in project/common/ (unless --update-config only)
+  # 3. Initialize the 5 master files in project/common/ (unless --update-config only)
   if not args.update_config:
     master_files_map = {
         "meetings_registry.md": "template_meetings_registry.md",

@@ -4,40 +4,43 @@ description: >-
   Manages end-to-end Google Cloud customer architecture engagements by scaffolding
   project workspaces, interactively customizing specs/specs_project.md and
   specs/gdrive_sync_manifest.json, analyzing multi-tab Google Meet notes and
-  transcripts, maintaining a 3-layer Markdown project knowledge base
-  (project/common/, project/meetings/, project/topics/), and synchronizing local
-  Markdown deliverables into Google Drive as native Google Docs. Activate when
-  setting up or bootstrapping a customer project workspace, customizing
-  specs_project.md or gdrive_sync_manifest.json, analyzing customer meeting notes
-  or transcripts, updating project rosters/glossaries/question logs/challenges,
+  transcripts, maintaining a 4-layer Markdown project knowledge base
+  (project/common/, project/meetings/, project/topics/, project/questions/),
+  answering technical questions using workspace Google Cloud skills, and
+  synchronizing local Markdown deliverables into Google Drive as native Google Docs.
+  Activate when setting up or bootstrapping a customer project workspace,
+  customizing specs_project.md or gdrive_sync_manifest.json, analyzing customer
+  meeting notes or transcripts, updating project rosters/glossaries/question
+  logs/challenges, answering selected technical questions in project/questions/,
   creating topic deep-dives, or syncing project documentation with Google Drive.
   Do not use for ad-hoc single-document Google Docs edits outside a project
-  workspace (use gdocs) or single-service code implementation.
+  workspace (use gdocs) or standalone application code implementation.
 ---
 
 # GCP Project Copilot (`gcp-project-copilot`)
 
-`gcp-project-copilot` equips the agent to operate as a **Customer Architecture Engagement Copilot** across any Google Cloud customer project. It scaffolds and configures new customer workspaces, customizes project metadata and Google Drive mappings (`specs/specs_project.md` and `specs/gdrive_sync_manifest.json`), transforms multi-tab Google Meet notes (`Quick notes`, `Full notes`, `Transcript`) into a three-layer Markdown knowledge base (`project/common/`, `project/meetings/`, `project/topics/`), and synchronizes the entire hierarchy to Google Drive as native, cross-linked Google Docs.
+`gcp-project-copilot` equips the agent to operate as a **Customer Architecture Engagement Copilot** across any Google Cloud customer project. It scaffolds and configures new customer workspaces, customizes project metadata and Google Drive mappings (`specs/specs_project.md` and `specs/gdrive_sync_manifest.json`), transforms multi-tab Google Meet notes (`Quick notes`, `Full notes`, `Transcript`) into a structured Markdown knowledge base (`project/common/`, `project/meetings/`, `project/topics/`, `project/questions/`), evaluates and answers technical questions using specialized Google Cloud skills available in the workspace, and synchronizes the hierarchy to Google Drive as native, cross-linked Google Docs.
 
 ---
 
 ## When to Use This Skill
 
 - **Activate when**:
-  1. **Setting up or scaffolding a customer workspace**: Creating the `specs/` and `project/{common,meetings,topics}` hierarchy and initializing `specs/specs_project.md`, `specs/gdrive_sync_manifest.json`, and the 5 living master documents via [`scripts/init_workspace.py`](./scripts/init_workspace.py).
+  1. **Setting up or scaffolding a customer workspace**: Creating the `specs/` and `project/{common,meetings,topics,questions}` hierarchy and initializing `specs/specs_project.md`, `specs/gdrive_sync_manifest.json`, and the 5 living master documents via [`scripts/init_workspace.py`](./scripts/init_workspace.py).
   2. **Customizing `specs/specs_project.md` or `specs/gdrive_sync_manifest.json`**: Helping the user configure or update customer identity, Google Drive Folder URLs/IDs, Canonical Architectural Domains (`D1..Dn`), or ASR speaker aliases.
   3. **Analyzing customer meeting notes**: Extracting technical questions, architectural challenges, stakeholder rosters, and glossary terms from Google Meet notes (`https://docs.google.com/document/d/<DOC_ID>`).
-  4. **Promoting a domain challenge into a deep-dive workstream**: Creating architectural evaluations and slide guides under `project/topics/<topic-slug>/docs/`.
-  5. **Synchronizing the workspace with Google Drive**: Running [`scripts/sync_drive.py`](./scripts/sync_drive.py) from the workspace to mirror folders, import/update native Google Docs, and refresh Section 2.2 of `specs/specs_project.md`.
+  4. **Answering one or more technical questions (or a domain/session group)**: Analyzing relevant Google Cloud skills available in the workspace to evaluate selected questions (`[D#-Q##]` / `[P1-Q##]`), saving an individual structured answer per question in `project/questions/` using [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md), and optionally synchronizing `project/questions/` with Google Drive.
+  5. **Promoting a domain challenge into a deep-dive workstream**: Creating architectural evaluations and slide guides under `project/topics/<topic-slug>/docs/`.
+  6. **Synchronizing the workspace with Google Drive**: Running [`scripts/sync_drive.py`](./scripts/sync_drive.py) from the workspace to mirror folders, import/update native Google Docs, and refresh Section 2.2 of `specs/specs_project.md`.
 - **Do NOT activate when (Anti-Scope)**:
   - Reading or editing standalone Google Docs unrelated to a structured customer project workspace (use the `gdocs` skill directly).
-  - Authoring product-specific code or pipelines such as Dataform SQLX (`dataform-bigquery`), dbt (`dbt-bigquery`), Spark (`gcp-spark`), or IAM policies (`iam-helper-for-policy-management`).
+  - Building standalone production pipelines or application code outside of customer architectural evaluations (note: when answering technical questions in **Workflow 6**, `gcp-project-copilot` **does** inspect and leverage specialized GCP skills available in the workspace to ground its answers and code snippets).
 
 ---
 
 ## Workspace Architecture & The 2 Project-Specific Configuration Files
 
-Every customer engagement workspace is powered by **two project-specific configuration files** in `<workspace-root>/specs/` and a **three-layer knowledge base** in `<workspace-root>/project/`, while all generic methodology, templates, and automation scripts reside inside this skill directory (`<skill-dir>/`):
+Every customer engagement workspace is powered by **two project-specific configuration files** in `<workspace-root>/specs/` and a **four-layer knowledge base** in `<workspace-root>/project/`, while all generic methodology, templates, and automation scripts reside inside this skill directory (`<skill-dir>/`):
 
 ```text
 <workspace-root>/
@@ -58,15 +61,18 @@ Every customer engagement workspace is powered by **two project-specific configu
     │       ├── YYYYMMDD_questions-log_<meeting-slug>.md
     │       └── YYYYMMDD_challenges_<meeting-slug>.md
     │
-    └── topics/                                   # LAYER 3: Deep-Dive Topic Workstreams (Created Lazily per Domain)
-        └── <topic-slug>/                         # Matches domain slug in specs/specs_project.md
-            ├── docs/                             # Deep-dive Markdown deliverables (<doc-stem>.md)
-            └── diagrams/                         # Per-document architecture diagrams & JSON specs
-                └── <doc-stem>/                   # Matches Markdown filename stem
-                    ├── *.svg                     # Official GCP Reference Architecture vector diagrams
-                    ├── *.png                     # Companion 2x HiDPI (144 DPI) PNGs for Slides/Docs
-                    └── specs/
-                        └── *.json                # Declarative JSON topology specs
+    ├── topics/                                   # LAYER 3: Deep-Dive Topic Workstreams (Created Lazily per Domain)
+    │   └── <topic-slug>/                         # Matches domain slug in specs/specs_project.md
+    │       ├── docs/                             # Deep-dive Markdown deliverables (<doc-stem>.md)
+    │       └── diagrams/                         # Per-document architecture diagrams & JSON specs
+    │           └── <doc-stem>/                   # Matches Markdown filename stem
+    │               ├── *.svg                     # Official GCP Reference Architecture vector diagrams
+    │               ├── *.png                     # Companion 2x HiDPI (144 DPI) PNGs for Slides/Docs
+    │               └── specs/
+    │                   └── *.json                # Declarative JSON topology specs
+    │
+    └── questions/                                # LAYER 4: Individual Technical Question Evaluations (Created Lazily)
+        └── <DOMAIN_ID>-Q<NN>_<question-slug>.md  # One individual structured answer file per question (template_answers_to_questions.md)
 ```
 
 ---
@@ -169,19 +175,54 @@ Whenever synchronizing `<workspace-root>/project/` with Google Drive:
    # Execute live synchronization from the workspace to Google Drive
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
 
+   # Synchronize only the project/questions/ folder (or a single question answer file):
+   python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions
+
    # Or synchronize a single Markdown document and its diagrams/<doc-stem>/ folder:
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/topics/<topic-slug>/docs/<doc-stem>.md
 
    # Or preview actions first without modifying Google Drive:
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --dry-run
    ```
-   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder (including `diagrams/<doc-stem>/` and `diagrams/<doc-stem>/specs/`), ensures every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`, topologically sorts all `.md` files (`topics/` $\to$ `meetings/` $\to$ `common/`), rewrites internal `.md` links to Google Docs URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), uploads/updates standalone `.svg`, `.png`, and `.json` assets in `diagrams/`, saves `specs/gdrive_sync_manifest.json`, and refreshes Section 2.2 in `specs/specs_project.md`.
+   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder (including `questions/`, `diagrams/<doc-stem>/`, and `diagrams/<doc-stem>/specs/`), ensures every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`, topologically sorts all `.md` files (`topics/` & `questions/` $\to$ `meetings/` $\to$ `common/`), rewrites internal `.md` links to Google Docs URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), uploads/updates standalone `.svg`, `.png`, and `.json` assets in `diagrams/`, saves `specs/gdrive_sync_manifest.json`, and refreshes Section 2.2 in `specs/specs_project.md`.
 
 ### Workflow 5: Promote a Domain Challenge into a Deep-Dive Topic Workstream (`project/topics/`)
 
 1. Create `<workspace>/project/topics/<topic-slug>/docs/` matching the domain's slug in `specs/specs_project.md`, and store any architecture diagrams and JSON specs for `<doc-stem>.md` under `<workspace>/project/topics/<topic-slug>/diagrams/<doc-stem>/` (`*.svg`, `*.png`, and `specs/*.json`).
 2. Author the deep-dive architectural analysis Markdown document addressing the domain's questions from `project_questions-log.md` and challenges from `project_challenges.md`.
 3. Convert the plain-text slug in Section 3 of `specs/specs_project.md` and `**Deep-Dive Deliverables:**` in `project/common/project_challenges.md` into active relative links pointing to the new deliverable, then execute **Workflow 4** (`sync_drive.py`).
+
+### Workflow 6: Answer Selected Technical Questions Using Workspace GCP Skills (`project/questions/`)
+
+When the user asks to answer one or more technical questions (e.g., `D3-Q14`, `D3-Q14, D3-Q15`, or a group such as all questions in domain `D3` or from a specific meeting):
+
+- [ ] **Step 1 — Select Target Question(s) & Load Project Context**:
+  - Read `<workspace>/specs/specs_project.md`, `project/common/project_questions-log.md`, and `project/common/project_challenges.md` to extract the verbatim question text, `Asked By` stakeholder attribution, session date, transcript deep-link, and customer architectural context for each selected question (`[D#-Q##]` or `[P1-Q##]`).
+  - **One Individual File Per Question by Default**: Even when multiple questions or a domain/session group are selected, generate **one individual Markdown response file per question** (do not aggregate multiple questions into a single file unless explicitly instructed by the user).
+- [ ] **Step 2 — Analyze Available Workspace Google Cloud Skills & Official Documentation**:
+  - Inspect the skills available in the workspace that match the question's technical domain (e.g., `bigquery-sql`, `bigquery-optimization`, `bigquery-basics`, `bigquery-slot-cost-optimizer`, `bigquery-observability`, `iam-helper-for-policy-management`, `google-cloud-waf-security`, `gcp-spark`, `dataform-bigquery`, `dbt-bigquery`, `retrieving-developer-knowledge`, etc.).
+  - Read the `SKILL.md` and relevant `references/*.md` files of those matching workspace skills, and verify exact IAM permissions, quotas, DDL syntax, or platform limits against official Google Cloud documentation (`https://docs.cloud.google.com/...`).
+- [ ] **Step 3 — Evaluate & Save Individual Answer in `project/questions/`**:
+  - Ensure `<workspace>/project/questions/` exists and save each question's evaluation as `<workspace>/project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` (e.g., `project/questions/D3-Q14_bigquery-row-limits-and-export-controls.md`).
+  - Follow the canonical structure in [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md):
+    1. **Header & Metadata Table**: Include `Customer / Project`, `Question ID` (`[D#-Q##]`), the verbatim **`Question` phrase**, `Canonical Domain`, `Asked By`, `Source Session & Log` (portable relative links), and `Date Answered` *(do not list skills in the top metadata table)*.
+    2. **Section 1 — Executive Summary & Solution Matrix**: Direct architectural answer and a summary table mapping each sub-requirement to its recommended Google Cloud control, layer, and enforcement mechanism.
+    3. **Section 2 — Technical Evaluation & Multi-Layer Google Cloud Controls**: Detailed breakdown (`Control A`, `Control B`, ...) with architectural explanations and production-ready SQL DDL, IAM JSON, CLI, or configuration snippets.
+    4. **Section 3 — IAM Permissions, Security Guardrails & Platform Caveats**: Exact IAM permission matrix (including predefined roles to avoid and how to restrict via Custom Roles or IAM v2 Deny Policies) plus `> [!IMPORTANT]` callouts on critical platform caveats or edge cases.
+    5. **Section 4 — Summary Recommendation & Next Steps for `{{CUSTOMER_NAME}}`**: Prioritized recommendation (`> [!TIP]`), owner-attributed next steps, and portable relative links to `../common/project_questions-log.md` and `../common/project_challenges.md`.
+    6. **Section 5 — Google Cloud Documentation Reference Links**: Curated list of official Google Cloud documentation URLs supporting the evaluation.
+    7. **Section 6 — Skills Employed**: Structured table listing each workspace skill employed in the analysis and its specific technical contribution to the evaluation.
+- [ ] **Step 4 — Cross-Link the Answer in `project_questions-log.md` (and Session Log)**:
+  - Append `* **Answer:** [<Short Title>](../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md)` under the corresponding question entry in `project/common/project_questions-log.md` (and `../../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` in the per-meeting `YYYYMMDD_questions-log_<slug>.md`).
+- [ ] **Step 5 — Synchronize `project/questions/` with Google Drive (If Required by the User)**:
+  - If requested by the user (or after confirming with the user), synchronize the answer(s) in `project/questions/` and the updated `project_questions-log.md` to Google Drive via **Workflow 4**:
+    ```bash
+    # Sync only the project/questions/ folder:
+    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions
+
+    # Or sync the full project/ hierarchy (including updated links in common/project_questions-log.md):
+    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
+    ```
 
 ---
 
@@ -200,3 +241,4 @@ Whenever synchronizing `<workspace-root>/project/` with Google Drive:
   - [`resources/templates/template_glossary.md`](./resources/templates/template_glossary.md)
   - [`resources/templates/template_questions-log.md`](./resources/templates/template_questions-log.md)
   - [`resources/templates/template_challenges.md`](./resources/templates/template_challenges.md)
+  - [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md)

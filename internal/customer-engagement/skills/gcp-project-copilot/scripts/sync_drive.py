@@ -374,9 +374,11 @@ def collect_ordered_markdown_files(project_dir: str) -> List[str]:
   }
 
   def base_priority(rel_path: str) -> Tuple[int, int, str]:
-    # Tier 1: topics/
+    # Tier 1: topics/ and questions/ (synced before meetings/ and common/ so links resolve)
     if rel_path.startswith("topics/"):
       return (1, 1, rel_path)
+    if rel_path.startswith("questions/"):
+      return (1, 2, rel_path)
     # Tier 2: meetings/ (challenges before questions-log)
     if rel_path.startswith("meetings/"):
       if "_challenges_" in rel_path:
@@ -970,7 +972,9 @@ def update_specs_project_registry(
       return (2, folder, sub, rel_path)
     if rel_path.startswith("topics/"):
       return (3, os.path.dirname(rel_path), 1, rel_path)
-    return (4, os.path.dirname(rel_path), 1, rel_path)
+    if rel_path.startswith("questions/"):
+      return (4, os.path.dirname(rel_path), 1, rel_path)
+    return (5, os.path.dirname(rel_path), 1, rel_path)
 
   sorted_docs = sorted(documents.keys(), key=doc_table_key)
   doc_lines = [
@@ -989,6 +993,8 @@ def update_specs_project_registry(
       layer_label = "**Layer 2 (`meetings/`)**"
     elif rel_path.startswith("topics/"):
       layer_label = "**Layer 3 (`topics/`)**"
+    elif rel_path.startswith("questions/"):
+      layer_label = "**Layer 4 (`questions/`)**"
     else:
       layer_label = "**Project (`project/`)**"
     doc_lines.append(
@@ -1100,13 +1106,18 @@ def main() -> int:
 
   # 1. Discover all directories under project/ (including diagrams/ and specs/) in top-down order
   rel_dirs: List[str] = []
-  for dirpath, dirnames, _ in os.walk(project_dir):
+  for dirpath, dirnames, filenames in os.walk(project_dir):
     dirnames[:] = sorted(
         d for d in dirnames
         if not d.startswith(".") and d != "__pycache__"
     )
     rel = os.path.relpath(dirpath, project_dir)
     if rel != ".":
+      # Skip creating an empty questions/ folder in Drive if no files/subfolders exist inside it yet
+      if rel == "questions" and not dirnames and not [
+          fn for fn in filenames if not fn.startswith(".")
+      ]:
+        continue
       rel_dirs.append(rel)
 
   print(f"=== Target Workspace: {workspace_root} ===")
@@ -1137,7 +1148,15 @@ def main() -> int:
     if not os.path.exists(candidate):
       candidate = os.path.abspath(os.path.join(project_dir, args.file))
     rel_target = os.path.relpath(candidate, project_dir)
-    if rel_target in ordered_files:
+    if os.path.isdir(candidate):
+      prefix = "" if rel_target == "." else rel_target.rstrip("/") + "/"
+      ordered_files = [
+          f for f in ordered_files if prefix == "" or f.startswith(prefix)
+      ]
+      asset_files = [
+          a for a in asset_files if prefix == "" or a.startswith(prefix)
+      ]
+    elif rel_target in ordered_files:
       ordered_files = [rel_target]
       doc_stem = os.path.splitext(os.path.basename(rel_target))[0]
       asset_files = [
@@ -1154,7 +1173,7 @@ def main() -> int:
       asset_files = selected
     else:
       raise RuntimeError(
-          f"Target file '{args.file}' (resolved to '{rel_target}') not found in project/"
+          f"Target file or directory '{args.file}' (resolved to '{rel_target}') not found in project/"
       )
 
   print(f"\n=== Phase 2: Synchronizing {len(ordered_files)} Markdown Documents ===")

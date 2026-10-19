@@ -81,7 +81,17 @@ Using the gcp-project-copilot skill and based on @project/common/project_challen
 
 ---
 
-## 8. Synchronize Local `project/` Hierarchy with Google Drive
+## 8. Answer One or More Technical Questions Using Workspace GCP Skills (`project/questions/`)
 ```text
-Use the gcp-project-copilot skill to synchronize all new or modified folders and Markdown documents in @project with Google Drive, and refresh the synchronized registry in @specs/specs_project.md.
+Use the gcp-project-copilot skill to evaluate and answer question(s) <D#-Q##> (or all questions in domain <D#>) from @project/common/project_questions-log.md:
+1. Analyze the relevant Google Cloud skills available in the workspace and official documentation.
+2. Save an individual structured answer file per question in `project/questions/` following `template_answers_to_questions.md`.
+3. Cross-link the answer(s) in @project/common/project_questions-log.md and sync `project/questions/` with Google Drive if requested.
+```
+
+---
+
+## 9. Synchronize Local `project/` (or `project/questions/`) Hierarchy with Google Drive
+```text
+Use the gcp-project-copilot skill to synchronize all new or modified folders and Markdown documents in @project (or only `project/questions/`) with Google Drive, and refresh the synchronized registry in @specs/specs_project.md.
 ```

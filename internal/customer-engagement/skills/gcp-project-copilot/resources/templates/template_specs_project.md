@@ -43,6 +43,7 @@
 | :--- | :--- | :--- |
 | `common/` | [`{{COMMON_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{COMMON_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
 | `meetings/` | [`{{MEETINGS_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{MEETINGS_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
+| `questions/` | [`{{QUESTIONS_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{QUESTIONS_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
 | `topics/` | [`{{TOPICS_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{TOPICS_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
 
 #### B. Synchronized Native Google Docs (0 Documents)
@@ -50,6 +51,12 @@
 | Layer / Scope | Local Markdown Source (`project/...`) | Synchronized Google Doc |
 | :--- | :--- | :--- |
 | **Layer 1 (`common/`)** | [`common/meetings_registry.md`](../project/common/meetings_registry.md) | [meetings_registry](https://docs.google.com/document/d/{{DOC_ID}}/edit) |
+
+#### C. Synchronized Diagram & Spec Assets (0 Files)
+
+| Parent Folder | Local Asset Path (`project/...`) | Synchronized Google Drive File |
+| :--- | :--- | :--- |
+| *(None yet — run `sync_drive.py` to synchronize diagrams and JSON specs)* | — | — |
 
 ---
 

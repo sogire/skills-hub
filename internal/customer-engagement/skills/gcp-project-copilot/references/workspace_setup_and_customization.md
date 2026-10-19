@@ -112,15 +112,18 @@ Execute `sync_drive.py` from the skill's `scripts/` directory, passing `--worksp
 # Preview changes without modifying Google Drive (optional dry-run)
 python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --dry-run
 
-# Execute live synchronization to Google Drive
+# Synchronize only the project/questions/ folder (or a single question answer file):
+python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions
+
+# Execute live synchronization of the full project/ hierarchy to Google Drive
 python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
 ```
 
 **What `sync_drive.py` does automatically**:
 1. **Resolves Target Workspace & Root Drive Folder ID**: Reads `specs/specs_project.md` and `specs/gdrive_sync_manifest.json` in `<workspace-root>`.
-2. **Phase 1 — Folder Mirroring**: Ensures every subfolder under `project/` (`common/`, `meetings/...`, `topics/...`) exists in Google Drive under the Root Project Drive Folder and records its folder ID in `specs/gdrive_sync_manifest.json`.
+2. **Phase 1 — Folder Mirroring**: Ensures every populated subfolder under `project/` (`common/`, `meetings/...`, `topics/...`, `questions/`) exists in Google Drive under the Root Project Drive Folder and records its folder ID in `specs/gdrive_sync_manifest.json`.
 3. **Phase 2 — Topological Native Google Docs Sync**:
-   - Sorts all `.md` files in `project/` in 3-tier link-dependency order (`topics/` $\to$ `meetings/` $\to$ `common/`) so any referenced document is synced before the document that links to it.
+   - Sorts all `.md` files in `project/` in link-dependency order (`topics/` & `questions/` $\to$ `meetings/` $\to$ `common/`) so any referenced document (including individual answers in `project/questions/`) is synced before `project_questions-log.md` or `project_challenges.md` links to it.
    - Rewrites relative `.md` links to their resolved Google Docs URLs.
    - Imports new documents (`gdocs mutate import-md --pageless` + `gdrive mutate mv`) or updates modified documents (`gdocs mutate sync` when open comments exist, or `gdocs mutate import-md --update` otherwise) based on SHA-256 hashes in `specs/gdrive_sync_manifest.json`.
 4. **Phase 3 — Registry Refresh**: Automatically rewrites Section 2.2 (`#### A. Synchronized Drive Subfolders` and `#### B. Synchronized Native Google Docs`) in `specs/specs_project.md` so the human-readable spec and `gdrive_sync_manifest.json` remain 100% synchronized.
