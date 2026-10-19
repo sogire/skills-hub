@@ -10,6 +10,7 @@ import datetime
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -310,6 +311,100 @@ class HubManager:
             pass
         return modules
 
+    def is_external_path(self, path: Path) -> bool:
+        """Returns True if path is inside the hub's external/ directory."""
+        ext_dir = (self.hub_dir / "external").resolve()
+        try:
+            path.resolve().relative_to(ext_dir)
+            return True
+        except ValueError:
+            return False
+
+    def enforce_external_readonly(self, targets: dict[str, dict] | None = None, quiet: bool = False) -> list[str]:
+        """Detects and reverts any local working-tree modifications or untracked files in external/ repositories."""
+        repos = {}
+        if targets is not None:
+            for name, info in targets.items():
+                if self.is_external_path(info["path"]):
+                    repos[name] = info["path"]
+        else:
+            for name, info in self.get_submodules().items():
+                if self.is_external_path(info["path"]):
+                    repos[name] = info["path"]
+            ext_dir = self.hub_dir / "external"
+            if ext_dir.exists() and ext_dir.is_dir():
+                for child in sorted(ext_dir.iterdir()):
+                    if child.is_dir() and not child.name.startswith(".") and child.name not in repos:
+                        if (child / ".git").exists():
+                            repos[child.name] = child
+
+        cleaned = []
+        for name, path in repos.items():
+            if not path.exists() or not (path / ".git").exists():
+                continue
+
+            status_res = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=path,
+                capture_output=True,
+                text=True
+            )
+            if status_res.returncode != 0 or not status_res.stdout.strip():
+                continue
+
+            # Attempt standard git reset and clean
+            subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=path, capture_output=True, text=True)
+            subprocess.run(["git", "clean", "-fd"], cwd=path, capture_output=True, text=True)
+
+            # Fallback if .git/modules index lock is read-only (e.g., inside restricted sandboxes)
+            recheck = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=path,
+                capture_output=True,
+                text=True
+            )
+            if recheck.returncode == 0 and recheck.stdout.strip():
+                tracked_paths = []
+                for line in recheck.stdout.splitlines():
+                    if len(line) < 4:
+                        continue
+                    code = line[:2]
+                    rel_path = line[3:].strip().strip('"')
+                    target_item = path / rel_path
+                    if code == "??":
+                        if target_item.is_dir() and not target_item.is_symlink():
+                            shutil.rmtree(target_item, ignore_errors=True)
+                        elif target_item.exists() or target_item.is_symlink():
+                            target_item.unlink(missing_ok=True)
+                    else:
+                        tracked_paths.append(rel_path)
+
+                if tracked_paths:
+                    arch = subprocess.Popen(
+                        ["git", "archive", "HEAD", "--"] + tracked_paths,
+                        cwd=path,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL
+                    )
+                    subprocess.run(
+                        ["tar", "-x", "-C", str(path)],
+                        stdin=arch.stdout,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    if arch.stdout:
+                        arch.stdout.close()
+                    arch.wait()
+
+            cleaned.append(name)
+            if not quiet:
+                print(
+                    f"  {COLOR_YELLOW}!{COLOR_RESET} {COLOR_BOLD}{name:<18}{COLOR_RESET} "
+                    f"Reverted local modifications in external/{name} (external/ repositories are read-only)"
+                )
+
+        return cleaned
+
     def get_plugin_skills_map(self, skills: dict | None = None, plugins: dict | None = None):
         """Builds bidirectional mappings: skill_to_plugin and plugin_to_skills."""
         if skills is None or plugins is None:
@@ -505,7 +600,8 @@ class HubManager:
         else:
             ws = workspace_root or find_workspace_root()
             agents_dir = ws / ".agents"
-            agents_dir.mkdir(parents=True, exist_ok=True)
+            if not self.is_external_path(ws):
+                agents_dir.mkdir(parents=True, exist_ok=True)
             return (
                 agents_dir,
                 agents_dir / "skills.json",
@@ -581,6 +677,12 @@ class HubManager:
         return self.get_active(is_global=True)
 
     def enable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, clusters: list[str] | None = None, as_symlink: bool = False, is_global: bool = False, configure_permissions: bool = True):
+        self.enforce_external_readonly()
+        ws_check = workspace_root or find_workspace_root()
+        if not is_global and self.is_external_path(ws_check):
+            print(f"{COLOR_RED}Error:{COLOR_RESET} Repositories under 'external/' are read-only and cannot be modified as a workspace.")
+            return
+
         all_skills, all_plugins = self.get_available()
         target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
@@ -735,6 +837,12 @@ class HubManager:
             print(f"   • Antigravity IDE: Settings → Permissions → File Permissions → Add File Read")
 
     def disable(self, workspace_root: Path | None = None, names: list[str] | None = None, group: str | None = None, clusters: list[str] | None = None, disable_all: bool = False, is_global: bool = False, clean_permissions: bool = False):
+        self.enforce_external_readonly()
+        ws_check = workspace_root or find_workspace_root()
+        if not is_global and self.is_external_path(ws_check):
+            print(f"{COLOR_RED}Error:{COLOR_RESET} Repositories under 'external/' are read-only and cannot be modified as a workspace.")
+            return
+
         all_skills, all_plugins = self.get_available()
         target_dir, skills_json, plugins_json, skills_dir, plugins_dir, scope_label = self.get_target_dirs(workspace_root, is_global)
 
@@ -968,6 +1076,9 @@ class HubManager:
                 subprocess.run(["git", "submodule", "update", "--init", "--recursive", str(path.relative_to(self.hub_dir))],
                                cwd=self.hub_dir, check=False)
 
+            # Enforce read-only invariant on external repositories before checking/fetching
+            self.enforce_external_readonly(targets={name: info})
+
             # Get current commit
             res_curr = subprocess.run(["git", "rev-parse", "HEAD"], cwd=path, capture_output=True, text=True)
             curr_hash = res_curr.stdout.strip()[:8]
@@ -975,7 +1086,10 @@ class HubManager:
             # Fetch upstream
             fetch_res = subprocess.run(["git", "fetch", "origin", branch], cwd=path, capture_output=True, text=True)
             if fetch_res.returncode != 0:
-                print(f"{COLOR_RED}✗ [{name}]{COLOR_RESET} Failed to fetch from {url} ({branch})")
+                if check_only:
+                    print(f"  {COLOR_GREEN}✓{COLOR_RESET} {COLOR_BOLD}{name:<18}{COLOR_RESET} Clean / read-only at {curr_hash} (offline: skipped remote fetch)")
+                else:
+                    print(f"{COLOR_RED}✗ [{name}]{COLOR_RESET} Failed to fetch from {url} ({branch})")
                 continue
 
             # Get remote commit
@@ -1005,9 +1119,22 @@ class HubManager:
         print()
 
     def scaffold(self, item_type: str, name: str, group: str | None = None, is_local: bool = False, workspace_root: Path | None = None):
+        ws = workspace_root or find_workspace_root()
+        if is_local and self.is_external_path(ws):
+            print(f"{COLOR_RED}Error:{COLOR_RESET} Repositories under 'external/' are read-only. Cannot create customizations inside '{ws}'.")
+            return
+
         clean_group = "templates"
         if group:
-            clean_group = group.strip("/")
+            raw_group = group.strip("/")
+            submodules = self.get_submodules()
+            if raw_group == "external" or raw_group.startswith("external/") or raw_group in submodules:
+                print(
+                    f"{COLOR_RED}Error:{COLOR_RESET} Repositories under 'external/' are strictly read-only. "
+                    f"Create new customizations under 'internal/' (e.g. '-g <typology>') or with '--local'."
+                )
+                return
+            clean_group = raw_group
             if clean_group.startswith("internal/"):
                 clean_group = clean_group[len("internal/"):]
 
@@ -1339,6 +1466,7 @@ def cmd_list(manager: HubManager, workspace_root: Path, query: str | None = None
 
 
 def cmd_status(manager: HubManager, workspace_root: Path, is_global: bool = False):
+    manager.enforce_external_readonly()
     all_skills, all_plugins = manager.get_available()
     skill_to_plugin, _ = manager.get_plugin_skills_map(skills=all_skills, plugins=all_plugins)
 
