@@ -18,38 +18,38 @@
 
 {{EXECUTIVE_SUMMARY_PARAGRAPH}}
 
-| Requirement / Sub-Question | Recommended Google Cloud Control | Architectural Layer | Enforcement Mechanism |
+| Requirement / Sub-Question | Recommended Google Cloud Solution | Architectural Layer | Implementation / Enforcement Mechanism |
 | :---- | :---- | :---- | :---- |
-| **{{REQUIREMENT_1}}** | {{GCP_CONTROL_1}} | {{LAYER_1}} *(e.g., Storage / Table DDL, View / Routine, Sharing, IAM, Agentic)* | {{MECHANISM_1}} |
-| **{{REQUIREMENT_2}}** | {{GCP_CONTROL_2}} | {{LAYER_2}} | {{MECHANISM_2}} |
-| **{{REQUIREMENT_3}}** | {{GCP_CONTROL_3}} | {{LAYER_3}} | {{MECHANISM_3}} |
+| **{{REQUIREMENT_1}}** | {{GCP_SOLUTION_1}} | {{LAYER_1}} *(e.g., Storage / Table DDL, Transformation, Catalog, Sharing, IAM, Agentic)* | {{MECHANISM_1}} |
+| **{{REQUIREMENT_2}}** | {{GCP_SOLUTION_2}} | {{LAYER_2}} | {{MECHANISM_2}} |
+| **{{REQUIREMENT_3}}** | {{GCP_SOLUTION_3}} | {{LAYER_3}} | {{MECHANISM_3}} |
 
 ---
 
-## 2. Technical Evaluation & Multi-Layer Google Cloud Controls
+## 2. Technical Evaluation & Google Cloud Architecture
 
-### Control A: {{CONTROL_A_TITLE}}
-* **GCP Service / Feature**: {{CONTROL_A_GCP_SERVICE}}
-* **How It Works**: {{CONTROL_A_EXPLANATION}}
-* **Implementation Pattern**:
+### 2.1 {{SUBSECTION_2_1_TITLE}} *(e.g., Step 1 — ..., Control 1 — ..., Pattern A — ..., or Direct Architectural Title)*
+* **GCP Service / Feature**: {{SUBSECTION_2_1_GCP_SERVICE}}
+* **How It Works**: {{SUBSECTION_2_1_EXPLANATION}}
+* **Implementation**:
   ```sql
-  {{CONTROL_A_CODE_SNIPPET}}
+  {{SUBSECTION_2_1_CODE_SNIPPET}}
   ```
 
-### Control B: {{CONTROL_B_TITLE}}
-* **GCP Service / Feature**: {{CONTROL_B_GCP_SERVICE}}
-* **How It Works**: {{CONTROL_B_EXPLANATION}}
-* **Implementation Pattern**:
+### 2.2 {{SUBSECTION_2_2_TITLE}}
+* **GCP Service / Feature**: {{SUBSECTION_2_2_GCP_SERVICE}}
+* **How It Works**: {{SUBSECTION_2_2_EXPLANATION}}
+* **Implementation**:
   ```sql
-  {{CONTROL_B_CODE_SNIPPET}}
+  {{SUBSECTION_2_2_CODE_SNIPPET}}
   ```
 
-### Control C: {{CONTROL_C_TITLE}}
-* **GCP Service / Feature**: {{CONTROL_C_GCP_SERVICE}}
-* **How It Works**: {{CONTROL_C_EXPLANATION}}
-* **Implementation Pattern**:
+### 2.3 {{SUBSECTION_2_3_TITLE}}
+* **GCP Service / Feature**: {{SUBSECTION_2_3_GCP_SERVICE}}
+* **How It Works**: {{SUBSECTION_2_3_EXPLANATION}}
+* **Implementation**:
   ```json
-  {{CONTROL_C_CODE_SNIPPET}}
+  {{SUBSECTION_2_3_CODE_SNIPPET}}
   ```
 
 ---

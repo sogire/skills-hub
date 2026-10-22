@@ -112,19 +112,20 @@ Execute `sync_drive.py` from the skill's `scripts/` directory, passing `--worksp
 # Preview changes without modifying Google Drive (optional dry-run)
 python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --dry-run
 
-# Synchronize only the project/questions/ folder (or a single question answer file):
+# Synchronize only the project/questions/ folder (or pass repeatable --file flags for specific files):
 python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions
 
-# Execute live synchronization of the full project/ hierarchy to Google Drive
+# Execute live wave-parallel synchronization (default --jobs 6; pass --jobs <N> to tune concurrency):
 python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
 ```
 
 **What `sync_drive.py` does automatically**:
 1. **Resolves Target Workspace & Root Drive Folder ID**: Reads `specs/specs_project.md` and `specs/gdrive_sync_manifest.json` in `<workspace-root>`.
-2. **Phase 1 — Folder Mirroring**: Ensures every populated subfolder under `project/` (`common/`, `meetings/...`, `topics/...`, `questions/`) exists in Google Drive under the Root Project Drive Folder and records its folder ID in `specs/gdrive_sync_manifest.json`.
-3. **Phase 2 — Topological Native Google Docs Sync**:
-   - Sorts all `.md` files in `project/` in link-dependency order (`topics/` & `questions/` $\to$ `meetings/` $\to$ `common/`) so any referenced document (including individual answers in `project/questions/`) is synced before `project_questions-log.md` or `project_challenges.md` links to it.
-   - Rewrites relative `.md` links to their resolved Google Docs URLs.
-   - Imports new documents (`gdocs mutate import-md --pageless` + `gdrive mutate mv`) or updates modified documents (`gdocs mutate sync` when open comments exist, or `gdocs mutate import-md --update` otherwise) based on SHA-256 hashes in `specs/gdrive_sync_manifest.json`.
-4. **Phase 3 — Registry Refresh**: Automatically rewrites Section 2.2 (`#### A. Synchronized Drive Subfolders` and `#### B. Synchronized Native Google Docs`) in `specs/specs_project.md` so the human-readable spec and `gdrive_sync_manifest.json` remain 100% synchronized.
+2. **Phase 1 — Folder Mirroring (with Per-Parent `ls` Caching)**: Ensures every populated subfolder under `project/` (`common/`, `meetings/...`, `topics/...`, `questions/`) exists in Google Drive under the Root Project Drive Folder and records its folder ID in `specs/gdrive_sync_manifest.json`.
+3. **Phase 2 — Wave-Parallel Native Google Docs Sync (`--jobs 6` default)**:
+   - Partitions target `.md` files in `project/` into topological link-dependency waves (`topics/` & leaf `questions/` $\to$ `meetings/` $\to$ `common/`). Updates to existing documents run concurrently in Wave 0 because their permanent Google Doc IDs/URLs are already in the manifest, while brand-new documents run wave-by-wave so internal links always resolve to real Google Docs URLs.
+   - Prefetches open-comment status across dirty documents in a single concurrent `gdocs readonly stream comments --open-only` batch call instead of per-file CLI startups.
+   - Normalizes single-token LaTeX symbols (`$\rightarrow$` $\to$ `→`) on staged Markdown (after computing SHA-256 hashes so existing manifest hashes stay 100% compatible) and passes `--render-math=false` / `--render-diagrams=false` whenever safe.
+   - Imports new documents (`gdocs mutate import-md --pageless` + `gdrive mutate mv`) or updates modified documents (`gdocs mutate sync --save-base=false` when open comments exist, or `gdocs mutate import-md --update` otherwise) with automatic exponential backoff on transient `429`/`503` errors and atomic manifest checkpointing.
+4. **Phase 3 & 4 — Parallel Asset Sync & Registry Refresh**: Uploads/updates `.svg`, `.png`, `.json`, and `.csv` assets concurrently across `--jobs` workers, and rewrites Section 2.2 (`#### A. Synchronized Drive Subfolders`, `#### B. Synchronized Native Google Docs`, and `#### C. Synchronized Diagram & Spec Assets`) in `specs/specs_project.md`.
 

@@ -10,10 +10,7 @@ This document provides a comprehensive, centralized catalog of all skills, group
 - [Catalog Overview](#catalog-overview)
 - [Curated Clusters](#curated-clusters)
   - [1. gcp-data-enterprise-architect](#1-gcp-data-enterprise-architect)
-  - [2. data-engineer](#2-data-engineer)
-  - [3. science-researcher](#3-science-researcher)
-  - [4. agent-developer](#4-agent-developer)
-  - [5. bq-sql-optimizer](#5-bq-sql-optimizer)
+  - [2. bq-sql-optimizer](#2-bq-sql-optimizer)
 - [Available Groups & Sources](#available-groups--sources)
   - [Subcategories in external/googlecloud-base](#subcategories-in-externalgooglecloud-base)
 - [Bundled Plugins](#bundled-plugins)
@@ -26,6 +23,7 @@ This document provides a comprehensive, centralized catalog of all skills, group
   - [external/googlecloud-base/analytics (Google Analytics)](#externalgooglecloud-baseanalytics-google-analytics)
   - [external/googlecloud-base/developers (Developer Knowledge)](#externalgooglecloud-basedevelopers-developer-knowledge)
   - [external/googlecloud-base/identity (Identity & Auth)](#externalgooglecloud-baseidentity-identity--auth)
+  - [internal/customer-engagement (Customer Architecture & Demos)](#internalcustomer-engagement-customer-architecture--demos)
   - [internal/hub-tools (Hub Meta-Tooling)](#internalhub-tools-hub-meta-tooling)
   - [internal/templates (Starter Templates)](#internaltemplates-starter-templates)
 
@@ -35,11 +33,11 @@ This document provides a comprehensive, centralized catalog of all skills, group
 
 | Metric | Count | Details |
 | :--- | :--- | :--- |
-| **Total Skills** | **232** | Across all internal typologies and upstream submodules |
-| **Curated Clusters** | **5** | Role-tailored skill bundles combining internal & external tools |
-| **Bundled Plugins** | **5** | Ready-to-use Antigravity plugins |
-| **Upstream Submodules** | **4** | Google Cloud Platform, DeepMind Science, Google ADK |
-| **Internal Typologies** | **2+** | Hub meta-tooling and starter templates (extensible) |
+| **Total Skills** | **255** | Across all internal typologies and upstream submodules |
+| **Curated Clusters** | **2** | Role-tailored skill bundles combining internal & external tools |
+| **Bundled Plugins** | **14** | Ready-to-use Antigravity plugins |
+| **Upstream Submodules** | **4** | Google Cloud Platform, Data Agent Kit, DeepMind Science, Google ADK |
+| **Internal Typologies** | **3** | Customer engagement, hub meta-tooling, and starter templates (extensible) |
 
 ---
 
@@ -49,11 +47,8 @@ Skill clusters allow you to activate a curated subset of skills tailored for spe
 
 | Predefined Cluster | Description | Skills Count | Key Technologies / Focus |
 | :--- | :--- | :--- | :--- |
-| [`gcp-data-enterprise-architect`](#1-gcp-data-enterprise-architect) | Google Cloud Data Enterprise Architect: multi-product lakehouse design, data mesh, governance, lineage, FinOps, security, and migration | 21 skills + 1 plugin | Lakehouse, Data Mesh, Dataplex Governance, Lineage, FinOps, Security |
-| [`data-engineer`](#2-data-engineer) | GCP Data Engineering and ETL toolset (BigQuery, dbt, Spark, Dataform) | 5 skills | BigQuery, dbt, Spark, Dataform, BigQuery Optimization |
-| [`science-researcher`](#3-science-researcher) | DeepMind bioinformatics, protein structure, and biomedical research tools | 5 skills | AlphaFold, PubMed, ChEMBL, UniProt, Clinical Trials |
-| [`agent-developer`](#4-agent-developer) | Google Agent Development Kit (ADK) agent authoring, testing, eval, and deployment | 5 skills | ADK code, eval, deploy, workflow, template-skill |
-| [`bq-sql-optimizer`](#5-bq-sql-optimizer) | BigQuery SQL & Slot Cost Optimizer: Offline job telemetry analysis (CSV/Sheets), SQL similarity grouping, anti-pattern classification, query refactoring, and partitioning/clustering DDL tuning | 12 skills | BigQuery SQL Tuning, Slot FinOps, Partitioning/Clustering DDL, Anti-Patterns |
+| [`gcp-data-enterprise-architect`](#1-gcp-data-enterprise-architect) | Google Cloud Data Enterprise Architect: multi-product lakehouse design, data mesh, governance, lineage, FinOps, security, and migration | 24 skills + 1 plugin | Lakehouse, Data Mesh, Dataplex Governance, Lineage, FinOps, Security, Diagrams & Demos |
+| [`bq-sql-optimizer`](#2-bq-sql-optimizer) | BigQuery SQL & Slot Cost Optimizer: Offline job telemetry analysis (CSV/Sheets), SQL similarity grouping, anti-pattern classification, query refactoring, and partitioning/clustering DDL tuning | 11 skills | BigQuery SQL Tuning, Slot FinOps, Partitioning/Clustering DDL, Anti-Patterns |
 
 ### 1. gcp-data-enterprise-architect
 
@@ -80,11 +75,11 @@ agyhub enable -G -c gcp-data-enterprise-architect
 | Skill | [`google-cloud-recipe-foundation-builder`](external/googlecloud-base/skills/cloud/google-cloud-recipe-foundation-builder/SKILL.md) | `external/googlecloud-base/cloud` | Deploys a baseline landing zone foundation for a Google Cloud Organization, establish... |
 | Skill | [`google-cloud-waf-cost-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-cost-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Evaluates Google Cloud workloads for cost efficiency and FinOps alignment using the G... |
 | Skill | [`google-cloud-waf-security`](external/googlecloud-base/skills/cloud/google-cloud-waf-security/SKILL.md) | `external/googlecloud-base/cloud` | Generates security-focused guidance for Google Cloud workloads based on the design pr... |
-| Skill | [`google-cloud-waf-reliability`](external/googlecloud-base/skills/cloud/google-cloud-waf-reliability/SKILL.md) | `external/googlecloud-base/cloud` | Generates guidance for reliability, resilience, availability, redundancy, fault-toler... |
+| Skill | [`google-cloud-waf-reliability`](external/googlecloud-base/skills/cloud/google-cloud-waf-reliability/SKILL.md) | `external/googlecloud-base/cloud` | Evaluates, designs, and improves the reliability, resilience, availability, fault tol... |
 | Skill | [`bigquery-optimization`](external/googlecloud-base/skills/cloud/bigquery-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Provides workflows to optimize BigQuery environments (capacity planning, editions), s... |
-| Skill | [`bigquery-slot-cost-optimizer`](external/googlecloud-base/skills/cloud/bigquery-slot-cost-optimizer/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes Google Cloud BigQuery slot consumption, query costs, and execution bottlenec... |
-| Skill | [`datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary/SKILL.md) | `external/googlecloud-base/cloud` | Summarizes Google Cloud Data Lineage graphs to help users debug data quality issues a... |
-| Skill | [`datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes the downstream impact (blast radius) when a BigQuery table or view is broken... |
+| Skill | [`bigquery-observability`](external/googlecloud-base/skills/cloud/bigquery-observability/SKILL.md) | `external/googlecloud-base/cloud` | Provides data-retrieval best practices, tool selection guidance, and performant SQL q... |
+| Skill | [`datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary/SKILL.md) | `external/googlecloud-base/cloud` | Summarizes data lineage graphs on Google Cloud to help users debug data quality issue... |
+| Skill | [`datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes the downstream impact (blast radius) using data lineage on Google Cloud when... |
 | Skill | [`federate-lakehouse-catalog`](external/googlecloud-data/skills/federate-lakehouse-catalog/SKILL.md) | `external/googlecloud-data` | Sets up Google Cloud Lakehouse federated catalogs to remote Iceberg REST Catalogs. Cu... |
 | Skill | [`discovering-gcp-data-assets`](external/googlecloud-data/skills/discovering-gcp-data-assets/SKILL.md) | `external/googlecloud-data` | Finds and inspects data assets within Google Cloud. Relevant when any of the followin... |
 | Skill | [`google-cloud-storage-bucket-architect`](external/googlecloud-data/skills/google-cloud-storage-bucket-architect/SKILL.md) | `external/googlecloud-data` | Creates Cloud Storage (Google Cloud Storage, or GCS) buckets. Analyzes the workload (... |
@@ -95,75 +90,12 @@ agyhub enable -G -c gcp-data-enterprise-architect
 | Skill | [`dbt-sf-to-bq-translator`](external/googlecloud-base/skills/cloud/dbt-sf-to-bq-translator/SKILL.md) | `external/googlecloud-base/cloud` | Translates Snowflake dbt SQL models to Standardized BigQuery SQL. Handles SQL compila... |
 | Skill | [`gcs-security-assessment`](external/googlecloud-data/skills/gcs-security-assessment/SKILL.md) | `external/googlecloud-data` | Assesses the security posture of Google Cloud Storage (GCS) buckets and projects. Gro... |
 | Skill | [`accidental-data-loss-prevention`](external/googlecloud-data/skills/accidental-data-loss-prevention/SKILL.md) | `external/googlecloud-data` | **STOP AND VERIFY**: Before running any command or tool that results in irreversible ... |
+| Skill | [`gcp-project-copilot`](internal/customer-engagement/skills/gcp-project-copilot/SKILL.md) | `internal/customer-engagement` | Manages end-to-end Google Cloud customer architecture engagements by scaffolding proj... |
+| Skill | [`gcp-architecture-diagram`](internal/customer-engagement/skills/gcp-architecture-diagram/SKILL.md) | `internal/customer-engagement` | Generates publication-grade Google Cloud Reference Architecture SVG diagrams (.svg) f... |
+| Skill | [`gcp-console-demo-generator`](internal/customer-engagement/skills/gcp-console-demo-generator/SKILL.md) | `internal/customer-engagement` | Designs story-driven Google Cloud customer demos ("history demos"), provisions isolat... |
 | Plugin | [`googlecloud-data`](external/googlecloud-data/plugin.json) | `external/googlecloud-data` | This plugin provides a specialized suite of skills for data engineers and database pr... |
 
-### 2. data-engineer
-
-**Description**: GCP Data Engineering and ETL toolset (BigQuery, dbt, Spark, Dataform)
-
-```bash
-# Activate this cluster in current workspace:
-agyhub enable -c data-engineer
-
-# Or activate globally across all workspaces:
-agyhub enable -G -c data-engineer
-```
-
-**Included Customizations:**
-
-| Type | Name | Provenance | Description |
-| :--- | :--- | :--- | :--- |
-| Skill | [`bigquery-sql`](external/googlecloud-data/skills/bigquery-sql/SKILL.md) | `external/googlecloud-data` | Provides BigQuery SQL query optimization techniques, execution best practices, and pe... |
-| Skill | [`dbt-bigquery`](external/googlecloud-data/skills/dbt-bigquery/SKILL.md) | `external/googlecloud-data` | Expert guidance for creating, modifying, and optimizing dbt pipelines for BigQuery. U... |
-| Skill | [`gcp-spark`](external/googlecloud-data/skills/gcp-spark/SKILL.md) | `external/googlecloud-data` | Develops, optimizes and executes Spark code on Managed Spark on Google Cloud (Datapro... |
-| Skill | [`dataform-bigquery`](external/googlecloud-data/skills/dataform-bigquery/SKILL.md) | `external/googlecloud-data` | Expertise in generating clean, correct, and efficient Dataform pipeline code for BigQ... |
-| Skill | [`bigquery-optimization`](external/googlecloud-base/skills/cloud/bigquery-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Provides workflows to optimize BigQuery environments (capacity planning, editions), s... |
-
-### 3. science-researcher
-
-**Description**: DeepMind bioinformatics, protein structure, and biomedical research tools
-
-```bash
-# Activate this cluster in current workspace:
-agyhub enable -c science-researcher
-
-# Or activate globally across all workspaces:
-agyhub enable -G -c science-researcher
-```
-
-**Included Customizations:**
-
-| Type | Name | Provenance | Description |
-| :--- | :--- | :--- | :--- |
-| Skill | [`alphafold_database_fetch_and_analyze`](external/deepmind-science/skills/alphafold_database_fetch_and_analyze/SKILL.md) | `external/deepmind-science` | Retrieve and analyze AlphaFold predicted structures for a protein. Use when the user ... |
-| Skill | [`pubmed_database`](external/deepmind-science/skills/pubmed_database/SKILL.md) | `external/deepmind-science` | Search PubMed for scientific literature, including published clinical trials. Fetch a... |
-| Skill | [`chembl_database`](external/deepmind-science/skills/chembl_database/SKILL.md) | `external/deepmind-science` | Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, ap... |
-| Skill | [`uniprot_database`](external/deepmind-science/skills/uniprot_database/SKILL.md) | `external/deepmind-science` | Access protein metadata, function, taxonomy, and sequences across UniProtKB, UniParc,... |
-| Skill | [`clinical_trials_database`](external/deepmind-science/skills/clinical_trials_database/SKILL.md) | `external/deepmind-science` | Query ClinicalTrials.gov via APIv2. Use when you want to search for trials by conditi... |
-
-### 4. agent-developer
-
-**Description**: Google Agent Development Kit (ADK) agent authoring, testing, eval, and deployment
-
-```bash
-# Activate this cluster in current workspace:
-agyhub enable -c agent-developer
-
-# Or activate globally across all workspaces:
-agyhub enable -G -c agent-developer
-```
-
-**Included Customizations:**
-
-| Type | Name | Provenance | Description |
-| :--- | :--- | :--- | :--- |
-| Skill | [`google-agents-cli-adk-code`](external/agents-cli/skills/google-agents-cli-adk-code/SKILL.md) | `external/agents-cli` | This skill should be used when the user wants to "write agent code", "build an agent ... |
-| Skill | [`google-agents-cli-eval`](external/agents-cli/skills/google-agents-cli-eval/SKILL.md) | `external/agents-cli` | This skill should be used when the user wants to "run an evaluation", "evaluate my ag... |
-| Skill | [`google-agents-cli-deploy`](external/agents-cli/skills/google-agents-cli-deploy/SKILL.md) | `external/agents-cli` | This skill should be used when the user wants to "deploy an agent", "deploy my ADK ag... |
-| Skill | [`google-agents-cli-workflow`](external/agents-cli/skills/google-agents-cli-workflow/SKILL.md) | `external/agents-cli` | This skill should be used when the user wants to "develop an agent", "build an agent ... |
-| Skill | [`template-skill`](internal/templates/skills/template-skill/SKILL.md) | `internal/templates` | A template skill showing the standard structure and best practices for authoring Anti... |
-
-### 5. bq-sql-optimizer
+### 2. bq-sql-optimizer
 
 **Description**: BigQuery SQL & Slot Cost Optimizer: Offline job telemetry analysis (CSV/Sheets), SQL similarity grouping, anti-pattern classification, query refactoring, and partitioning/clustering DDL tuning
 
@@ -184,11 +116,10 @@ agyhub enable -G -c bq-sql-optimizer
 | :--- | :--- | :--- | :--- |
 | Skill | [`bigquery-sql`](external/googlecloud-data/skills/bigquery-sql/SKILL.md) | `external/googlecloud-data` | Provides BigQuery SQL query optimization techniques, execution best practices, and pe... |
 | Skill | [`bigquery-optimization`](external/googlecloud-base/skills/cloud/bigquery-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Provides workflows to optimize BigQuery environments (capacity planning, editions), s... |
-| Skill | [`bigquery-slot-cost-optimizer`](external/googlecloud-base/skills/cloud/bigquery-slot-cost-optimizer/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes Google Cloud BigQuery slot consumption, query costs, and execution bottlenec... |
 | Skill | [`bigquery-observability`](external/googlecloud-base/skills/cloud/bigquery-observability/SKILL.md) | `external/googlecloud-base/cloud` | Provides data-retrieval best practices, tool selection guidance, and performant SQL q... |
 | Skill | [`bigquery-troubleshooting`](external/googlecloud-base/skills/cloud/bigquery-troubleshooting/SKILL.md) | `external/googlecloud-base/cloud` | Provides diagnostic workflows and step-by-step root-cause analysis procedures for act... |
-| Skill | [`datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes the downstream impact (blast radius) when a BigQuery table or view is broken... |
-| Skill | [`datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary/SKILL.md) | `external/googlecloud-base/cloud` | Summarizes Google Cloud Data Lineage graphs to help users debug data quality issues a... |
+| Skill | [`datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis/SKILL.md) | `external/googlecloud-base/cloud` | Analyzes the downstream impact (blast radius) using data lineage on Google Cloud when... |
+| Skill | [`datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary/SKILL.md) | `external/googlecloud-base/cloud` | Summarizes data lineage graphs on Google Cloud to help users debug data quality issue... |
 | Skill | [`dbt-bigquery`](external/googlecloud-data/skills/dbt-bigquery/SKILL.md) | `external/googlecloud-data` | Expert guidance for creating, modifying, and optimizing dbt pipelines for BigQuery. U... |
 | Skill | [`dataform-bigquery`](external/googlecloud-data/skills/dataform-bigquery/SKILL.md) | `external/googlecloud-data` | Expertise in generating clean, correct, and efficient Dataform pipeline code for BigQ... |
 | Skill | [`google-cloud-waf-cost-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-cost-optimization/SKILL.md) | `external/googlecloud-base/cloud` | Evaluates Google Cloud workloads for cost efficiency and FinOps alignment using the G... |
@@ -206,10 +137,11 @@ The hub organizes tools into **`external/`** (read-only upstream submodules) and
 | `external/agents-cli` (or `agents-cli`) | [google/agents-cli](https://github.com/google/agents-cli) | 7 | Google Agent Development Kit (ADK) agent authoring, scaffolding, testing, and deployment | `agyhub enable -g agents-cli` |
 | `external/googlecloud-data` (or `googlecloud-data`) | [GoogleCloudPlatform/data-agent-kit-plugin](https://github.com/GoogleCloudPlatform/data-agent-kit-plugin) | 37 | Data Agent Kit: BigQuery, dbt, Spark, Dataform, Airflow, Lakehouse catalogs | `agyhub enable -g googlecloud-data` |
 | `external/deepmind-science` (or `deepmind-science`) | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | 40 | DeepMind bioinformatics, protein structures (AlphaFold), PubMed, BLAST, chemistry | `agyhub enable -g deepmind-science` |
-| `external/googlecloud-base` (or `googlecloud-base`) | [google/skills](https://github.com/google/skills) | 144 | Comprehensive Google Cloud Platform suite (AlloyDB, BigQuery, Vertex, SecOps, WAF, etc.) | `agyhub enable -g googlecloud-base` |
+| `external/googlecloud-base` (or `googlecloud-base`) | [google/skills](https://github.com/google/skills) | 164 | Comprehensive Google Cloud Platform suite (AlloyDB, BigQuery, Vertex, GKE, SecOps, WAF, etc.) | `agyhub enable -g googlecloud-base` |
+| `internal/customer-engagement` (or `customer-engagement`) | Local Typology | 3 | Customer architecture engagements, reference SVG diagrams, and story-driven console demos (`gcp-project-copilot`, `gcp-architecture-diagram`, `gcp-console-demo-generator`) | `agyhub enable -g customer-engagement` |
 | `internal/hub-tools` (or `hub-tools`) | Local Typology | 3 | Meta-tooling skills (`agyhub-cluster-role-creation`, `agyhub-skills-gap-creator`, `agyhub-agent`) | `agyhub enable -g hub-tools` |
 | `internal/templates` (or `templates`) | Local Typology | 1 | Starter templates for creating new skills, plugins, and rules | `agyhub enable -g templates` |
-| `internal` | Local Typologies | 4+ | All proprietary custom skills, plugins, and rules across all internal typologies | `agyhub enable -g internal` |
+| `internal` | Local Typologies | 7 | All proprietary custom skills, plugins, and rules across all internal typologies | `agyhub enable -g internal` |
 
 ### Subcategories in `external/googlecloud-base`
 
@@ -217,11 +149,11 @@ The large `googlecloud-base` repository is further divided into modular subcateg
 
 | Subcategory | Skills Count | Target Domain | Quick Enable Command |
 | :--- | :--- | :--- | :--- |
-| `cloud` | 125 | GCP Infrastructure, AI/ML, Databases, Security, Networking | `agyhub enable -g cloud` |
+| `cloud` | 143 | GCP Infrastructure, AI/ML, Databases, Security, Networking | `agyhub enable -g cloud` |
 | `ads` | 14 | Google Ads API, Campaigns, Reporting | `agyhub enable -g ads` |
 | `analytics` | 2 | Google Analytics 4 (GA4) Admin & Data APIs | `agyhub enable -g analytics` |
-| `developers` | 2 | Developer knowledge retrieval & skill discovery | `agyhub enable -g developers` |
-| `identity` | 1 | DPoP OAuth 2.0 token security | `agyhub enable -g identity` |
+| `developers` | 3 | Developer knowledge retrieval, skill discovery & code migration | `agyhub enable -g developers` |
+| `identity` | 2 | OAuth 2.0 DPoP token security & Sign In With Google (SiwG) | `agyhub enable -g identity` |
 
 ---
 
@@ -232,16 +164,25 @@ Plugins bundle skills, rules, and optional MCP configurations into portable pack
 | Plugin Name | Source / Group | Description | Quick Enable Command |
 | :--- | :--- | :--- | :--- |
 | [`agents-cli`](external/agents-cli/plugin.json) | `external/agents-cli` | Scaffold, develop, evaluate, and deploy AI agents with Google ADK. Bundles skills for... | `agyhub enable agents-cli` |
+| [`alloydb-omni`](external/googlecloud-base/plugins/cloud/data-cloud/alloydb-omni/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Create, connect, and interact with an AlloyDB Omni database and data. | `agyhub enable alloydb-omni` |
+| [`bigquery-data-analytics`](external/googlecloud-base/plugins/cloud/data-cloud/bigquery-data-analytics/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Connect, query, and generate data insights for BigQuery datasets and data. | `agyhub enable bigquery-data-analytics` |
+| [`data-agent-kit-plugin`](external/googlecloud-base/plugins/cloud/data-cloud/data-agent-kit-plugin/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | This plugin provides a specialized suite of skills for data engineers and database pr... | `agyhub enable data-agent-kit-plugin` |
+| [`db-context-enrichment`](external/googlecloud-base/plugins/cloud/data-cloud/db-context-enrichment/plugin/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Context Engineering Agent for generating natural language to SQL templates, facets, a... | `agyhub enable db-context-enrichment` |
 | [`deepmind-science`](external/deepmind-science/plugin.json) | `external/deepmind-science` | Curated collection of agent skills for science tasks. | `agyhub enable deepmind-science` |
 | [`google-cloud-developer`](external/googlecloud-base/plugins/cloud/google-cloud-developer/plugin.json) | `external/googlecloud-base/cloud` | Google Cloud guidance for coding agents: first-project onboarding, authentication and... | `agyhub enable google-cloud-developer` |
+| [`google-cloud-storage`](external/googlecloud-base/plugins/cloud/data-cloud/google-cloud-storage/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Official Google Cloud Storage (GCS) plugin. Storage tools plus vetted skills to manag... | `agyhub enable google-cloud-storage` |
 | [`googlecloud-data`](external/googlecloud-data/plugin.json) | `external/googlecloud-data` | This plugin provides a specialized suite of skills for data engineers and database pr... | `agyhub enable googlecloud-data` |
+| [`knowledge-catalog`](external/googlecloud-base/plugins/cloud/data-cloud/knowledge-catalog/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Connect to Knowledge Catalog to discover, manage, monitor, and govern data and AI art... | `agyhub enable knowledge-catalog` |
+| [`looker`](external/googlecloud-base/plugins/cloud/data-cloud/looker/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Connect to Looker and interact with your data using LookML. | `agyhub enable looker` |
+| [`oracledb`](external/googlecloud-base/plugins/cloud/data-cloud/oracledb/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Connect, query, and interact with Oracle Databases and their data. | `agyhub enable oracledb` |
+| [`spanner`](external/googlecloud-base/plugins/cloud/data-cloud/spanner/plugin.json) | `external/googlecloud-base/cloud/data-cloud` | Connect and interact with Spanner data using natural language. | `agyhub enable spanner` |
 | [`template-plugin`](internal/templates/plugins/template-plugin/plugin.json) | `internal/templates` | A starter template plugin packaging skills, rules, and optional MCP configs into a bu... | `agyhub enable template-plugin` |
 
 ---
 
 ## Complete Skills Inventory
 
-Below is the complete inventory of all 231 skills available in the hub, categorized by their provenance and group.
+Below is the complete inventory of all 255 skills available in the hub, categorized by their provenance and group.
 
 ### external/agents-cli (Google ADK Agents CLI)
 
@@ -292,7 +233,7 @@ Skills for modern data engineering, lakehouses, orchestration, and BigQuery anal
 | [`gcp-managed-spark-upgrades`](external/googlecloud-data/skills/gcp-managed-spark-upgrades/SKILL.md) | Upgrades GCP Spark/Dataproc jobs to newer versions by analyzing, remediating, and tes... | [`external/googlecloud-data/skills/gcp-managed-spark-upgrades`](external/googlecloud-data/skills/gcp-managed-spark-upgrades) |
 | [`gcp-pipeline-orchestration`](external/googlecloud-data/skills/gcp-pipeline-orchestration/SKILL.md) | This skill helps the agent generate or update orchestration pipeline definitions for ... | [`external/googlecloud-data/skills/gcp-pipeline-orchestration`](external/googlecloud-data/skills/gcp-pipeline-orchestration) |
 | [`gcp-pipeline-resource-provisioning`](external/googlecloud-data/skills/gcp-pipeline-resource-provisioning/SKILL.md) | Automates declarative resource creation and provisioning for data pipelines, supporti... | [`external/googlecloud-data/skills/gcp-pipeline-resource-provisioning`](external/googlecloud-data/skills/gcp-pipeline-resource-provisioning) |
-| [`gcp-spark`](external/googlecloud-data/skills/gcp-spark/SKILL.md) | Develops, optimizes and executes Spark code on Managed Spark on Google Cloud (Datapro... | [`external/googlecloud-data/skills/gcp-spark`](external/googlecloud-data/skills/gcp-spark) |
+| [`gcp-spark`](external/googlecloud-data/skills/gcp-spark/SKILL.md) | Develops, optimizes and runs PySpark/Spark code on Managed Spark (Dataproc clusters a... | [`external/googlecloud-data/skills/gcp-spark`](external/googlecloud-data/skills/gcp-spark) |
 | [`gcp-spark-troubleshooting`](external/googlecloud-data/skills/gcp-spark-troubleshooting/SKILL.md) | "Provides expert guidance for troubleshooting Google Cloud Spark and Dataproc workloa... | [`external/googlecloud-data/skills/gcp-spark-troubleshooting`](external/googlecloud-data/skills/gcp-spark-troubleshooting) |
 | [`gcs-security-assessment`](external/googlecloud-data/skills/gcs-security-assessment/SKILL.md) | Assesses the security posture of Google Cloud Storage (GCS) buckets and projects. Gro... | [`external/googlecloud-data/skills/gcs-security-assessment`](external/googlecloud-data/skills/gcs-security-assessment) |
 | [`google-cloud-auth-verification`](external/googlecloud-data/skills/google-cloud-auth-verification/SKILL.md) | Mandatory Step 0 pre-flight execution order and authentication verification for Googl... | [`external/googlecloud-data/skills/google-cloud-auth-verification`](external/googlecloud-data/skills/google-cloud-auth-verification) |
@@ -356,9 +297,9 @@ Bioinformatics, cheminformatics, structural biology, and biomedical literature r
 
 ### external/googlecloud-base/cloud (Google Cloud Platform & ML)
 
-Infrastructure, database management, FinOps, security architecture, and Vertex AI skills.
+Infrastructure, database management, FinOps, security architecture, GKE, and Vertex AI / Agent Platform skills.
 
-*Total skills in this category: **125***
+*Total skills in this category: **143***
 
 | Skill Name | Description | Path |
 | :--- | :--- | :--- |
@@ -376,26 +317,35 @@ Infrastructure, database management, FinOps, security architecture, and Vertex A
 | [`agent-platform-tuning`](external/googlecloud-base/skills/cloud/agent-platform-tuning/SKILL.md) | Agent Platform Model Tuning. Use when you need to fine-tune open models or Gemini mod... | [`external/googlecloud-base/skills/cloud/agent-platform-tuning`](external/googlecloud-base/skills/cloud/agent-platform-tuning) |
 | [`agent-platform-tuning-management`](external/googlecloud-base/skills/cloud/agent-platform-tuning-management/SKILL.md) | Manages GenAI tuning jobs in Agent Platform. Use this to list, get, or cancel ongoing... | [`external/googlecloud-base/skills/cloud/agent-platform-tuning-management`](external/googlecloud-base/skills/cloud/agent-platform-tuning-management) |
 | [`alloydb-basics`](external/googlecloud-base/skills/cloud/alloydb-basics/SKILL.md) | Manages clusters, instances, and backups for AlloyDB for PostgreSQL, and integrates w... | [`external/googlecloud-base/skills/cloud/alloydb-basics`](external/googlecloud-base/skills/cloud/alloydb-basics) |
+| [`api-gateway-backend-security-and-rate-limiting`](external/googlecloud-base/skills/cloud/api-gateway-backend-security-and-rate-limiting/SKILL.md) | Secures and rate limits backend services behind Google Cloud API Gateway across OpenA... | [`external/googlecloud-base/skills/cloud/api-gateway-backend-security-and-rate-limiting`](external/googlecloud-base/skills/cloud/api-gateway-backend-security-and-rate-limiting) |
+| [`api-gateway-mcp-server`](external/googlecloud-base/skills/cloud/api-gateway-mcp-server/SKILL.md) | Configures Google Cloud API Gateway to act as a remote Model Context Protocol (MCP) s... | [`external/googlecloud-base/skills/cloud/api-gateway-mcp-server`](external/googlecloud-base/skills/cloud/api-gateway-mcp-server) |
+| [`apigee-agent-gateway-governance`](external/googlecloud-base/skills/cloud/apigee-agent-gateway-governance/SKILL.md) | Stands up an Apigee API proxy that a Google Cloud Agent Gateway calls as an ext-proc ... | [`external/googlecloud-base/skills/cloud/apigee-agent-gateway-governance`](external/googlecloud-base/skills/cloud/apigee-agent-gateway-governance) |
 | [`application-design-center-design-deploy`](external/googlecloud-base/skills/cloud/application-design-center-design-deploy/SKILL.md) | Processes GCP infrastructure design and deployment workflows within Application Desig... | [`external/googlecloud-base/skills/cloud/application-design-center-design-deploy`](external/googlecloud-base/skills/cloud/application-design-center-design-deploy) |
+| [`assuredworkloads-environment-assessor`](external/googlecloud-base/skills/cloud/assuredworkloads-environment-assessor/SKILL.md) | Discover Google Cloud resource telemetry and effective Org Policies, evaluate brownfi... | [`external/googlecloud-base/skills/cloud/assuredworkloads-environment-assessor`](external/googlecloud-base/skills/cloud/assuredworkloads-environment-assessor) |
+| [`assuredworkloads-frameworks-author`](external/googlecloud-base/skills/cloud/assuredworkloads-frameworks-author/SKILL.md) | Authors custom cloud controls and customized frameworks for Assured Workloads when bu... | [`external/googlecloud-base/skills/cloud/assuredworkloads-frameworks-author`](external/googlecloud-base/skills/cloud/assuredworkloads-frameworks-author) |
+| [`assuredworkloads-frameworks-navigator`](external/googlecloud-base/skills/cloud/assuredworkloads-frameworks-navigator/SKILL.md) | Acts as a Data Boundary Compliance Analyst that maps user compliance queries against ... | [`external/googlecloud-base/skills/cloud/assuredworkloads-frameworks-navigator`](external/googlecloud-base/skills/cloud/assuredworkloads-frameworks-navigator) |
 | [`bigquery-basics`](external/googlecloud-base/skills/cloud/bigquery-basics/SKILL.md) | Manages datasets, tables, and jobs in BigQuery. Use when you need to interact with Bi... | [`external/googlecloud-base/skills/cloud/bigquery-basics`](external/googlecloud-base/skills/cloud/bigquery-basics) |
 | [`bigquery-observability`](external/googlecloud-base/skills/cloud/bigquery-observability/SKILL.md) | Provides data-retrieval best practices, tool selection guidance, and performant SQL q... | [`external/googlecloud-base/skills/cloud/bigquery-observability`](external/googlecloud-base/skills/cloud/bigquery-observability) |
 | [`bigquery-optimization`](external/googlecloud-base/skills/cloud/bigquery-optimization/SKILL.md) | Provides workflows to optimize BigQuery environments (capacity planning, editions), s... | [`external/googlecloud-base/skills/cloud/bigquery-optimization`](external/googlecloud-base/skills/cloud/bigquery-optimization) |
-| [`bigquery-slot-cost-optimizer`](external/googlecloud-base/skills/cloud/bigquery-slot-cost-optimizer/SKILL.md) | Analyzes Google Cloud BigQuery slot consumption, query costs, and execution bottlenec... | [`external/googlecloud-base/skills/cloud/bigquery-slot-cost-optimizer`](external/googlecloud-base/skills/cloud/bigquery-slot-cost-optimizer) |
 | [`bigquery-troubleshooting`](external/googlecloud-base/skills/cloud/bigquery-troubleshooting/SKILL.md) | Provides diagnostic workflows and step-by-step root-cause analysis procedures for act... | [`external/googlecloud-base/skills/cloud/bigquery-troubleshooting`](external/googlecloud-base/skills/cloud/bigquery-troubleshooting) |
-| [`cloud-build-basics`](external/googlecloud-base/skills/cloud/cloud-build-basics/SKILL.md) | Teaches the fundamentals of Google Cloud Build (GCB). Covers core concepts, API enabl... | [`external/googlecloud-base/skills/cloud/cloud-build-basics`](external/googlecloud-base/skills/cloud/cloud-build-basics) |
+| [`bigquery-udfs`](external/googlecloud-base/skills/cloud/bigquery-udfs/SKILL.md) | Creates, deploys, and troubleshoots BigQuery User-Defined Functions (UDFs) and Remote... | [`external/googlecloud-base/skills/cloud/bigquery-udfs`](external/googlecloud-base/skills/cloud/bigquery-udfs) |
+| [`cloud-build-basics`](external/googlecloud-base/skills/cloud/cloud-build-basics/SKILL.md) | Teaches the fundamentals of Cloud Build on Google Cloud. Covers core concepts, API en... | [`external/googlecloud-base/skills/cloud/cloud-build-basics`](external/googlecloud-base/skills/cloud/cloud-build-basics) |
 | [`cloud-databases-onboarding`](external/googlecloud-base/skills/cloud/cloud-databases-onboarding/SKILL.md) | Guides users through discovering their database requirements, recommends a Google Clo... | [`external/googlecloud-base/skills/cloud/cloud-databases-onboarding`](external/googlecloud-base/skills/cloud/cloud-databases-onboarding) |
-| [`cloud-logging-configuration-basics`](external/googlecloud-base/skills/cloud/cloud-logging-configuration-basics/SKILL.md) | Configure single-project Google Cloud Logging: regional log buckets, log sinks, log v... | [`external/googlecloud-base/skills/cloud/cloud-logging-configuration-basics`](external/googlecloud-base/skills/cloud/cloud-logging-configuration-basics) |
+| [`cloud-logging-configuration-basics`](external/googlecloud-base/skills/cloud/cloud-logging-configuration-basics/SKILL.md) | Configure single-project Cloud Logging on Google Cloud: regional log buckets, log sin... | [`external/googlecloud-base/skills/cloud/cloud-logging-configuration-basics`](external/googlecloud-base/skills/cloud/cloud-logging-configuration-basics) |
 | [`cloud-logging-cross-project-configuration`](external/googlecloud-base/skills/cloud/cloud-logging-cross-project-configuration/SKILL.md) | Configure and troubleshoot Google Cloud cross-project centralized logging and read-ti... | [`external/googlecloud-base/skills/cloud/cloud-logging-cross-project-configuration`](external/googlecloud-base/skills/cloud/cloud-logging-cross-project-configuration) |
-| [`cloud-logging-query-generation`](external/googlecloud-base/skills/cloud/cloud-logging-query-generation/SKILL.md) | Generates Logging Query Language (LQL) queries for Google Cloud Logging from natural ... | [`external/googlecloud-base/skills/cloud/cloud-logging-query-generation`](external/googlecloud-base/skills/cloud/cloud-logging-query-generation) |
-| [`cloud-monitoring-chart-generation`](external/googlecloud-base/skills/cloud/cloud-monitoring-chart-generation/SKILL.md) | Generates Google Cloud Monitoring Server-Driven UI (SDUI) Widget and XyChart Protocol... | [`external/googlecloud-base/skills/cloud/cloud-monitoring-chart-generation`](external/googlecloud-base/skills/cloud/cloud-monitoring-chart-generation) |
+| [`cloud-logging-query-generation`](external/googlecloud-base/skills/cloud/cloud-logging-query-generation/SKILL.md) | Generates Logging Query Language (LQL) queries for Cloud Logging on Google Cloud from... | [`external/googlecloud-base/skills/cloud/cloud-logging-query-generation`](external/googlecloud-base/skills/cloud/cloud-logging-query-generation) |
+| [`cloud-monitoring-chart-generation`](external/googlecloud-base/skills/cloud/cloud-monitoring-chart-generation/SKILL.md) | Generates Cloud Monitoring Server-Driven UI (SDUI) Widget and XyChart Protocol Buffer... | [`external/googlecloud-base/skills/cloud/cloud-monitoring-chart-generation`](external/googlecloud-base/skills/cloud/cloud-monitoring-chart-generation) |
 | [`cloud-monitoring-list-time-series-request`](external/googlecloud-base/skills/cloud/cloud-monitoring-list-time-series-request/SKILL.md) | Generates valid Cloud Monitoring ListTimeSeries requests and aggregation specificatio... | [`external/googlecloud-base/skills/cloud/cloud-monitoring-list-time-series-request`](external/googlecloud-base/skills/cloud/cloud-monitoring-list-time-series-request) |
-| [`cloud-monitoring-metric-selection`](external/googlecloud-base/skills/cloud/cloud-monitoring-metric-selection/SKILL.md) | Retrieve, query, and identify relevant Google Cloud Monitoring metric descriptors for... | [`external/googlecloud-base/skills/cloud/cloud-monitoring-metric-selection`](external/googlecloud-base/skills/cloud/cloud-monitoring-metric-selection) |
+| [`cloud-monitoring-metric-selection`](external/googlecloud-base/skills/cloud/cloud-monitoring-metric-selection/SKILL.md) | Retrieve, query, and identify relevant Cloud Monitoring metric descriptors on Google ... | [`external/googlecloud-base/skills/cloud/cloud-monitoring-metric-selection`](external/googlecloud-base/skills/cloud/cloud-monitoring-metric-selection) |
+| [`cloud-monitoring-notification-channels-configuration`](external/googlecloud-base/skills/cloud/cloud-monitoring-notification-channels-configuration/SKILL.md) | Generates Terraform HCL configurations for Cloud Monitoring notification channels (`g... | [`external/googlecloud-base/skills/cloud/cloud-monitoring-notification-channels-configuration`](external/googlecloud-base/skills/cloud/cloud-monitoring-notification-channels-configuration) |
 | [`cloud-monitoring-promql-query`](external/googlecloud-base/skills/cloud/cloud-monitoring-promql-query/SKILL.md) | Generates valid PromQL queries from Cloud Monitoring metric descriptors and resource ... | [`external/googlecloud-base/skills/cloud/cloud-monitoring-promql-query`](external/googlecloud-base/skills/cloud/cloud-monitoring-promql-query) |
-| [`cloud-run-alert-configuration`](external/googlecloud-base/skills/cloud/cloud-run-alert-configuration/SKILL.md) | Configures best-practice, high-signal alerting policies for Google Cloud Run resource... | [`external/googlecloud-base/skills/cloud/cloud-run-alert-configuration`](external/googlecloud-base/skills/cloud/cloud-run-alert-configuration) |
+| [`cloud-network-insights`](external/googlecloud-base/skills/cloud/cloud-network-insights/SKILL.md) | Guides and automates setup, onboarding, and synthetic monitoring operations for Cloud... | [`external/googlecloud-base/skills/cloud/cloud-network-insights`](external/googlecloud-base/skills/cloud/cloud-network-insights) |
+| [`cloud-run-alert-configuration`](external/googlecloud-base/skills/cloud/cloud-run-alert-configuration/SKILL.md) | Configures best-practice, high-signal alerting policies for Cloud Run resources on Go... | [`external/googlecloud-base/skills/cloud/cloud-run-alert-configuration`](external/googlecloud-base/skills/cloud/cloud-run-alert-configuration) |
 | [`cloud-run-basics`](external/googlecloud-base/skills/cloud/cloud-run-basics/SKILL.md) | Manages Cloud Run services, jobs, and worker pools. Use when you need to deploy appli... | [`external/googlecloud-base/skills/cloud/cloud-run-basics`](external/googlecloud-base/skills/cloud/cloud-run-basics) |
 | [`cloud-sql-basics`](external/googlecloud-base/skills/cloud/cloud-sql-basics/SKILL.md) | This file generates or explains Cloud SQL resources. Use this file when the user asks... | [`external/googlecloud-base/skills/cloud/cloud-sql-basics`](external/googlecloud-base/skills/cloud/cloud-sql-basics) |
-| [`datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis/SKILL.md) | Analyzes the downstream impact (blast radius) when a BigQuery table or view is broken... | [`external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis) |
-| [`datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary/SKILL.md) | Summarizes Google Cloud Data Lineage graphs to help users debug data quality issues a... | [`external/googlecloud-base/skills/cloud/datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary) |
+| [`cloud-trace-querying`](external/googlecloud-base/skills/cloud/cloud-trace-querying/SKILL.md) | Query Cloud Trace spans, filter by latency thresholds or error status, correlate dist... | [`external/googlecloud-base/skills/cloud/cloud-trace-querying`](external/googlecloud-base/skills/cloud/cloud-trace-querying) |
+| [`datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis/SKILL.md) | Analyzes the downstream impact (blast radius) using data lineage on Google Cloud when... | [`external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis`](external/googlecloud-base/skills/cloud/datalineage-bigquery-asset-impact-analysis) |
+| [`datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary/SKILL.md) | Summarizes data lineage graphs on Google Cloud to help users debug data quality issue... | [`external/googlecloud-base/skills/cloud/datalineage-summary`](external/googlecloud-base/skills/cloud/datalineage-summary) |
 | [`dbt-sf-to-bq-translator`](external/googlecloud-base/skills/cloud/dbt-sf-to-bq-translator/SKILL.md) | Translates Snowflake dbt SQL models to Standardized BigQuery SQL. Handles SQL compila... | [`external/googlecloud-base/skills/cloud/dbt-sf-to-bq-translator`](external/googlecloud-base/skills/cloud/dbt-sf-to-bq-translator) |
 | [`detection-engineering-coverage-evaluation`](external/googlecloud-base/skills/cloud/detection-engineering-coverage-evaluation/SKILL.md) | Automates the end-to-end detection engineering workflow in Google SecOps using MCP to... | [`external/googlecloud-base/skills/cloud/detection-engineering-coverage-evaluation`](external/googlecloud-base/skills/cloud/detection-engineering-coverage-evaluation) |
 | [`developer-device-platform-basics`](external/googlecloud-base/skills/cloud/developer-device-platform-basics/SKILL.md) | Provides guidance and instructions on managing remote devices on Developer Device Pla... | [`external/googlecloud-base/skills/cloud/developer-device-platform-basics`](external/googlecloud-base/skills/cloud/developer-device-platform-basics) |
@@ -411,9 +361,16 @@ Infrastructure, database management, FinOps, security architecture, and Vertex A
 | [`gemini-live-api`](external/googlecloud-base/skills/cloud/gemini-live-api/SKILL.md) | Generates a Gemini LiveAPI client service class in the user's chosen programming lang... | [`external/googlecloud-base/skills/cloud/gemini-live-api`](external/googlecloud-base/skills/cloud/gemini-live-api) |
 | [`gke-ai-troubleshooting-handle-disruption-gpu-tpu`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-handle-disruption-gpu-tpu/SKILL.md) | Diagnoses, predicts, and mitigates node disruptions during Compute Engine host mainte... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-handle-disruption-gpu-tpu`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-handle-disruption-gpu-tpu) |
 | [`gke-ai-troubleshooting-jobset-interruption`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-jobset-interruption/SKILL.md) | Diagnoses GKE JobSet interruptions, restarts, and preemptions for AI/ML training work... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-jobset-interruption`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-jobset-interruption) |
+| [`gke-ai-troubleshooting-node-unresponsive-timeout`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-node-unresponsive-timeout/SKILL.md) | Diagnose and mitigate GKE TPU or GPU nodes stuck in NotReady / NodeStatusUnknown ("Ku... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-node-unresponsive-timeout`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-node-unresponsive-timeout) |
 | [`gke-ai-troubleshooting-tpu-dynamic-slices-monitoring`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-dynamic-slices-monitoring/SKILL.md) | Monitors, troubleshoots, and manages GKE TPU Dynamic Slices custom resources. Use whe... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-dynamic-slices-monitoring`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-dynamic-slices-monitoring) |
 | [`gke-ai-troubleshooting-tpu-metrics-monitoring`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-metrics-monitoring/SKILL.md) | Monitors and troubleshoots GKE TPU workloads, nodes, and node pools using GKE system ... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-metrics-monitoring`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-metrics-monitoring) |
+| [`gke-ai-troubleshooting-tpu-mxla-hang`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-mxla-hang/SKILL.md) | Diagnose GKE Cloud TPU multi-slice training hangs (Megascale `HANG_DETECTED` logs and... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-mxla-hang`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-mxla-hang) |
+| [`gke-ai-troubleshooting-tpu-partition-overlap`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-partition-overlap/SKILL.md) | Diagnose and resolve GKE TPU slice creation failures (SliceCreationFailed) caused by ... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-partition-overlap`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-partition-overlap) |
+| [`gke-ai-troubleshooting-tpu-performance-degradation`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-performance-degradation/SKILL.md) | Diagnose GKE Cloud TPU training throughput drops and step-time regressions (15%+ TPU ... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-performance-degradation`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-performance-degradation) |
+| [`gke-ai-troubleshooting-tpu-reservation-stockout`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-reservation-stockout/SKILL.md) | Diagnose and resolve cluster-wide GKE TPU node pool creation or scale-up failures cau... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-reservation-stockout`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-reservation-stockout) |
+| [`gke-ai-troubleshooting-tpu-slice-mig-stuck-updating`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-slice-mig-stuck-updating/SKILL.md) | Diagnose and resolve GKE TPU Dynamic Slice creation and JobSet scheduling failures bl... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-slice-mig-stuck-updating`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-slice-mig-stuck-updating) |
 | [`gke-ai-troubleshooting-tpu-vbar-oom`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-vbar-oom/SKILL.md) | Diagnoses and prevents vbar_control_agent segfaults, out-of-memory (OOM) errors, and ... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-vbar-oom`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-vbar-oom) |
+| [`gke-ai-troubleshooting-tpu-vm-repair-stuck`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-vm-repair-stuck/SKILL.md) | Diagnose GKE TPU VM instances stuck in Compute Engine repair (REPAIRING state) after ... | [`external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-vm-repair-stuck`](external/googlecloud-base/skills/cloud/gke-ai-troubleshooting-tpu-vm-repair-stuck) |
 | [`gke-alert-configuration`](external/googlecloud-base/skills/cloud/gke-alert-configuration/SKILL.md) | Configures alerting policies in Terraform for Google Kubernetes Engine (GKE) clusters... | [`external/googlecloud-base/skills/cloud/gke-alert-configuration`](external/googlecloud-base/skills/cloud/gke-alert-configuration) |
 | [`gke-app-onboarding`](external/googlecloud-base/skills/cloud/gke-app-onboarding/SKILL.md) | Manages GKE application onboarding, covering containerization, deployment manifests, ... | [`external/googlecloud-base/skills/cloud/gke-app-onboarding`](external/googlecloud-base/skills/cloud/gke-app-onboarding) |
 | [`gke-backup-dr`](external/googlecloud-base/skills/cloud/gke-backup-dr/SKILL.md) | Configures Backup for GKE: the BackupRestore cluster addon, BackupPlan and RestorePla... | [`external/googlecloud-base/skills/cloud/gke-backup-dr`](external/googlecloud-base/skills/cloud/gke-backup-dr) |
@@ -445,17 +402,18 @@ Infrastructure, database management, FinOps, security architecture, and Vertex A
 | [`gke-workload-security`](external/googlecloud-base/skills/cloud/gke-workload-security/SKILL.md) | Audits, configures, and hardens workload-level security controls for Google Kubernete... | [`external/googlecloud-base/skills/cloud/gke-workload-security`](external/googlecloud-base/skills/cloud/gke-workload-security) |
 | [`gke-workload-troubleshooting`](external/googlecloud-base/skills/cloud/gke-workload-troubleshooting/SKILL.md) | Diagnoses GKE workload failures (CrashLoopBackOff, OOMKilled, ImagePullBackOff, Pendi... | [`external/googlecloud-base/skills/cloud/gke-workload-troubleshooting`](external/googlecloud-base/skills/cloud/gke-workload-troubleshooting) |
 | [`google-agents-cli-onboarding`](external/googlecloud-base/skills/cloud/google-agents-cli-onboarding/SKILL.md) | Onboarding entrypoint for agents-cli in Agent Platform. It should be used when the us... | [`external/googlecloud-base/skills/cloud/google-agents-cli-onboarding`](external/googlecloud-base/skills/cloud/google-agents-cli-onboarding) |
-| [`google-cloud-filestore-auditing`](external/googlecloud-base/skills/cloud/google-cloud-filestore-auditing/SKILL.md) | Audits Google Cloud Filestore instances across projects for disaster recovery readine... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-auditing`](external/googlecloud-base/skills/cloud/google-cloud-filestore-auditing) |
-| [`google-cloud-filestore-autoscale`](external/googlecloud-base/skills/cloud/google-cloud-filestore-autoscale/SKILL.md) | Inspects Google Cloud Filestore capacity and utilization, evaluates storage scaling r... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-autoscale`](external/googlecloud-base/skills/cloud/google-cloud-filestore-autoscale) |
-| [`google-cloud-filestore-log-troubleshooting`](external/googlecloud-base/skills/cloud/google-cloud-filestore-log-troubleshooting/SKILL.md) | Diagnoses and resolves Google Cloud Filestore client mount failures, permission error... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-log-troubleshooting`](external/googlecloud-base/skills/cloud/google-cloud-filestore-log-troubleshooting) |
-| [`google-cloud-filestore-nfs-browser`](external/googlecloud-base/skills/cloud/google-cloud-filestore-nfs-browser/SKILL.md) | Inspects, searches, and reads files and POSIX metadata on Google Cloud Filestore (NFS... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-nfs-browser`](external/googlecloud-base/skills/cloud/google-cloud-filestore-nfs-browser) |
+| [`google-cloud-filestore-auditing`](external/googlecloud-base/skills/cloud/google-cloud-filestore-auditing/SKILL.md) | Audits Filestore instances on Google Cloud across projects for disaster recovery read... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-auditing`](external/googlecloud-base/skills/cloud/google-cloud-filestore-auditing) |
+| [`google-cloud-filestore-autoscale`](external/googlecloud-base/skills/cloud/google-cloud-filestore-autoscale/SKILL.md) | Inspects Filestore capacity and utilization on Google Cloud, evaluates storage scalin... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-autoscale`](external/googlecloud-base/skills/cloud/google-cloud-filestore-autoscale) |
+| [`google-cloud-filestore-log-troubleshooting`](external/googlecloud-base/skills/cloud/google-cloud-filestore-log-troubleshooting/SKILL.md) | Diagnoses and resolves Filestore client mount failures on Google Cloud, permission er... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-log-troubleshooting`](external/googlecloud-base/skills/cloud/google-cloud-filestore-log-troubleshooting) |
+| [`google-cloud-filestore-nfs-browser`](external/googlecloud-base/skills/cloud/google-cloud-filestore-nfs-browser/SKILL.md) | Inspects, searches, and reads files and POSIX metadata on Filestore (NFS) instances o... | [`external/googlecloud-base/skills/cloud/google-cloud-filestore-nfs-browser`](external/googlecloud-base/skills/cloud/google-cloud-filestore-nfs-browser) |
 | [`google-cloud-global-frontend-configuration`](external/googlecloud-base/skills/cloud/google-cloud-global-frontend-configuration/SKILL.md) | Guides agents through a 6-step discovery process to design and deploy Google Cloud gl... | [`external/googlecloud-base/skills/cloud/google-cloud-global-frontend-configuration`](external/googlecloud-base/skills/cloud/google-cloud-global-frontend-configuration) |
 | [`google-cloud-networking-observability`](external/googlecloud-base/skills/cloud/google-cloud-networking-observability/SKILL.md) | Investigates Google Cloud networking issues by analyzing GCP logs, metrics, and diagn... | [`external/googlecloud-base/skills/cloud/google-cloud-networking-observability`](external/googlecloud-base/skills/cloud/google-cloud-networking-observability) |
-| [`google-cloud-recipe-auth`](external/googlecloud-base/skills/cloud/google-cloud-recipe-auth/SKILL.md) | Provides expert guidance on authenticating and authorizing to Google Cloud services a... | [`external/googlecloud-base/skills/cloud/google-cloud-recipe-auth`](external/googlecloud-base/skills/cloud/google-cloud-recipe-auth) |
+| [`google-cloud-recipe-auth`](external/googlecloud-base/skills/cloud/google-cloud-recipe-auth/SKILL.md) | Provides expert guidance on Identity and Access Management (IAM) and authenticating a... | [`external/googlecloud-base/skills/cloud/google-cloud-recipe-auth`](external/googlecloud-base/skills/cloud/google-cloud-recipe-auth) |
 | [`google-cloud-recipe-foundation-builder`](external/googlecloud-base/skills/cloud/google-cloud-recipe-foundation-builder/SKILL.md) | Deploys a baseline landing zone foundation for a Google Cloud Organization, establish... | [`external/googlecloud-base/skills/cloud/google-cloud-recipe-foundation-builder`](external/googlecloud-base/skills/cloud/google-cloud-recipe-foundation-builder) |
 | [`google-cloud-recipe-onboarding`](external/googlecloud-base/skills/cloud/google-cloud-recipe-onboarding/SKILL.md) | Guides a developer's first steps on Google Cloud, covering account creation, billing ... | [`external/googlecloud-base/skills/cloud/google-cloud-recipe-onboarding`](external/googlecloud-base/skills/cloud/google-cloud-recipe-onboarding) |
 | [`google-cloud-scc-query`](external/googlecloud-base/skills/cloud/google-cloud-scc-query/SKILL.md) | Queries and retrieves active security findings, external exposures, toxic combination... | [`external/googlecloud-base/skills/cloud/google-cloud-scc-query`](external/googlecloud-base/skills/cloud/google-cloud-scc-query) |
-| [`google-cloud-slo-alert-configuration`](external/googlecloud-base/skills/cloud/google-cloud-slo-alert-configuration/SKILL.md) | Configures PromQL-based Service Level Objective (SLO) alerting policies for Google Cl... | [`external/googlecloud-base/skills/cloud/google-cloud-slo-alert-configuration`](external/googlecloud-base/skills/cloud/google-cloud-slo-alert-configuration) |
+| [`google-cloud-scc-remediation`](external/googlecloud-base/skills/cloud/google-cloud-scc-remediation/SKILL.md) | Remediates Google Cloud Security Command Center findings, including IAM permission fi... | [`external/googlecloud-base/skills/cloud/google-cloud-scc-remediation`](external/googlecloud-base/skills/cloud/google-cloud-scc-remediation) |
+| [`google-cloud-slo-alert-configuration`](external/googlecloud-base/skills/cloud/google-cloud-slo-alert-configuration/SKILL.md) | Configures Cloud Monitoring PromQL-based Service Level Objective (SLO) alerting polic... | [`external/googlecloud-base/skills/cloud/google-cloud-slo-alert-configuration`](external/googlecloud-base/skills/cloud/google-cloud-slo-alert-configuration) |
 | [`google-cloud-solution-agentic-ai-bidirectional-streaming`](external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-bidirectional-streaming/SKILL.md) | Guides agents to interactively discover customer requirements for live, bidirectional... | [`external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-bidirectional-streaming`](external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-bidirectional-streaming) |
 | [`google-cloud-solution-agentic-ai-borderless-data-lakehouse`](external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-borderless-data-lakehouse/SKILL.md) | Discovers requirements and designs a borderless open data lakehouse using Lakehouse f... | [`external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-borderless-data-lakehouse`](external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-borderless-data-lakehouse) |
 | [`google-cloud-solution-agentic-ai-data-science-workflow`](external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-data-science-workflow/SKILL.md) | Designs a tailored multi-product agentic data science architecture on Google Cloud th... | [`external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-data-science-workflow`](external/googlecloud-base/skills/cloud/google-cloud-solution-agentic-ai-data-science-workflow) |
@@ -468,18 +426,19 @@ Infrastructure, database management, FinOps, security architecture, and Vertex A
 | [`google-cloud-solution-n-tier-serverless-web-app`](external/googlecloud-base/skills/cloud/google-cloud-solution-n-tier-serverless-web-app/SKILL.md) | Assists in designing and implementing secure n-tier serverless web applications and m... | [`external/googlecloud-base/skills/cloud/google-cloud-solution-n-tier-serverless-web-app`](external/googlecloud-base/skills/cloud/google-cloud-solution-n-tier-serverless-web-app) |
 | [`google-cloud-solution-rag-enterprise-search-gke-sqldb`](external/googlecloud-base/skills/cloud/google-cloud-solution-rag-enterprise-search-gke-sqldb/SKILL.md) | Discovers requirements, and generates architectural, design, and deployment guidance ... | [`external/googlecloud-base/skills/cloud/google-cloud-solution-rag-enterprise-search-gke-sqldb`](external/googlecloud-base/skills/cloud/google-cloud-solution-rag-enterprise-search-gke-sqldb) |
 | [`google-cloud-waf-cost-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-cost-optimization/SKILL.md) | Evaluates Google Cloud workloads for cost efficiency and FinOps alignment using the G... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-cost-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-cost-optimization) |
-| [`google-cloud-waf-operational-excellence`](external/googlecloud-base/skills/cloud/google-cloud-waf-operational-excellence/SKILL.md) | Generates operations-focused guidance for Google Cloud workloads based on the design ... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-operational-excellence`](external/googlecloud-base/skills/cloud/google-cloud-waf-operational-excellence) |
+| [`google-cloud-waf-operational-excellence`](external/googlecloud-base/skills/cloud/google-cloud-waf-operational-excellence/SKILL.md) | Generates operational guidance for CI/CD deployment pipelines, observability, monitor... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-operational-excellence`](external/googlecloud-base/skills/cloud/google-cloud-waf-operational-excellence) |
 | [`google-cloud-waf-performance-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-performance-optimization/SKILL.md) | Generates performance-focused guidance for Google Cloud workloads based on the design... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-performance-optimization`](external/googlecloud-base/skills/cloud/google-cloud-waf-performance-optimization) |
-| [`google-cloud-waf-reliability`](external/googlecloud-base/skills/cloud/google-cloud-waf-reliability/SKILL.md) | Generates guidance for reliability, resilience, availability, redundancy, fault-toler... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-reliability`](external/googlecloud-base/skills/cloud/google-cloud-waf-reliability) |
+| [`google-cloud-waf-reliability`](external/googlecloud-base/skills/cloud/google-cloud-waf-reliability/SKILL.md) | Evaluates, designs, and improves the reliability, resilience, availability, fault tol... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-reliability`](external/googlecloud-base/skills/cloud/google-cloud-waf-reliability) |
 | [`google-cloud-waf-security`](external/googlecloud-base/skills/cloud/google-cloud-waf-security/SKILL.md) | Generates security-focused guidance for Google Cloud workloads based on the design pr... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-security`](external/googlecloud-base/skills/cloud/google-cloud-waf-security) |
 | [`google-cloud-waf-sustainability`](external/googlecloud-base/skills/cloud/google-cloud-waf-sustainability/SKILL.md) | Provides recommendations for environmental sustainability, carbon footprint reduction... | [`external/googlecloud-base/skills/cloud/google-cloud-waf-sustainability`](external/googlecloud-base/skills/cloud/google-cloud-waf-sustainability) |
 | [`iam-helper-for-policy-management`](external/googlecloud-base/skills/cloud/iam-helper-for-policy-management/SKILL.md) | Streamlines the creation, modification, and management of IAM allow policies (v1) and... | [`external/googlecloud-base/skills/cloud/iam-helper-for-policy-management`](external/googlecloud-base/skills/cloud/iam-helper-for-policy-management) |
-| [`iam-helper-for-policy-simulator`](external/googlecloud-base/skills/cloud/iam-helper-for-policy-simulator/SKILL.md) | Safely simulates and applies Google Cloud IAM v1 (Allow) policy changes. Uses the Pol... | [`external/googlecloud-base/skills/cloud/iam-helper-for-policy-simulator`](external/googlecloud-base/skills/cloud/iam-helper-for-policy-simulator) |
+| [`iam-helper-for-policy-simulator`](external/googlecloud-base/skills/cloud/iam-helper-for-policy-simulator/SKILL.md) | Safely simulates and applies Identity and Access Management (IAM) v1 (Allow) policy c... | [`external/googlecloud-base/skills/cloud/iam-helper-for-policy-simulator`](external/googlecloud-base/skills/cloud/iam-helper-for-policy-simulator) |
 | [`iam-helper-for-privileged-access-management`](external/googlecloud-base/skills/cloud/iam-helper-for-privileged-access-management/SKILL.md) | Manages the end-to-end lifecycle of on-demand, temporary access using Privileged Acce... | [`external/googlecloud-base/skills/cloud/iam-helper-for-privileged-access-management`](external/googlecloud-base/skills/cloud/iam-helper-for-privileged-access-management) |
-| [`iam-helper-for-troubleshooting`](external/googlecloud-base/skills/cloud/iam-helper-for-troubleshooting/SKILL.md) | Diagnoses, remediates, and manages Google Cloud Identity and Access Management (IAM) ... | [`external/googlecloud-base/skills/cloud/iam-helper-for-troubleshooting`](external/googlecloud-base/skills/cloud/iam-helper-for-troubleshooting) |
+| [`iam-helper-for-troubleshooting`](external/googlecloud-base/skills/cloud/iam-helper-for-troubleshooting/SKILL.md) | Diagnoses, remediates, and manages Identity and Access Management (IAM) access issues... | [`external/googlecloud-base/skills/cloud/iam-helper-for-troubleshooting`](external/googlecloud-base/skills/cloud/iam-helper-for-troubleshooting) |
 | [`managed-airflow-dag-authoring`](external/googlecloud-base/skills/cloud/managed-airflow-dag-authoring/SKILL.md) | Provides guidance for authoring Apache Airflow DAGs in Managed Service for Apache Air... | [`external/googlecloud-base/skills/cloud/managed-airflow-dag-authoring`](external/googlecloud-base/skills/cloud/managed-airflow-dag-authoring) |
 | [`managed-airflow-dag-troubleshooting`](external/googlecloud-base/skills/cloud/managed-airflow-dag-troubleshooting/SKILL.md) | Provides guidance for troubleshooting Apache Airflow DAGs (failed DAG runs and task i... | [`external/googlecloud-base/skills/cloud/managed-airflow-dag-troubleshooting`](external/googlecloud-base/skills/cloud/managed-airflow-dag-troubleshooting) |
 | [`managed-airflow-migrations`](external/googlecloud-base/skills/cloud/managed-airflow-migrations/SKILL.md) | Provides guidance for migrating Apache Airflow DAGs in Managed Service for Apache Air... | [`external/googlecloud-base/skills/cloud/managed-airflow-migrations`](external/googlecloud-base/skills/cloud/managed-airflow-migrations) |
+| [`managed-airflow-recommendations`](external/googlecloud-base/skills/cloud/managed-airflow-recommendations/SKILL.md) | Provides recommendations and best practices for creating, configuring, tuning and opt... | [`external/googlecloud-base/skills/cloud/managed-airflow-recommendations`](external/googlecloud-base/skills/cloud/managed-airflow-recommendations) |
 | [`secops-cases`](external/googlecloud-base/skills/cloud/secops-cases/SKILL.md) | Manage Google Security Operations (SecOps) SOAR cases throughout their lifecycle. Use... | [`external/googlecloud-base/skills/cloud/secops-cases`](external/googlecloud-base/skills/cloud/secops-cases) |
 | [`secops-detection-engineering`](external/googlecloud-base/skills/cloud/secops-detection-engineering/SKILL.md) | Author, validate, test, and deploy YARA-L 2.0 detection rules and evaluate end-to-end... | [`external/googlecloud-base/skills/cloud/secops-detection-engineering`](external/googlecloud-base/skills/cloud/secops-detection-engineering) |
 | [`secops-hunt`](external/googlecloud-base/skills/cloud/secops-hunt/SKILL.md) | Expert guidance for proactive threat hunting in Google SecOps. Use when proactively h... | [`external/googlecloud-base/skills/cloud/secops-hunt`](external/googlecloud-base/skills/cloud/secops-hunt) |
@@ -490,7 +449,7 @@ Infrastructure, database management, FinOps, security architecture, and Vertex A
 
 ### external/googlecloud-base/ads (Google Ads API)
 
-Campaign management, reporting, budget optimization, and bidding strategies via the Google Ads API.
+Google Ads API, Data Manager API, Google Mobile Ads (GMA), and Interactive Media Ads (IMA) SDK skills.
 
 *Total skills in this category: **14***
 
@@ -524,36 +483,50 @@ Google Analytics 4 (GA4) administration and data extraction skills.
 
 ### external/googlecloud-base/developers (Developer Knowledge)
 
-Meta-guidance skills for searching Google documentation and discovering Google platform skills.
-
-*Total skills in this category: **2***
-
-| Skill Name | Description | Path |
-| :--- | :--- | :--- |
-| [`finding-google-skills`](external/googlecloud-base/skills/developers/finding-google-skills/SKILL.md) | Google platform decision and setup guidance, loaded on demand from Google's skill cat... | [`external/googlecloud-base/skills/developers/finding-google-skills`](external/googlecloud-base/skills/developers/finding-google-skills) |
-| [`retrieving-developer-knowledge`](external/googlecloud-base/skills/developers/retrieving-developer-knowledge/SKILL.md) | Searches, retrieves, and synthesizes official Google developer documentation across G... | [`external/googlecloud-base/skills/developers/retrieving-developer-knowledge`](external/googlecloud-base/skills/developers/retrieving-developer-knowledge) |
-
-### external/googlecloud-base/identity (Identity & Auth)
-
-Security and identity integration skills for OAuth 2.0.
-
-*Total skills in this category: **1***
-
-| Skill Name | Description | Path |
-| :--- | :--- | :--- |
-| [`dpop-adoption`](external/googlecloud-base/skills/identity/dpop-adoption/SKILL.md) | Implement and debug OAuth 2.0 DPoP (RFC 9449) refresh token sender-constraining for W... | [`external/googlecloud-base/skills/identity/dpop-adoption`](external/googlecloud-base/skills/identity/dpop-adoption) |
-
-### internal/hub-tools (Hub Meta-Tooling)
-
-Internal meta-skills for designing new role clusters and authoring gap skills.
+Meta-guidance skills for searching Google documentation, discovering Google platform skills, and migrating legacy codebases.
 
 *Total skills in this category: **3***
 
 | Skill Name | Description | Path |
 | :--- | :--- | :--- |
-| [`agyhub-agent`](internal/hub-tools/skills/agyhub-agent/SKILL.md) | Expert guidance for AI agents to discover, inspect, enable, disable, configure, and troubleshoot Antigravity skills, clusters, groups, and plugins using the agyhub CLI. | [`internal/hub-tools/skills/agyhub-agent`](internal/hub-tools/skills/agyhub-agent) |
+| [`finding-google-skills`](external/googlecloud-base/skills/developers/finding-google-skills/SKILL.md) | Google platform decision and setup guidance, loaded on demand from Google's skill cat... | [`external/googlecloud-base/skills/developers/finding-google-skills`](external/googlecloud-base/skills/developers/finding-google-skills) |
+| [`migrate-to-rust`](external/googlecloud-base/skills/developers/migrate-to-rust/SKILL.md) | Clones, analyzes, plans, and migrates legacy codebases (C++, Fortran, Java, Python, C... | [`external/googlecloud-base/skills/developers/migrate-to-rust`](external/googlecloud-base/skills/developers/migrate-to-rust) |
+| [`retrieving-developer-knowledge`](external/googlecloud-base/skills/developers/retrieving-developer-knowledge/SKILL.md) | Searches, retrieves, and synthesizes official Google developer documentation across G... | [`external/googlecloud-base/skills/developers/retrieving-developer-knowledge`](external/googlecloud-base/skills/developers/retrieving-developer-knowledge) |
+
+### external/googlecloud-base/identity (Identity & Auth)
+
+Security and identity integration skills for OAuth 2.0 DPoP and Sign In With Google (SiwG).
+
+*Total skills in this category: **2***
+
+| Skill Name | Description | Path |
+| :--- | :--- | :--- |
+| [`dpop-adoption`](external/googlecloud-base/skills/identity/dpop-adoption/SKILL.md) | Implement and debug OAuth 2.0 DPoP (RFC 9449) refresh token sender-constraining for W... | [`external/googlecloud-base/skills/identity/dpop-adoption`](external/googlecloud-base/skills/identity/dpop-adoption) |
+| [`sign-in-with-google-web`](external/googlecloud-base/skills/identity/sign-in-with-google-web/SKILL.md) | Implement, configure, and secure Sign In With Google (SiwG) using Google Identity Ser... | [`external/googlecloud-base/skills/identity/sign-in-with-google-web`](external/googlecloud-base/skills/identity/sign-in-with-google-web) |
+
+### internal/customer-engagement (Customer Architecture & Demos)
+
+Proprietary skills for managing end-to-end Google Cloud customer engagements, generating official reference architecture SVGs, and building story-driven Cloud Console demos.
+
+*Total skills in this category: **3***
+
+| Skill Name | Description | Path |
+| :--- | :--- | :--- |
+| [`gcp-architecture-diagram`](internal/customer-engagement/skills/gcp-architecture-diagram/SKILL.md) | Generates publication-grade Google Cloud Reference Architecture SVG diagrams (.svg) f... | [`internal/customer-engagement/skills/gcp-architecture-diagram`](internal/customer-engagement/skills/gcp-architecture-diagram) |
+| [`gcp-console-demo-generator`](internal/customer-engagement/skills/gcp-console-demo-generator/SKILL.md) | Designs story-driven Google Cloud customer demos ("history demos"), provisions isolat... | [`internal/customer-engagement/skills/gcp-console-demo-generator`](internal/customer-engagement/skills/gcp-console-demo-generator) |
+| [`gcp-project-copilot`](internal/customer-engagement/skills/gcp-project-copilot/SKILL.md) | Manages end-to-end Google Cloud customer architecture engagements by scaffolding proj... | [`internal/customer-engagement/skills/gcp-project-copilot`](internal/customer-engagement/skills/gcp-project-copilot) |
+
+### internal/hub-tools (Hub Meta-Tooling)
+
+Internal meta-skills for operating the hub CLI, designing new role clusters, and authoring gap skills.
+
+*Total skills in this category: **3***
+
+| Skill Name | Description | Path |
+| :--- | :--- | :--- |
+| [`agyhub-agent`](internal/hub-tools/skills/agyhub-agent/SKILL.md) | Expert guidance for AI agents to discover, inspect, enable, disable, configure, and t... | [`internal/hub-tools/skills/agyhub-agent`](internal/hub-tools/skills/agyhub-agent) |
 | [`agyhub-cluster-role-creation`](internal/hub-tools/skills/agyhub-cluster-role-creation/SKILL.md) | Guides the agent in designing, scoping, and generating new role-based skill clusters ... | [`internal/hub-tools/skills/agyhub-cluster-role-creation`](internal/hub-tools/skills/agyhub-cluster-role-creation) |
-| [`agyhub-skills-gap-creator`](internal/hub-tools/skills/agyhub-skills-gap-creator/SKILL.md) | Guides the agent in creating a new, specialized internal skill based on an identified... | [`internal/hub-tools/skills/agyhub-skills-gap-creator`](internal/hub-tools/skills/agyhub-skills-gap-creator) |
+| [`agyhub-skills-gap-creator`](internal/hub-tools/skills/agyhub-skills-gap-creator/SKILL.md) | Guides the agent in creating a new, specialized skill based on an identified gap (fro... | [`internal/hub-tools/skills/agyhub-skills-gap-creator`](internal/hub-tools/skills/agyhub-skills-gap-creator) |
 
 ### internal/templates (Starter Templates)
 

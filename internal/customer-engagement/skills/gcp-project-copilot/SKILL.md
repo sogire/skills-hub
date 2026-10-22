@@ -12,7 +12,9 @@ description: >-
   customizing specs_project.md or gdrive_sync_manifest.json, analyzing customer
   meeting notes or transcripts, updating project rosters/glossaries/question
   logs/challenges, answering selected technical questions in project/questions/,
-  creating topic deep-dives, or syncing project documentation with Google Drive.
+  exporting the cumulative question log to a Google Sheets-ready CSV
+  (project/questions/question-list.csv), creating topic deep-dives or story-driven
+  GCP Console screenshot demos, or syncing project documentation with Google Drive.
   Do not use for ad-hoc single-document Google Docs edits outside a project
   workspace (use gdocs) or standalone application code implementation.
 ---
@@ -32,6 +34,8 @@ description: >-
   4. **Answering one or more technical questions (or a domain/session group) and/or generating 1-slide question summary prompts**: Analyzing relevant Google Cloud skills available in the workspace to evaluate selected questions (`[D#-Q##]` / `[P1-Q##]`), saving an individual structured answer per question in `project/questions/` using [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md), and synchronizing `project/questions/` with Google Drive.
   5. **Promoting a domain challenge into a deep-dive workstream**: Creating architectural evaluations and slide guides under `project/topics/<topic-slug>/docs/`.
   6. **Synchronizing the workspace with Google Drive**: Running [`scripts/sync_drive.py`](./scripts/sync_drive.py) from the workspace to mirror folders, import/update native Google Docs, and refresh Section 2.2 of `specs/specs_project.md`.
+  7. **Exporting the cumulative question list to CSV for Google Sheets**: Running [`scripts/export_questions_csv.py`](./scripts/export_questions_csv.py) to parse all coded questions (`[D#-Q##]` / `[P1-Q##]`) from `project/common/project_questions-log.md` into `project/questions/question-list.csv` (`Updated,Code,Section,Asked By,Session Date,Question`).
+  8. **Generating a story-driven GCP Console screenshot demo**: Collaborating with sibling skill [`gcp-console-demo-generator`](../gcp-console-demo-generator/SKILL.md) to build Act-by-Act visual demo guides, single-Sandbox GCP setups (`.runtime/`), and sanitized multi-persona Console screenshots under `project/topics/<topic-slug>/demos/<demo-slug>/`.
 - **Do NOT activate when (Anti-Scope)**:
   - Reading or editing standalone Google Docs unrelated to a structured customer project workspace (use the `gdocs` skill directly).
   - Building standalone production pipelines or application code outside of customer architectural evaluations (note: when answering technical questions in **Workflow 6**, `gcp-project-copilot` **does** inspect and leverage specialized GCP skills available in the workspace to ground its answers and code snippets).
@@ -61,18 +65,25 @@ Every customer engagement workspace is powered by **two project-specific configu
     │       ├── YYYYMMDD_questions-log_<meeting-slug>.md
     │       └── YYYYMMDD_challenges_<meeting-slug>.md
     │
-    ├── topics/                                   # LAYER 3: Deep-Dive Topic Workstreams (Created Lazily per Domain)
+    ├── topics/                                   # LAYER 3: Deep-Dive Topic Workstreams & Demos (Created Lazily per Domain)
     │   └── <topic-slug>/                         # Matches domain slug in specs/specs_project.md
     │       ├── docs/                             # Deep-dive Markdown deliverables (<doc-stem>.md)
-    │       └── diagrams/                         # Per-document architecture diagrams & JSON specs
-    │           └── <doc-stem>/                   # Matches Markdown filename stem
-    │               ├── *.svg                     # Official GCP Reference Architecture vector diagrams
-    │               ├── *.png                     # Companion 2x HiDPI (144 DPI) PNGs for Slides/Docs
-    │               └── specs/
-    │                   └── *.json                # Declarative JSON topology specs
+    │       ├── diagrams/                         # Per-document architecture diagrams & JSON specs
+    │       │   └── <doc-stem>/                   # Matches Markdown filename stem
+    │       │       ├── *.svg                     # Official GCP Reference Architecture vector diagrams
+    │       │       ├── *.png                     # Companion 2x HiDPI (144 DPI) PNGs for Slides/Docs
+    │       │       └── specs/
+    │       │           └── *.json                # Declarative JSON topology specs
+    │       └── demos/                            # Story-driven GCP Console screenshot demos (gcp-console-demo-generator)
+    │           └── <demo-slug>/
+    │               ├── docs/                     # Visual Demo Guide (<demo>.md) & optional Slides prompt (<demo>_slides-prompt.md)
+    │               ├── screenshots/<demo-stem>/  # Sanitized 2x HiDPI GCP Console PNGs with callouts
+    │               ├── diagrams/<demo-stem>/     # Companion GCP Reference Architecture SVG/PNG
+    │               └── .runtime/                 # Local-only Sandbox scripts & state (ignored by sync_drive.py)
     │
-    └── questions/                                # LAYER 4: Individual Technical Question Evaluations (Created Lazily)
-        ├── <DOMAIN_ID>-Q<NN>_<question-slug>.md  # One individual structured answer file per question (template_answers_to_questions.md)
+    └── questions/                                # LAYER 4: Individual Technical Question Evaluations & CSV Exports
+        ├── question-list.csv                     # Google Sheets-ready CSV export of all coded questions (export_questions_csv.py)
+        └── <DOMAIN_ID>-Q<NN>_<question-slug>.md  # One individual structured answer file per question (template_answers_to_questions.md)
 
 ```
 
@@ -90,6 +101,9 @@ Every customer engagement workspace is powered by **two project-specific configu
    - **Keyword Expansion First**: If a meeting introduces a sub-topic sharing the same governance boundary or GCP service family as an existing domain `D#`, map it to `D#` and append the new keywords in `specs/specs_project.md`.
    - **Interactive Approval for `D(n+1)`**: If a meeting introduces a genuinely distinct architectural pillar ($\ge 2$ questions or a dedicated agenda segment outside `D1..Dn`), pause before writing files and use `ask_question` to confirm whether to create `D(n+1)` or merge into an existing domain.
    - **Logical Slug First**: Record new domain slugs in `specs/specs_project.md` as plain code (`` `<new-slug>` ``) without creating an empty folder. Create `project/topics/<new-slug>/docs/` only when a deep-dive deliverable is actually generated.
+5. **Strict Template Adherence & Subagent Delegation Gate (`project/questions/`)**:
+   - Every question evaluation written to `<workspace-root>/project/questions/` MUST strictly match [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md) (exact dual H1 header, exact 7-row metadata table with **zero** skills/status rows, and exact 6 numbered `##` sections).
+   - **Subagent Batch Rule**: Whenever delegating question batches to parallel subagents (`invoke_subagent`), the parent prompt MUST pass the absolute path to `<skill-dir>/resources/templates/template_answers_to_questions.md`, instruct every subagent to read that template verbatim via `read_file` **before** authoring any file, forbid improvising custom headings (`Original Question`, `TL;DR`, bulleted metadata, etc.), and require passing [`scripts/validate_question_answers.py`](./scripts/validate_question_answers.py) (`exit 0`) prior to completion.
 
 ---
 
@@ -173,19 +187,23 @@ Whenever synchronizing `<workspace-root>/project/` with Google Drive:
    Verify that the **Root Project Drive Folder** in Section 2.1 of `<workspace-root>/specs/specs_project.md` (or `root_folder_id` in `specs/gdrive_sync_manifest.json`) contains a valid Google Drive Folder ID (not `{{DRIVE_ROOT_FOLDER_ID}}`). If missing, ask the user for the Google Drive Folder URL/ID and run **Workflow 2** (`init_workspace.py --update-config --root-folder "<URL_OR_ID>"`).
 2. **Run [`scripts/sync_drive.py`](./scripts/sync_drive.py)**:
    ```bash
-   # Execute live synchronization from the workspace to Google Drive
+   # Execute live wave-parallel synchronization (default --jobs 6 workers):
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
 
-   # Synchronize only the project/questions/ folder (or a single question answer file):
+   # Tune worker concurrency explicitly (e.g., --jobs 8 for large batches, or --jobs 1 for serial):
+   python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --jobs 8
+
+   # Synchronize only the project/questions/ folder (or pass repeatable --file flags for specific files):
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions
 
-   # Or synchronize a single Markdown document and its diagrams/<doc-stem>/ folder:
-   python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/topics/<topic-slug>/docs/<doc-stem>.md
+   # Or synchronize one or more specific Markdown documents (and any companion diagrams/<doc-stem>/ folders):
+   python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> \
+     --file project/topics/<topic-slug>/docs/<doc-stem>.md
 
    # Or preview actions first without modifying Google Drive:
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --dry-run
    ```
-   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder (including `questions/`, `diagrams/<doc-stem>/`, and `diagrams/<doc-stem>/specs/`), ensures every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`, topologically sorts all `.md` files (`topics/` & `questions/` $\to$ `meetings/` $\to$ `common/`), rewrites internal `.md` links to Google Docs URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), uploads/updates standalone `.svg`, `.png`, and `.json` assets in `diagrams/`, saves `specs/gdrive_sync_manifest.json`, and refreshes Section 2.2 in `specs/specs_project.md`.
+   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder (including `questions/`, `diagrams/<doc-stem>/`, `screenshots/<demo-stem>/`, and `diagrams/<doc-stem>/specs/`), ensures every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`, uploads/updates standalone `.svg`, `.png`, `.json`, and `.csv` assets first (Phase 2), partitions `.md` files into topological link-dependency waves (`topics/` & leaf `questions/` $\to$ `meetings/` $\to$ `common/`, running all updates to existing Google Docs concurrently in Wave 0 across `--jobs` workers), prefetches open-comment status in a single `gdocs readonly stream comments` batch call, rewrites internal `.md` and non-image asset links (`[foo.png](...)`, `[question-list.csv](...)`) to Google Docs/Drive URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), atomically checkpoints `specs/gdrive_sync_manifest.json`, and refreshes Section 2.2 in `specs/specs_project.md`.
 
 ### Workflow 5: Promote a Domain Challenge into a Deep-Dive Topic Workstream (`project/topics/`)
 
@@ -207,12 +225,26 @@ When the user asks to answer one or more technical questions (e.g., `D3-Q14`, `D
   - Ensure `<workspace>/project/questions/` exists and save each question's evaluation as `<workspace>/project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` (e.g., `project/questions/D3-Q14_bigquery-row-limits-and-export-controls.md`).
   - Follow the canonical structure in [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md):
     1. **Header & Metadata Table**: Include `Customer / Project`, `Question ID` (`[D#-Q##]`), the verbatim **`Question` phrase**, `Canonical Domain`, `Asked By`, `Source Session & Log` (portable relative links), and `Date Answered` *(do not list skills in the top metadata table)*.
-    2. **Section 1 — Executive Summary & Solution Matrix**: Direct architectural answer and a summary table mapping each sub-requirement to its recommended Google Cloud control, layer, and enforcement mechanism.
-    3. **Section 2 — Technical Evaluation & Multi-Layer Google Cloud Controls**: Detailed breakdown (`Control A`, `Control B`, ...) with architectural explanations and production-ready SQL DDL, IAM JSON, CLI, or configuration snippets.
+    2. **Section 1 — Executive Summary & Solution Matrix**: Direct architectural answer and a summary table (`| Requirement / Sub-Question | Recommended Google Cloud Solution | Architectural Layer | Implementation / Enforcement Mechanism |`) mapping each sub-requirement to its recommended Google Cloud solution, layer, and implementation/enforcement mechanism.
+    3. **Section 2 — Technical Evaluation & Google Cloud Architecture**: Numbered `### 2.1`, `### 2.2`, `### 2.3`, ... subsections (including any architecture diagrams or trade-off matrices so zero unnumbered `###` headings exist in Section 2) with production-ready SQL DDL, IAM JSON, CLI, or Terraform snippets. Adapt subsection titles semantically to the question's nature—never force a single noun across all answers:
+       - **`Step 1 / 2 / 3`** (or **`Stage 1 / 2 / 3`**) for chronological workflows, lifecycles, or troubleshooting runbooks (`### 2.1 Step 1 — ...`).
+       - **`Control 1 / 2 / 3`** for defense-in-depth security, IAM, RLS/CLS, data-egress, or FinOps guardrails (`### 2.1 Control 1 — ...`).
+       - **`Pattern A / B / C`** for distinct architectural design patterns or implementation alternatives (`### 2.1 Pattern A — ...`).
+       - **Direct Descriptive Titles** (`### 2.x <Descriptive Title>`) for architecture diagrams, comparative trade-off matrices, cost worksheets, platform mechanics, or mixed evaluations.
     4. **Section 3 — IAM Permissions, Security Guardrails & Platform Caveats**: Exact IAM permission matrix (including predefined roles to avoid and how to restrict via Custom Roles or IAM v2 Deny Policies) plus `> [!IMPORTANT]` callouts on critical platform caveats or edge cases.
     5. **Section 4 — Summary Recommendation & Next Steps for `{{CUSTOMER_NAME}}`**: Prioritized recommendation (`> [!TIP]`), owner-attributed next steps, and portable relative links to `../common/project_questions-log.md` and `../common/project_challenges.md`.
     6. **Section 5 — Google Cloud Documentation Reference Links**: Curated list of official Google Cloud documentation URLs supporting the evaluation.
-    7. **Section 6 — Skills Employed**: Structured table listing each workspace skill employed in the analysis and its specific technical contribution to the evaluation.
+    7. **Section 6 — Skills Employed**: Structured table listing each workspace skill employed in the analysis (`| Workspace Skill | Technical Contribution to This Evaluation |`) and its specific technical contribution to the evaluation.
+  - **Subagent Delegation Requirement**: If delegating one or more questions to subagents (`invoke_subagent`), pass the exact `<skill-dir>/resources/templates/template_answers_to_questions.md` path in every subagent prompt and require each subagent to read it via `read_file` before writing files. Never let a subagent invent custom `H1`/`H2` headings or put `Grounded Workspace Skills` in the top metadata table.
+- [ ] **Step 3b — Validate Question Answer Structure (`scripts/validate_question_answers.py`)**:
+  - Run the structural validator across the newly generated or updated file(s) and fix any reported deviations before finishing:
+    ```bash
+    # Validate all question answers in project/questions/:
+    python3 <skill-dir>/scripts/validate_question_answers.py --workspace <workspace-root>
+
+    # Or validate specific question file(s):
+    python3 <skill-dir>/scripts/validate_question_answers.py --workspace <workspace-root> --file project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md
+    ```
 - [ ] **Step 4 — Cross-Link the Answer in `project_questions-log.md` (and Session Log)**:
   - Append `* **Answer:** [<Short Title>](../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md)` under the corresponding question entry in `project/common/project_questions-log.md` (and `../../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` in the per-meeting `YYYYMMDD_questions-log_<slug>.md`).
 - [ ] **Step 5 — Synchronize `project/questions/` with Google Drive (If Required by the User)**:
@@ -225,6 +257,51 @@ When the user asks to answer one or more technical questions (e.g., `D3-Q14`, `D
     python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
     ```
 
+### Workflow 7: Export Consolidated Question List to CSV for Google Sheets (`scripts/export_questions_csv.py`)
+
+When the user asks to generate or refresh a CSV export of all project questions from `project/common/project_questions-log.md` for importing into Google Sheets:
+
+1. **Run [`scripts/export_questions_csv.py`](./scripts/export_questions_csv.py)**:
+   ```bash
+   python3 <skill-dir>/scripts/export_questions_csv.py --workspace <workspace-root>
+   ```
+   - Parses every coded question (`[D#-Q##]` and `[P#-Q##]`) from `<workspace-root>/project/common/project_questions-log.md`.
+   - Writes an RFC 4180 UTF-8 CSV file to `<workspace-root>/project/questions/question-list.csv` with the columns:
+     - `Updated`: ISO date (`YYYY-MM-DD`) when the CSV file was generated/updated
+     - `Code`: Question code without brackets or backticks (e.g., `D1-Q01`, `P1-Q08`)
+     - `Section`: Full canonical domain/section heading (e.g., `D1. Data Mesh, Data Products & Platform Framework`)
+     - `Asked By`: Stakeholder name with Markdown emphasis markers removed
+     - `Session Date`: ISO session date (`YYYY-MM-DD`)
+     - `Question`: Plain-text question with outer bolding (`**`) and inline backticks (`` ` ``) stripped for clean spreadsheet cells
+2. **Synchronize `project/questions/question-list.csv` to Google Drive (Optional / On Request)**:
+   ```bash
+   python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions/question-list.csv
+   ```
+
+### Workflow 8: Create a Story-Driven GCP Console Demo & Screenshot Walkthrough (`gcp-console-demo-generator`)
+
+When the user asks to design a narrative / "history" demo for a topic (`D1..Dn`), set up demo assets/permissions in a Sandbox GCP project, and capture Google Cloud Console screenshots:
+
+1. **Read & Activate [`gcp-console-demo-generator`](../gcp-console-demo-generator/SKILL.md)**:
+   Follow its 4-Phase workflow (`Grill-Me Storyboard` $\to$ `Single-Sandbox Provisioning (.runtime/)` $\to$ `Multi-Persona Chrome CDP Screenshot Capture` $\to$ `Validation & Drive Sync`).
+2. **Store Output Under `project/topics/<topic-slug>/demos/<demo-slug>/`**:
+   - Keep real Sandbox Project IDs, Argolis test user emails, `provision.sh`, `teardown.sh`, and `state.json` strictly inside dot-prefixed `.runtime/` (automatically ignored by `sync_drive.py`) and optional Section 6 of `specs/specs_project.md`.
+   - Store customer-facing deliverables in `docs/<demo-stem>.md` (plus optional `docs/<demo-stem>_slides-prompt.md`), `screenshots/<demo-stem>/*.png`, and `diagrams/<demo-stem>/*.svg`.
+3. **Cross-Link & Synchronize to Google Drive via Workflow 4**:
+   Link the new demo under its domain in `project/common/project_challenges.md`, preview link/image resolution with `--dry-run`, and synchronize both the demo bundle and `project_challenges.md`:
+   ```bash
+   python3 <skill-dir>/scripts/sync_drive.py \
+     --workspace <workspace-root> \
+     --file project/topics/<topic-slug>/demos/<demo-slug> \
+     --file project/common/project_challenges.md \
+     --dry-run
+
+   python3 <skill-dir>/scripts/sync_drive.py \
+     --workspace <workspace-root> \
+     --file project/topics/<topic-slug>/demos/<demo-slug> \
+     --file project/common/project_challenges.md
+   ```
+   `sync_drive.py` automatically skips `.runtime/`, uploads all screenshot and diagram assets first (so companion `_slides-prompt.md` asset links resolve on the first pass), and stages local `../screenshots/*.png` and `../diagrams/*.svg` images into native Google Docs.
 
 ---
 
@@ -236,6 +313,8 @@ When the user asks to answer one or more technical questions (e.g., `D3-Q14`, `D
 - **Executable Scripts**:
   - [`scripts/init_workspace.py`](./scripts/init_workspace.py) — Workspace scaffolding & config customization (`specs_project.md` + `gdrive_sync_manifest.json`)
   - [`scripts/sync_drive.py`](./scripts/sync_drive.py) — Dependency-ordered Google Drive & native Google Docs synchronization
+  - [`scripts/export_questions_csv.py`](./scripts/export_questions_csv.py) — Export all coded questions from `project/common/project_questions-log.md` to `project/questions/question-list.csv` for Google Sheets import
+  - [`scripts/validate_question_answers.py`](./scripts/validate_question_answers.py) — Validate `project/questions/*.md` files against `template_answers_to_questions.md` and Mermaid/path hygiene guardrails
 - **Canonical Starter Templates**:
   - [`resources/templates/template_specs_project.md`](./resources/templates/template_specs_project.md)
   - [`resources/templates/template_meetings_registry.md`](./resources/templates/template_meetings_registry.md)

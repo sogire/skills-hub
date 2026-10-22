@@ -85,14 +85,20 @@ Using the gcp-project-copilot skill and based on @project/common/project_challen
 ```text
 Use the gcp-project-copilot skill to evaluate and answer question(s) <D#-Q##> (or all questions in domain <D#>) from @project/common/project_questions-log.md:
 1. Analyze the relevant Google Cloud skills available in the workspace and official documentation.
-2. Save an individual structured answer file per question in `project/questions/` following `template_answers_to_questions.md`.
+2. Save an individual structured answer file per question in `project/questions/` strictly following `resources/templates/template_answers_to_questions.md` (if delegating to subagents, require each subagent to read `template_answers_to_questions.md` first) and verify with `scripts/validate_question_answers.py`.
 3. Cross-link the answer(s) in @project/common/project_questions-log.md and sync `project/questions/` with Google Drive if requested.
 ```
 
 ---
 
-## 9. Synchronize Local `project/` (or `project/questions/`) Hierarchy with Google Drive
+## 9. Export the Cumulative Question List to CSV for Google Sheets (`project/questions/question-list.csv`)
+```text
+Use the gcp-project-copilot skill to export all coded questions from @project/common/project_questions-log.md into `project/questions/question-list.csv` (`Updated,Code,Section,Asked By,Session Date,Question`) for Google Sheets import, and synchronize it with Google Drive.
+```
+
+---
+
+## 10. Synchronize Local `project/` (or `project/questions/`) Hierarchy with Google Drive
 ```text
 Use the gcp-project-copilot skill to synchronize all new or modified folders and Markdown documents in @project (or only `project/questions/`) with Google Drive, and refresh the synchronized registry in @specs/specs_project.md.
-
 ```

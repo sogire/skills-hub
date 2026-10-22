@@ -79,12 +79,11 @@ flowchart LR
 
 ## 2. Skill Breakdown by Competency
 
-The [`bq-sql-optimizer`](./bq-sql-optimizer.json) cluster bundles **12 skills** and **0 plugins** mapped directly to the core architectural pillars:
+The [`bq-sql-optimizer`](./bq-sql-optimizer.json) cluster bundles **11 skills** and **0 plugins** mapped directly to the core architectural pillars:
 
 | Competency Domain | Skill / Plugin Identifier | Architectural Rationale | Provenance Source |
 | :--- | :--- | :--- | :--- |
-| **Telemetry & Pareto Profiling** | `bigquery-slot-cost-optimizer` | Provides slot consumption heuristics, cost formulas, and decision trees (`Rule SLOT-001`, `Rule JOIN-001`, `Rule PART-001`) plus offline telemetry analysis patterns. | `external/googlecloud-base/cloud` |
-| | `bigquery-observability` | Supplies authoritative schema dictionaries (`schema_compute.md`, `schema_storage.md`) for interpreting `INFORMATION_SCHEMA.JOBS*` and `TABLE_STORAGE*` columns in CSV/Sheet exports. | `external/googlecloud-base/cloud` |
+| **Telemetry & Pareto Profiling** | `bigquery-observability` | Supplies authoritative schema dictionaries (`schema_compute.md`, `schema_storage.md`), `normalized_literals` cohort patterns, and reservation/slot telemetry guidance for interpreting `INFORMATION_SCHEMA.JOBS*` and `TABLE_STORAGE*` exports. | `external/googlecloud-base/cloud` |
 | **Workload Grouping & Lineage** | `datalineage-bigquery-asset-impact-analysis` | Evaluates downstream blast radius when refactoring shared destination tables, views, or partition keys identified during job grouping. | `external/googlecloud-base/cloud` |
 | | `datalineage-summary` | Summarizes upstream source-to-target transformation flows across grouped SQL jobs. | `external/googlecloud-base/cloud` |
 | **Anti-Pattern Diagnosis** | `bigquery-troubleshooting` | Provides the 4-step cost diagnostic funnel and root-cause analysis workflows for execution graph bottlenecks, shuffle spills, and data skew. | `external/googlecloud-base/cloud` |
@@ -100,7 +99,7 @@ The [`bq-sql-optimizer`](./bq-sql-optimizer.json) cluster bundles **12 skills** 
 
 ## 3. Missing Skills Analysis (Catalog Gaps)
 
-While the upstream catalog provides strong foundational rules for individual BigQuery SQL rewrites (`bigquery-sql`), DDL partitioning (`bigquery-optimization`), and slot heuristics (`bigquery-slot-cost-optimizer`), it assumes interactive `gcloud`/`bq` CLI access and single-query analysis. To support **automated, batch-scale offline optimization from CSV/Google Sheets**, the following capability gaps exist and are recommended for creation in `internal/data-platform/skills/`:
+While the upstream catalog provides strong foundational rules for individual BigQuery SQL rewrites (`bigquery-sql`), DDL partitioning and capacity optimization (`bigquery-optimization`), and telemetry/execution diagnostics (`bigquery-observability`, `bigquery-troubleshooting`), it assumes interactive `gcloud`/`bq` CLI access and single-query analysis. To support **automated, batch-scale offline optimization from CSV/Google Sheets**, the following capability gaps exist and are recommended for creation in `internal/data-platform/skills/`:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐

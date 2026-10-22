@@ -105,3 +105,18 @@ To avoid duplication, the full **Customer Glossary of Terms** and **Stakeholder 
 | **{{ARCHITECT_FULL_NAME}}** | Google Cloud | `@{{GOOGLE_HANDLE}}` | `{{ASR_VARIANT_1}}`, `{{ASR_VARIANT_2}}` |
 | **{{PARTNER_FULL_NAME}}** | External Partner | `@{{PARTNER_HANDLE}}` | `{{ASR_VARIANT_1}}` |
 
+---
+
+## 6. Sandbox GCP Demo Environment & Persona Accounts (Internal Only — Optional)
+
+> [!IMPORTANT]
+> **Local-Only Demo Configuration (`gcp-console-demo-generator`)**:
+> Because `specs/specs_project.md` is excluded from Google Drive synchronization, store your single Sandbox / Argolis GCP Project ID and test persona emails here so `gcp-console-demo-generator` can provision demo assets in `.runtime/` and mask these internal identifiers with customer-aligned aliases in all screenshots and `project/` deliverables.
+
+| Parameter / Persona Role | Internal Sandbox / Argolis Value | Customer-Facing Story Alias (`docs/` & DOM Mask) | Notes |
+| :--- | :--- | :--- | :--- |
+| **`SANDBOX_PROJECT_ID`** | `{{SANDBOX_PROJECT_ID}}` | `gcp-producer-domain` / `gcp-consumer-domain` | Single existing Sandbox GCP project hosting prefixed `<demo>_*` assets |
+| **`SANDBOX_REGION` / `BQ_LOCATION`** | `{{SANDBOX_REGION}}` / `{{BQ_LOCATION}}` | `{{BQ_LOCATION}}` | Regional / multi-regional location for demo datasets & exchanges |
+| **Persona: `producer` (Owner / Steward)** | `{{PRODUCER_ARGOLIS_EMAIL}}` | `steward@producer-domain` | Persistent Chrome CDP profile cached by email |
+| **Persona: `consumer` (Subscriber / Analyst)** | `{{CONSUMER_ARGOLIS_EMAIL}}` | `analyst@consumer-domain` | Least-privilege test user demonstrating CLS/RLS/Egress enforcement |
+

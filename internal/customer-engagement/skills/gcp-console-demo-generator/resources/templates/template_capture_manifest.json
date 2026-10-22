@@ -1,0 +1,82 @@
+{
+  "env_file": "demo_env.json",
+  "output_dir": "../screenshots/{{DEMO_STEM}}",
+  "viewport": {
+    "width": 1600,
+    "height": 1000,
+    "device_scale_factor": 2
+  },
+  "dom_replacements": {
+    "{{REAL_SANDBOX_PROJECT_ID}}": "{{PRODUCER_PROJECT_ALIAS}}"
+  },
+  "scenes": [
+    {
+      "id": "act-01-publisher-listing",
+      "persona": "producer",
+      "project_display_alias": "{{PRODUCER_PROJECT_ALIAS}}",
+      "output_file": "act-01-publisher-listing.png",
+      "url": "https://console.cloud.google.com/bigquery/analytics-hub/exchanges?project={{REAL_SANDBOX_PROJECT_ID}}",
+      "wait_until": "domcontentloaded",
+      "wait_for_spinners": true,
+      "settle_ms": 1000,
+      "actions": [
+        {
+          "type": "wait_for_text",
+          "text": "{{EXCHANGE_DISPLAY_NAME}}",
+          "timeout_ms": 30000
+        }
+      ],
+      "callouts": [
+        {
+          "step": 1,
+          "selector": "text={{EXCHANGE_DISPLAY_NAME}}",
+          "color": "amber",
+          "anchor": "top-left",
+          "label": "Published Domain Exchange"
+        }
+      ]
+    },
+    {
+      "id": "act-02-subscriber-query",
+      "persona": "consumer",
+      "project_display_alias": "{{CONSUMER_PROJECT_ALIAS}}",
+      "output_file": "act-02-subscriber-query.png",
+      "url": "https://console.cloud.google.com/bigquery?project={{REAL_SANDBOX_PROJECT_ID}}",
+      "wait_until": "domcontentloaded",
+      "wait_for_spinners": true,
+      "settle_ms": 1200,
+      "actions": [
+        {
+          "type": "bq_set_query",
+          "clean_tabs": true,
+          "sql": "SELECT * FROM `{{REAL_SANDBOX_PROJECT_ID}}.{{DEMO_PREFIX}}_cons_shared.manifests` WHERE seal_integrity_status = 0;"
+        },
+        {
+          "type": "bq_run_query",
+          "wait_for_completion": true,
+          "timeout_ms": 45000
+        }
+      ],
+      "callouts": [
+        {
+          "step": 1,
+          "selector": ".monaco-editor .view-lines",
+          "color": "blue",
+          "anchor": "top-left",
+          "label": "Consumer-Pays SQL Query"
+        },
+        {
+          "step": 2,
+          "x": 380,
+          "y": 652,
+          "width": 1140,
+          "height": 120,
+          "color": "green",
+          "anchor": "bottom-left",
+          "label": "Filtered Rows on Result Canvas"
+        }
+      ]
+    }
+  ]
+}
+

@@ -4,7 +4,6 @@
   "skills": [
     "bigquery-sql",
     "bigquery-optimization",
-    "bigquery-slot-cost-optimizer",
     "bigquery-observability",
     "bigquery-troubleshooting",
     "datalineage-bigquery-asset-impact-analysis",

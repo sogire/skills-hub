@@ -82,7 +82,7 @@ flowchart TD
 
 ## 2. Skill Breakdown by Competency
 
-The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) cluster bundles **21 skills** and **1 plugin** mapped directly to the core architectural pillars:
+The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) cluster bundles **24 skills** and **1 plugin** mapped directly to the core architectural pillars:
 
 | Competency Domain | Skill / Plugin Identifier | Architectural Rationale | Provenance Source |
 | :--- | :--- | :--- | :--- |
@@ -98,8 +98,8 @@ The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) clus
 | | `google-cloud-waf-cost-optimization` | Alignment with Google Cloud WAF principles for cost transparency, rightsizing, and FinOps. | `google-cloud-skills` |
 | | `google-cloud-waf-security` | Alignment with Google Cloud WAF principles for defense-in-depth, least privilege, and identity. | `google-cloud-skills` |
 | | `google-cloud-waf-reliability` | Alignment with Google Cloud WAF principles for high availability, fault tolerance, and DR. | `google-cloud-skills` |
-| **FinOps & Capacity Optimization** | `bigquery-optimization` | SQL query tuning, partitioning, clustering, anti-pattern detection, and execution plan profiling. | `google-cloud-skills` |
-| | `bigquery-slot-cost-optimizer` | BigQuery Editions slot reservation sizing, autoscaling configuration, and commitments. | `google-cloud-skills` |
+| **FinOps & Capacity Optimization** | `bigquery-optimization` | BigQuery Editions capacity planning, reservation rightsizing, partitioning/clustering DDL, and SQL tuning. | `external/googlecloud-base/cloud` |
+| | `bigquery-observability` | Auditing reservation capacity, slot contention, autoscaling saturation, and compute/storage billable usage via `INFORMATION_SCHEMA` and Cloud Monitoring. | `external/googlecloud-base/cloud` |
 | **Security & Landing Zones** | `google-cloud-recipe-foundation-builder` | Enterprise landing zone automation, folder hierarchies, organizational policies, and project factories. | `google-cloud-skills` |
 | | `iam-helper-for-policy-management` | Designing least-privilege IAM policies, condition bindings, and service account perimeters. | `gcp-developer-assist-skills` |
 | | `iam-helper-for-privileged-access-management` | Enforcing just-in-time (JIT) access and Privileged Access Management (PAM) for production data. | `gcp-developer-assist-skills` |
@@ -110,6 +110,7 @@ The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) clus
 | **Modernization & Translation** | `dbt-sf-to-bq-translator` | Automated migration rules, SQL dialect conversion, and dbt models from Snowflake to BigQuery. | `data-engineer` |
 | **Customer Engagement & Diagrams** | `gcp-project-copilot` | End-to-end customer architecture workspace management, meeting synthesis, and Google Docs synchronization. | `internal/customer-engagement` |
 | | `gcp-architecture-diagram` | Generates official Google Cloud Reference Architecture `.svg` diagrams from declarative JSON specs or Mermaid flowcharts. | `internal/customer-engagement` |
+| | `gcp-console-demo-generator` | Story-driven GCP demo design, single-Sandbox asset provisioning (`.runtime/`), and sanitized multi-persona Cloud Console screenshot capture. | `internal/customer-engagement` |
 | **Plugin** | `googlecloud-data` | Bundled plugin providing ready-to-run rules and data engineering standards for Google Cloud. | `external/googlecloud-data` |
 
 ---

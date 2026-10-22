@@ -10,7 +10,7 @@
     "google-cloud-waf-security",
     "google-cloud-waf-reliability",
     "bigquery-optimization",
-    "bigquery-slot-cost-optimizer",
+    "bigquery-observability",
     "datalineage-summary",
     "datalineage-bigquery-asset-impact-analysis",
     "federate-lakehouse-catalog",
@@ -24,7 +24,8 @@
     "gcs-security-assessment",
     "accidental-data-loss-prevention",
     "gcp-project-copilot",
-    "gcp-architecture-diagram"
+    "gcp-architecture-diagram",
+    "gcp-console-demo-generator"
   ],
   "plugins": [
     "googlecloud-data"
