@@ -33,7 +33,7 @@ description: >-
   3. **Analyzing customer meeting notes**: Extracting technical questions, architectural challenges, stakeholder rosters, and glossary terms from Google Meet notes (`https://docs.google.com/document/d/<DOC_ID>`).
   4. **Answering one or more technical questions (or a domain/session group) and/or generating 1-slide question summary prompts**: Analyzing relevant Google Cloud skills available in the workspace to evaluate selected questions (`[D#-Q##]` / `[P1-Q##]`), saving an individual structured answer per question in `project/questions/` using [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md), and synchronizing `project/questions/` with Google Drive.
   5. **Promoting a domain challenge into a deep-dive workstream**: Creating architectural evaluations and slide guides under `project/topics/<topic-slug>/docs/`.
-  6. **Synchronizing the workspace with Google Drive**: Running [`scripts/sync_drive.py`](./scripts/sync_drive.py) from the workspace to mirror folders, import/update native Google Docs, and refresh Section 2.2 of `specs/specs_project.md`.
+  6. **Synchronizing the workspace with Google Drive**: Running [`scripts/sync_drive.py`](./scripts/sync_drive.py) from the workspace to mirror folders, import/update native Google Docs and assets, and persist all Drive IDs, URLs, and SHA-256 content hashes in `specs/gdrive_sync_manifest.json`.
   7. **Exporting the cumulative question list to CSV for Google Sheets**: Running [`scripts/export_questions_csv.py`](./scripts/export_questions_csv.py) to parse all coded questions (`[D#-Q##]` / `[P1-Q##]`) from `project/common/project_questions-log.md` into `project/questions/question-list.csv` (`Updated,Code,Section,Asked By,Session Date,Question`).
   8. **Generating a story-driven GCP Console screenshot demo**: Collaborating with sibling skill [`gcp-console-demo-generator`](../gcp-console-demo-generator/SKILL.md) to build Act-by-Act visual demo guides, single-Sandbox GCP setups (`.runtime/`), and sanitized multi-persona Console screenshots under `project/topics/<topic-slug>/demos/<demo-slug>/`.
 - **Do NOT activate when (Anti-Scope)**:
@@ -101,9 +101,12 @@ Every customer engagement workspace is powered by **two project-specific configu
    - **Keyword Expansion First**: If a meeting introduces a sub-topic sharing the same governance boundary or GCP service family as an existing domain `D#`, map it to `D#` and append the new keywords in `specs/specs_project.md`.
    - **Interactive Approval for `D(n+1)`**: If a meeting introduces a genuinely distinct architectural pillar ($\ge 2$ questions or a dedicated agenda segment outside `D1..Dn`), pause before writing files and use `ask_question` to confirm whether to create `D(n+1)` or merge into an existing domain.
    - **Logical Slug First**: Record new domain slugs in `specs/specs_project.md` as plain code (`` `<new-slug>` ``) without creating an empty folder. Create `project/topics/<new-slug>/docs/` only when a deep-dive deliverable is actually generated.
-5. **Strict Template Adherence & Subagent Delegation Gate (`project/questions/`)**:
-   - Every question evaluation written to `<workspace-root>/project/questions/` MUST strictly match [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md) (exact dual H1 header, exact 7-row metadata table with **zero** skills/status rows, and exact 6 numbered `##` sections).
-   - **Subagent Batch Rule**: Whenever delegating question batches to parallel subagents (`invoke_subagent`), the parent prompt MUST pass the absolute path to `<skill-dir>/resources/templates/template_answers_to_questions.md`, instruct every subagent to read that template verbatim via `read_file` **before** authoring any file, forbid improvising custom headings (`Original Question`, `TL;DR`, bulleted metadata, etc.), and require passing [`scripts/validate_question_answers.py`](./scripts/validate_question_answers.py) (`exit 0`) prior to completion.
+5. **Strict Template Adherence, External-Skill-Only Section 6 & Anti-Hallucination Gate (`project/questions/`)**:
+   - Every question evaluation written to `<workspace-root>/project/questions/` MUST strictly match [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md) (exact dual H1 header, exact 7-row metadata table with **zero** skills/status rows, exact 6 numbered `##` sections, and the 4-column Section 6 validation matrix).
+   - **Never List `agyhub` Internal or IDE Meta-Skills in Section 6**: `## 6. Skills Employed` is customer-facing and MUST list **only external Google Cloud / technical domain skills** (`skills-hub/external/*`, e.g., `bigquery-optimization`, `dataform-bigquery`, `iam-helper-for-policy-management`, `retrieving-developer-knowledge`). Strictly exclude `agyhub` internal skills (`skills-hub/internal/*`: `gcp-project-copilot`, `gcp-architecture-diagram`, `gcp-console-demo-generator`, `agyhub-*`, `template-skill`) and IDE/doc utilities (`agy-customizations`, `antigravity-guide`, `gdocs`, `gdrive`).
+   - **Deprecated External Skill Lifecycle Rule**: If an existing historical answer cites an external skill that was valid when authored but later deprecated (e.g., `bigquery-slot-cost-optimizer`), **preserve that historical reference** during routine edits or Drive syncs. Only remove/replace deprecated skills when the user explicitly asks to **completely regenerate** the answer—in which case the regenerated answer MUST strictly use **currently active** external skills (`--require-active-skills`).
+   - **100% Skill & Official-Doc Grounding for Code Sections**: Read every cited external skill's `SKILL.md` and relevant `references/*.md` via `read_file` **before** authoring. Whenever any code block (`sql`, `sqlx`, `bash`, `yaml`, `json`, `python`, `hcl`, `lookml`), `gcloud`/`bq` CLI flag, DDL option, or IAM permission is not explicitly covered in the read workspace skills, **mandatorily** execute `retrieving-developer-knowledge` (`search_documents` / `get_documents` / `answer_query` MCP or REST API) to verify exact syntax before writing code, and map 100% of code-bearing `§2.x` subsections and `§3.1` in Section 6.
+   - **Subagent Batch Rule**: Whenever delegating question batches to parallel subagents (`invoke_subagent`), the parent prompt MUST pass the absolute path to `<skill-dir>/resources/templates/template_answers_to_questions.md`, instruct every subagent to read both that template and every target external skill's `SKILL.md` via `read_file` **before** authoring any file, forbid internal skills in Section 6 or improvised headings, and require passing [`scripts/validate_question_answers.py`](./scripts/validate_question_answers.py) with `--require-active-skills` (`exit 0`) prior to completion.
 
 ---
 
@@ -117,13 +120,15 @@ Every customer engagement workspace is powered by **two project-specific configu
 
 Read **[`references/workspace_setup_and_customization.md`](./references/workspace_setup_and_customization.md)** for full details.
 
-1. **Collect Customer & Drive Parameters**:
+1. **Collect Customer, Drive & Taxonomy Parameters**:
    - If the user provides a kickoff Google Meet document (`https://docs.google.com/document/d/<DOC_ID>`), read its tabs via `gdocs` first to auto-extract `CUSTOMER_NAME`, `PROJECT_NAME`, `PROGRAM_NAME`, `PILOT_DOMAIN`, `UPCOMING_DOMAINS`, `EXTERNAL_PARTNERS`, initial `D1..Dn` domains, and ASR aliases.
    - Ask the user for any missing parameters (especially the **Root Project Google Drive Folder URL or ID** where `project/` will be synchronized).
+   - **Select Domain Taxonomy Preset (`--taxonomy`)**: Default to `data-analytics-agents` (**3 Data + 2 Analytics + 2 Agents + `P1`**). If the engagement is strictly focused on AI Agents, Conversational Analytics, and MCP grounding, offer or pass `--taxonomy agentic-ai-platform` (run `init_workspace.py --list-taxonomies` to inspect all presets defined in [`resources/taxonomies/taxonomy_presets.json`](./resources/taxonomies/taxonomy_presets.json)).
 2. **Execute [`scripts/init_workspace.py`](./scripts/init_workspace.py)**:
    ```bash
    python3 <skill-dir>/scripts/init_workspace.py \
      --workspace <workspace-root> \
+     --taxonomy data-analytics-agents \
      --customer-name "<Customer Name>" \
      --customer-domain "<customer.com>" \
      --project-name "<Project Name>" \
@@ -136,7 +141,7 @@ Read **[`references/workspace_setup_and_customization.md`](./references/workspac
      --discover-drive \
      --with-gemini-rules
    ```
-   This scaffolds `specs/`, `project/common/`, `project/meetings/`, `project/topics/`, renders `specs/specs_project.md` and `specs/gdrive_sync_manifest.json`, and initializes all 5 living master documents in `project/common/`.
+   This scaffolds `specs/`, `project/common/`, `project/meetings/`, `project/topics/`, `project/questions/`, renders `specs/specs_project.md` and `specs/gdrive_sync_manifest.json`, and initializes all 5 living master documents in `project/common/`.
 
 ### Workflow 2: Customize `specs/specs_project.md` & `specs/gdrive_sync_manifest.json`
 
@@ -203,7 +208,7 @@ Whenever synchronizing `<workspace-root>/project/` with Google Drive:
    # Or preview actions first without modifying Google Drive:
    python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --dry-run
    ```
-   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder (including `questions/`, `diagrams/<doc-stem>/`, `screenshots/<demo-stem>/`, and `diagrams/<doc-stem>/specs/`), ensures every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`, uploads/updates standalone `.svg`, `.png`, `.json`, and `.csv` assets first (Phase 2), partitions `.md` files into topological link-dependency waves (`topics/` & leaf `questions/` $\to$ `meetings/` $\to$ `common/`, running all updates to existing Google Docs concurrently in Wave 0 across `--jobs` workers), prefetches open-comment status in a single `gdocs readonly stream comments` batch call, rewrites internal `.md` and non-image asset links (`[foo.png](...)`, `[question-list.csv](...)`) to Google Docs/Drive URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), atomically checkpoints `specs/gdrive_sync_manifest.json`, and refreshes Section 2.2 in `specs/specs_project.md`.
+   `sync_drive.py` automatically creates missing Drive subfolders under the Root Project Drive Folder (including `questions/`, `diagrams/<doc-stem>/`, `screenshots/<demo-stem>/`, and `diagrams/<doc-stem>/specs/`), ensures every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`, uploads/updates standalone `.svg`, `.png`, `.json`, and `.csv` assets first (Phase 2), partitions `.md` files into topological link-dependency waves (`topics/` & leaf `questions/` $\to$ `meetings/` $\to$ `common/`, running all updates to existing Google Docs concurrently in Wave 0 across `--jobs` workers), prefetches open-comment status in a single `gdocs readonly stream comments` batch call, rewrites internal `.md` and non-image asset links (`[foo.png](...)`, `[question-list.csv](...)`) to Google Docs/Drive URLs, imports/updates native Google Docs (preserving open comments via 3-way `gdocs mutate sync`), and atomically checkpoints all folder, document, and asset state into `specs/gdrive_sync_manifest.json`.
 
 ### Workflow 5: Promote a Domain Challenge into a Deep-Dive Topic Workstream (`project/topics/`)
 
@@ -218,32 +223,42 @@ When the user asks to answer one or more technical questions (e.g., `D3-Q14`, `D
 - [ ] **Step 1 — Select Target Question(s) & Load Project Context**:
   - Read `<workspace>/specs/specs_project.md`, `project/common/project_questions-log.md`, and `project/common/project_challenges.md` to extract the verbatim question text, `Asked By` stakeholder attribution, session date, transcript deep-link, and customer architectural context for each selected question (`[D#-Q##]` or `[P1-Q##]`).
   - **One Individual File Per Question by Default**: Even when multiple questions or a domain/session group are selected, generate **one individual Markdown response file per question** (do not aggregate multiple questions into a single file unless explicitly instructed by the user).
-- [ ] **Step 2 — Analyze Available Workspace Google Cloud Skills & Official Documentation**:
-  - Inspect the skills available in the workspace that match the question's technical domain (e.g., `bigquery-sql`, `bigquery-optimization`, `bigquery-basics`, `bigquery-slot-cost-optimizer`, `bigquery-observability`, `iam-helper-for-policy-management`, `google-cloud-waf-security`, `gcp-spark`, `dataform-bigquery`, `dbt-bigquery`, `retrieving-developer-knowledge`, etc.).
-  - Read the `SKILL.md` and relevant `references/*.md` files of those matching workspace skills, and verify exact IAM permissions, quotas, DDL syntax, or platform limits against official Google Cloud documentation (`https://docs.cloud.google.com/...`).
+- [ ] **Step 2 — Read External Workspace Google Cloud Skills & Ground Code Gaps via Official Documentation**:
+  - Inspect the **currently active external** Google Cloud / technical skills in the workspace that match the question's domain (e.g., `bigquery-sql`, `bigquery-optimization`, `bigquery-basics`, `bigquery-observability`, `iam-helper-for-policy-management`, `google-cloud-waf-security`, `gcp-spark`, `dataform-bigquery`, `dbt-bigquery`, `retrieving-developer-knowledge`, etc.). Never select `agyhub` internal skills (`gcp-project-copilot`, `gcp-architecture-diagram`, `gcp-console-demo-generator`, `agyhub-*`) or IDE meta-skills for Section 6.
+  - **Read-Before-Write Gate**: Call `read_file` on `SKILL.md` and the specific `references/*.md` files of each selected external skill **before** authoring the evaluation.
+  - **Zero-Guess Code Grounding (`retrieving-developer-knowledge` on Skill Gaps)**: Whenever any `gcloud`/`bq` CLI flag, SQL DDL `OPTIONS(...)` key, YAML/JSON/Terraform schema, LookML parameter, or granular IAM permission (`<service>.<resource>.<verb>`) is not verbatim in a read workspace skill, execute `retrieving-developer-knowledge` (`search_documents` / `get_documents` / `answer_query` MCP or `developerknowledge.googleapis.com/v1` REST API) to verify the exact specification against official Google Cloud documentation (`https://docs.cloud.google.com/...` / `https://cloud.google.com/...`) before writing code.
 - [ ] **Step 3 — Evaluate & Save Individual Answer in `project/questions/`**:
   - Ensure `<workspace>/project/questions/` exists and save each question's evaluation as `<workspace>/project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` (e.g., `project/questions/D3-Q14_bigquery-row-limits-and-export-controls.md`).
   - Follow the canonical structure in [`resources/templates/template_answers_to_questions.md`](./resources/templates/template_answers_to_questions.md):
     1. **Header & Metadata Table**: Include `Customer / Project`, `Question ID` (`[D#-Q##]`), the verbatim **`Question` phrase**, `Canonical Domain`, `Asked By`, `Source Session & Log` (portable relative links), and `Date Answered` *(do not list skills in the top metadata table)*.
     2. **Section 1 — Executive Summary & Solution Matrix**: Direct architectural answer and a summary table (`| Requirement / Sub-Question | Recommended Google Cloud Solution | Architectural Layer | Implementation / Enforcement Mechanism |`) mapping each sub-requirement to its recommended Google Cloud solution, layer, and implementation/enforcement mechanism.
-    3. **Section 2 — Technical Evaluation & Google Cloud Architecture**: Numbered `### 2.1`, `### 2.2`, `### 2.3`, ... subsections (including any architecture diagrams or trade-off matrices so zero unnumbered `###` headings exist in Section 2) with production-ready SQL DDL, IAM JSON, CLI, or Terraform snippets. Adapt subsection titles semantically to the question's nature—never force a single noun across all answers:
+    3. **Section 2 — Technical Evaluation & Google Cloud Architecture**: Numbered `### 2.1`, `### 2.2`, `### 2.3`, ... subsections (including any architecture diagrams or trade-off matrices so zero unnumbered `###` headings exist in Section 2) with syntactically valid, skill/doc-verified SQL DDL, IAM JSON (strictly valid JSON without `//` comments), `gcloud`/`bq` CLI, YAML, Python, LookML, or Terraform snippets. Adapt subsection titles semantically to the question's nature—never force a single noun across all answers:
        - **`Step 1 / 2 / 3`** (or **`Stage 1 / 2 / 3`**) for chronological workflows, lifecycles, or troubleshooting runbooks (`### 2.1 Step 1 — ...`).
        - **`Control 1 / 2 / 3`** for defense-in-depth security, IAM, RLS/CLS, data-egress, or FinOps guardrails (`### 2.1 Control 1 — ...`).
        - **`Pattern A / B / C`** for distinct architectural design patterns or implementation alternatives (`### 2.1 Pattern A — ...`).
        - **Direct Descriptive Titles** (`### 2.x <Descriptive Title>`) for architecture diagrams, comparative trade-off matrices, cost worksheets, platform mechanics, or mixed evaluations.
-    4. **Section 3 — IAM Permissions, Security Guardrails & Platform Caveats**: Exact IAM permission matrix (including predefined roles to avoid and how to restrict via Custom Roles or IAM v2 Deny Policies) plus `> [!IMPORTANT]` callouts on critical platform caveats or edge cases.
+    4. **Section 3 — IAM Permissions, Security Guardrails & Platform Caveats**: Exact IAM permission matrix (listing granular 3-part `<service>.<resource>.<verb>` permissions in Column 2 and `roles/...` predefined roles in Column 3, never swapping roles into Column 2) plus `> [!IMPORTANT]` callouts on critical platform caveats or edge cases.
     5. **Section 4 — Summary Recommendation & Next Steps for `{{CUSTOMER_NAME}}`**: Prioritized recommendation (`> [!TIP]`), owner-attributed next steps, and portable relative links to `../common/project_questions-log.md` and `../common/project_challenges.md`.
     6. **Section 5 — Google Cloud Documentation Reference Links**: Curated list of official Google Cloud documentation URLs supporting the evaluation.
-    7. **Section 6 — Skills Employed**: Structured table listing each workspace skill employed in the analysis (`| Workspace Skill | Technical Contribution to This Evaluation |`) and its specific technical contribution to the evaluation.
-  - **Subagent Delegation Requirement**: If delegating one or more questions to subagents (`invoke_subagent`), pass the exact `<skill-dir>/resources/templates/template_answers_to_questions.md` path in every subagent prompt and require each subagent to read it via `read_file` before writing files. Never let a subagent invent custom `H1`/`H2` headings or put `Grounded Workspace Skills` in the top metadata table.
-- [ ] **Step 3b — Validate Question Answer Structure (`scripts/validate_question_answers.py`)**:
-  - Run the structural validator across the newly generated or updated file(s) and fix any reported deviations before finishing:
+    7. **Section 6 — Skills Employed (4-Column External Skill Validation Matrix)**: Structured 4-column table (`| External Skill | Validated Sections & Code Blocks | Grounding Artifacts Consulted | Technical Contribution to This Evaluation |`) mapping **only external technical skills** (never `gcp-project-copilot` or other `agyhub` internal/IDE meta-skills) to **100% of code-bearing `§2.x` subsections and `§3.1`**, citing the exact on-disk `SKILL.md` / `references/<file>.md` files read or live `retrieving-developer-knowledge` doc lookups executed. *(Note: Preserve previously valid deprecated external skills in historical answers; only replace them with currently active skills when completely regenerating an answer).*
+  - **Subagent Delegation Requirement**: If delegating one or more questions to subagents (`invoke_subagent`), pass the exact `<skill-dir>/resources/templates/template_answers_to_questions.md` path in every subagent prompt, require each subagent to read both `template_answers_to_questions.md` and every cited external skill's `SKILL.md` via `read_file` before writing files, forbid listing internal skills in Section 6, and require each subagent to pass `validate_question_answers.py --require-active-skills --transcript <appDataDir>/brain/<subagent-conversation-id>` inside its own session before completing (since each Antigravity `run_command` sandbox isolates `<appDataDir>/brain/<conversation-id>` per agent).
+- [ ] **Step 3b — Validate Structure, Skill Grounding & Code Anti-Hallucination Gates (`scripts/validate_question_answers.py`)**:
+  - Run the validator across newly generated or regenerated file(s) with `--require-active-skills` (and `--transcript <transcript.jsonl>` when available in an Antigravity session to log-verify every `read_file` / doc lookup call) and fix all reported errors (`exit 0`) before finishing:
     ```bash
-    # Validate all question answers in project/questions/:
-    python3 <skill-dir>/scripts/validate_question_answers.py --workspace <workspace-root>
+    # Validate newly authored or completely regenerated question file(s) (strictly enforces active external skills, 100% §2.x/§3.1 coverage, CLI flags & AST syntax):
+    python3 <skill-dir>/scripts/validate_question_answers.py \
+      --workspace <workspace-root> \
+      --require-active-skills \
+      --file project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md
 
-    # Or validate specific question file(s):
-    python3 <skill-dir>/scripts/validate_question_answers.py --workspace <workspace-root> --file project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md
+    # Optional: include Antigravity execution transcript proof (--transcript automatically enables --require-active-skills):
+    python3 <skill-dir>/scripts/validate_question_answers.py \
+      --workspace <workspace-root> \
+      --transcript <appDataDir>/brain/<conversation-id>/.system_generated/logs/transcript.jsonl \
+      --file project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md
+
+    # Validate all historical + current question answers in project/questions/ (preserves historical deprecated external skills with [WARN]):
+    python3 <skill-dir>/scripts/validate_question_answers.py --workspace <workspace-root>
     ```
 - [ ] **Step 4 — Cross-Link the Answer in `project_questions-log.md` (and Session Log)**:
   - Append `* **Answer:** [<Short Title>](../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md)` under the corresponding question entry in `project/common/project_questions-log.md` (and `../../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` in the per-meeting `YYYYMMDD_questions-log_<slug>.md`).
@@ -314,8 +329,9 @@ When the user asks to design a narrative / "history" demo for a topic (`D1..Dn`)
   - [`scripts/init_workspace.py`](./scripts/init_workspace.py) — Workspace scaffolding & config customization (`specs_project.md` + `gdrive_sync_manifest.json`)
   - [`scripts/sync_drive.py`](./scripts/sync_drive.py) — Dependency-ordered Google Drive & native Google Docs synchronization
   - [`scripts/export_questions_csv.py`](./scripts/export_questions_csv.py) — Export all coded questions from `project/common/project_questions-log.md` to `project/questions/question-list.csv` for Google Sheets import
-  - [`scripts/validate_question_answers.py`](./scripts/validate_question_answers.py) — Validate `project/questions/*.md` files against `template_answers_to_questions.md` and Mermaid/path hygiene guardrails
-- **Canonical Starter Templates**:
+  - [`scripts/validate_question_answers.py`](./scripts/validate_question_answers.py) — Validate `project/questions/*.md` files against `template_answers_to_questions.md`, enforcing external-only Section 6 skill attribution, 100% `§2.x`/`§3.1` skill coverage, offline `gcloud`/`bq` CLI flag schemas, JSON/YAML/Python/SQL syntax, IAM permission grammar, and optional `transcript.jsonl` execution proof
+- **Canonical Starter Templates & Taxonomy Presets**:
+  - [`resources/taxonomies/taxonomy_presets.json`](./resources/taxonomies/taxonomy_presets.json) — Selectable canonical architectural domain taxonomy presets (`data-analytics-agents` [default], `agentic-ai-platform`)
   - [`resources/templates/template_specs_project.md`](./resources/templates/template_specs_project.md)
   - [`resources/templates/template_meetings_registry.md`](./resources/templates/template_meetings_registry.md)
   - [`resources/templates/template_members.md`](./resources/templates/template_members.md)

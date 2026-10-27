@@ -35,28 +35,7 @@
 ### 2.2 Synchronized `project/` Google Drive Hierarchy & Native Google Docs Registry
 
 > [!NOTE]
-> Maintained automatically via `sync_drive.py` and [`specs/gdrive_sync_manifest.json`](./gdrive_sync_manifest.json). Run `sync_drive.py` to synchronize any new or modified Markdown files in [`project/`](../project/) to Google Drive.
-
-#### A. Synchronized Drive Subfolders (Under `{{DRIVE_ROOT_FOLDER_NAME}}`)
-
-| Local Directory (`project/...`) | Google Drive Folder Link | Parent Folder |
-| :--- | :--- | :--- |
-| `common/` | [`{{COMMON_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{COMMON_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
-| `meetings/` | [`{{MEETINGS_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{MEETINGS_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
-| `questions/` | [`{{QUESTIONS_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{QUESTIONS_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
-| `topics/` | [`{{TOPICS_FOLDER_ID}}`](https://drive.google.com/drive/folders/{{TOPICS_FOLDER_ID}}) | `{{DRIVE_ROOT_FOLDER_NAME}}` |
-
-#### B. Synchronized Native Google Docs (0 Documents)
-
-| Layer / Scope | Local Markdown Source (`project/...`) | Synchronized Google Doc |
-| :--- | :--- | :--- |
-| **Layer 1 (`common/`)** | [`common/meetings_registry.md`](../project/common/meetings_registry.md) | [meetings_registry](https://docs.google.com/document/d/{{DOC_ID}}/edit) |
-
-#### C. Synchronized Diagram & Spec Assets (0 Files)
-
-| Parent Folder | Local Asset Path (`project/...`) | Synchronized Google Drive File |
-| :--- | :--- | :--- |
-| *(None yet — run `sync_drive.py` to synchronize diagrams and JSON specs)* | — | — |
+> All synchronized Google Drive subfolder IDs, native Google Docs URLs, diagram/screenshot/CSV asset links, and SHA-256 content hashes for [`project/`](../project/) are managed automatically in [`specs/gdrive_sync_manifest.json`](./gdrive_sync_manifest.json) via `sync_drive.py`.
 
 ---
 
@@ -74,14 +53,14 @@ All extracted questions (`questions-log`) and architectural topics (`challenges`
 
 | Domain ID | Canonical Domain Name | `project/topics/` Directory Slug | Core Technical Scope & Keywords |
 | :--- | :--- | :--- | :--- |
-| **D1** | **Data Mesh, Data Products & Platform Framework** | `platform-framework` | Medallion layer boundaries (`Bronze` / `Silver` / `Gold`), Data Product classification, GCP Project Factory, declarative IaC/Terraform, naming standards |
-| **D2** | **Analytics Hub, Data Sharing & Access Management** | `access-management` | Cross-project IAM vs. Analytics Hub Exchanges/Listings, decoupled compute ("consumer pays"), Dataplex ABAC, Data Clean Rooms, identity propagation |
-| **D3** | **Data Security, Confidentiality & Compliance** | `security-compliance` | Tenant/domain isolation, Sensitive Data Protection (Cloud DLP), BigQuery Column-Level Security (CLS), Dynamic Data Masking, Row-Level Security (RLS) |
-| **D4** | **Data Quality, Schema Evolution & Dead-Letter Queues** | `data-quality-dlq` | Dataplex Data Quality / profiling scans, schema drift handling, enforceable Data Contracts, quarantine / Dead-Letter Queue (DLQ) patterns |
-| **D5** | **Metadata Automation, Knowledge Catalog & Lineage** | `catalog-lineage` | Dataplex Universal Catalog, Business Glossary ingestion, AI-generated metadata descriptions, BigLake unstructured GCS governance, Data Lineage API |
-| **D6** | **Cross-Project Observability & Centralized Monitoring** | `observability-monitoring` | Centralized observability GCP project, cross-project Cloud Logging sinks, BigQuery `INFORMATION_SCHEMA` telemetry, pipeline health dashboards |
-| **D7** | **AI Agents, Data Agent Kit (DAK) & FinOps Guardrails** | `ai-agents-finops` | Data Agent Kit (DAK) evaluation, slot consumption vs. LLM token billing, FinOps guardrails (`maximum_bytes_billed`, dry-runs), hybrid agentic/deterministic split |
-| **P1** | **Project Organization, Workstream Alignment & Delivery Governance** | `project-organization` | Engagement roadmap & milestone prioritization, workshop cadence & review slot scheduling, cross-workstream scope alignment, schema/data handoff logistics & unblocking workarounds |
+| **D1** | **Data Platform Foundation, Ingestion & Data Products** | `platform-framework` | Medallion architecture (`Bronze` / `Silver` / `Gold`), Data Product classification & contracts, batch/streaming ingestion (`Dataflow`, `Pub/Sub`, `DTS`), ELT pipelines (`Dataform`, `dbt`, `Managed Spark`), GCP Project Factory & Terraform IaC |
+| **D2** | **Data Sharing, Consumer Authorization & Access Management** | `access-management` | Consumer application & user authorization models, least-privilege view-level access (`Authorized Views` / `Authorized Datasets`), stable semantic interface datasets, `BigQuery Sharing (Analytics Hub)`, approval workflows & IAM scale quotas |
+| **D3** | **Data Governance, Knowledge Catalog, Quality & Security** | `governance-security` | `Dataplex Universal Catalog` (Knowledge Catalog Data Products, business glossary, aspect types, `Data Lineage`), automated Data Quality & profiling scans, banking/enterprise compliance, `Cloud DLP`, BigQuery Column-Level Security (`Policy Tags` / Dynamic Masking), Row-Level Security (`RLS`), CMEK & `VPC-SC` |
+| **D4** | **Analytics Consumption, Semantic Layer, BI & Applied ML** | `analytics-bi-ml` | Enterprise BI & governed semantic layer (`Looker`, `Conversational Analytics`), analytical SQL patterns, `BigQuery ML` (`BQML`), Python/Spark analytics (`BigFrames`, notebooks), unstructured & graph analytics (`BigLake`, `BigQuery Graph`) |
+| **D5** | **Platform Observability, Capacity Optimization & FinOps** | `observability-finops` | `BigQuery Editions` slot reservations & autoscaling, physical/logical storage & partitioning/clustering optimization, centralized `INFORMATION_SCHEMA` & Cloud Logging telemetry, and producer vs. consumer compute cost attribution |
+| **D6** | **AI Agents Architecture, Orchestration & Data Grounding** | `ai-agents-architecture` | Agentic design & multi-agent orchestration (`Google ADK`, `Gemini Enterprise`), grounding agents on governed Data Products (`Google Cloud MCP`, `BigQuery Data Agents`, `Data Agent Kit`, Vector Search/RAG), and end-to-end identity passthrough (`OAuth On-Behalf-Of` $\rightarrow$ `SESSION_USER()`) |
+| **D7** | **AgentOps, Evaluation, Security Guardrails & AI FinOps** | `agentops-governance` | Agent evaluation datasets & quality metrics (`ADK Eval`, `Vertex AI Evaluation`), agent tracing & telemetry (`Cloud Trace`, `Cloud Logging`), prompt/tool security guardrails (`Model Armor`, IAM tool boundaries), and combined LLM token + BigQuery slot FinOps guardrails |
+| **P1** | **Project Organization, Workstream Alignment & Delivery Governance** | `project-organization` | Engagement roadmap & milestone prioritization, workshop cadence & session preparation, cross-workstream alignment across Data, Analytics & Agents, and PoC/pilot handoff logistics |
 
 ---
 

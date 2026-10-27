@@ -15,8 +15,8 @@
 
 | Segment # | Leadership | Time Range | Lead Presenter(s) | Segment Focus, Demos & Artifacts Shown | Primary Domains |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | **Customer-Led (`{{CUSTOMER_NAME}}`)** | `00:00 – 00:45` | {{CUSTOMER_PRESENTERS}} | Presented current {{PILOT_DOMAIN}} pipeline architecture (`Bronze` / `Silver` / `Gold`), source system ingestion patterns, and governance requirements. | `D1`, `D3`, `D4` |
-| **2** | **Google-Led (`Google Cloud`)** | `00:45 – 01:30` | {{GOOGLE_PRESENTERS}} | Presented Data Mesh product tier boundaries, Analytics Hub zero-copy sharing ("Consumer Pays"), hybrid RBAC/ABAC security patterns, and FinOps guardrails. | `D1`, `D2`, `D3`, `D7` |
+| **1** | **Customer-Led (`{{CUSTOMER_NAME}}`)** | `00:00 – 00:45` | {{CUSTOMER_PRESENTERS}} | Presented current {{PILOT_DOMAIN}} pipeline architecture (`Bronze` / `Silver` / `Gold`), source system ingestion patterns, and governance requirements. | `D1`, `D2`, `D3` |
+| **2** | **Google-Led (`Google Cloud`)** | `00:45 – 01:30` | {{GOOGLE_PRESENTERS}} | Presented Data Mesh product tier boundaries, Analytics Hub / Authorized Views zero-copy sharing, hybrid RBAC/ABAC security patterns, and AI Agent grounding & FinOps guardrails. | `D1`, `D2`, `D3`, `D6`, `D7` |
 
 ---
 

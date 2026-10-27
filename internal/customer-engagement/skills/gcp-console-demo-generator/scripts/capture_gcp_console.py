@@ -270,6 +270,10 @@ async (payload) => {
     'cfc-cookie-banner',
     '.cfc-promo-banner',
     '.cfc-survey-banner',
+    '.mat-mdc-tooltip',
+    '.mat-tooltip',
+    'mat-tooltip-component',
+    '.cdk-overlay-container [role="tooltip"]',
     'img[src*="googleusercontent.com"]',
     'img[src*="lh3.google.com"]',
     ...(payload.extra_hide_selectors || [])
@@ -711,7 +715,7 @@ class CDPPageSession:
 
   def click_selector(self, selector: str, timeout_ms: int = 30000, optional: bool = False) -> None:
     try:
-      info = self.wait_for_selector(selector, timeout_ms=2000 if optional else timeout_ms)
+      info = self.wait_for_selector(selector, timeout_ms=timeout_ms)
     except RuntimeError:
       if optional:
         return
@@ -915,7 +919,8 @@ def wait_for_spinners_gone(session: CDPPageSession, timeout_ms: int = 20000) -> 
 def execute_scene_actions(session: CDPPageSession, actions: List[Dict[str, Any]]) -> None:
   for act in actions:
     kind = act.get("type", "").strip()
-    timeout_ms = int(act.get("timeout_ms", 30000))
+    default_timeout = 3000 if act.get("optional") else 30000
+    timeout_ms = int(act.get("timeout_ms", default_timeout))
 
     if kind == "goto":
       session.goto(act["url"], timeout_ms=timeout_ms)
@@ -1042,7 +1047,9 @@ def execute_scene_actions(session: CDPPageSession, actions: List[Dict[str, Any]]
             {"type": "keyUp", "key": "Backspace", "code": "Backspace", "windowsVirtualKeyCode": 8},
         )
         time.sleep(0.15)
-        session.ws.call("Input.insertText", {"text": sql})
+        # Strip leading line indentation before Input.insertText so Monaco auto-indent does not staircase multi-line SQL
+        normalized_sql = "\n".join(line.lstrip(" \t") for line in sql.splitlines())
+        session.ws.call("Input.insertText", {"text": normalized_sql})
       time.sleep(0.8)
     elif kind == "bq_run_query":
       run_timeout_ms = int(act.get("timeout_ms", 45000))
@@ -1339,15 +1346,37 @@ INSPECT_SCENE_DOM_JS = r"""
     if (banners.length >= 25) break;
   }
 
+  const layoutPanes = [];
+  const paneSeen = new Set();
+  for (const el of document.querySelectorAll('nav, [role="navigation"], [role="tree"], [role="main"], [role="region"], cfc-panel, mat-drawer, mat-sidenav, mat-card, cfc-table')) {
+    const box = vis(el);
+    if (!box || box.width < 120 || box.height < 80) continue;
+    const key = `${box.x},${box.y},${box.width},${box.height}`;
+    if (paneSeen.has(key)) continue;
+    paneSeen.add(key);
+    layoutPanes.push({
+      tag: el.tagName.toLowerCase(),
+      role: el.getAttribute('role') || '',
+      label: (el.getAttribute('aria-label') || '').slice(0, 80),
+      ...box,
+    });
+    if (layoutPanes.length >= 25) break;
+  }
+
+  const bodyText = (document.body && document.body.innerText) ? document.body.innerText : '';
+  const routeError = /Page not found|URL not found/i.test(bodyText);
+
   return {
     url: String(location.href || ''),
     title: String(document.title || ''),
     actual_email: actualEmail,
+    route_error: routeError,
     viewport: {
       width: window.innerWidth,
       height: window.innerHeight,
       devicePixelRatio: window.devicePixelRatio,
     },
+    layout_panes: layoutPanes,
     tabs,
     buttons,
     canvases,
@@ -1712,7 +1741,11 @@ def run_capture(args: argparse.Namespace) -> int:
           return 0
 
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
-        # Blur Monaco/active inputs before DOM text replacement so cursor blink does not re-render text nodes
+        # Park virtual mouse cursor at (0, 0) and blur active inputs so hover tooltips and cursor blink never pollute screenshots
+        try:
+          session.ws.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 0, "y": 0})
+        except Exception:
+          pass
         session.eval_js(
             "() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }"
         )

@@ -37,10 +37,13 @@ Cloud Console is an Angular Material SPA where network requests continue in the 
      {"type": "bq_run_query", "wait_for_completion": true, "timeout_ms": 45000}
      ```
    - Write the **real** `<SANDBOX_PROJECT_ID>.<demo_prefix>_...` table name in `bq_set_query` so BigQuery executes the real query against the Sandbox project. Right before snapping the PNG (after CSS/overlay reflow settles), `capture_gcp_console.py` synchronously rewrites `<SANDBOX_PROJECT_ID>` $\rightarrow$ `gcp-supplychain-domain` and `lc_demo_cons_cargo_shared` $\rightarrow$ `lost_cargo_shared` inside Monaco `.view-lines` and query tabs!
-4. **2026 BigQuery Studio HTML5 `<canvas>` Result Grid Rule**:
+4. **2026 BigQuery Studio HTML5 `<canvas>` Result Grid & `1600×1000` Viewport Coordinate Rule**:
    - BigQuery Studio paints query result rows and cell values onto an **HTML5 `<canvas>`**, **not** HTML `<td>` elements!
    - **Never** use `wait_for_text` or `selector: "text=..."` on query result cell values (they do not exist in the DOM and will always time out). Rely on `bq_run_query` (`"wait_for_completion": true`) or DOM chrome text (`"Query results"`, `"Access Denied:"`).
+   - Always check `viewport.width` (`1600`) and `viewport.height` (`1000`) and run `--inspect-scene <scene-id>` (`layout_panes`, `tabs`, `canvases`) before hardcoding `(x, y, width, height)` callout coordinates—never estimate coordinates on a `1000px` mental grid when the browser viewport is `1600×1000`.
    - Highlight `<canvas>` result rows using explicit viewport coordinates (`1600x1000` viewport: typically `"x": 380, "y": 652, "width": 1140, "height": 120` for the first 4 rows, or `"height": 175` for 6 rows) with `"anchor": "bottom-left"` or `"top-right"` so the callout pill never obscures data cells!
+5. **`optional: true` vs. Required Tab Navigation Clicks**:
+   - Never set `"optional": true` on primary scene navigation clicks (such as switching to `[role="tab"]:has-text("Lineage")`, `[role="tab"]:has-text("Data Profile")`, or `[role="tab"]:has-text("Data Quality")`). Always precede tab clicks with `wait_for_selector` (`timeout_ms: 30000`) and follow with `wait_for_spinners_gone`.
 
 ---
 

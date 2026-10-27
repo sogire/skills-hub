@@ -31,7 +31,104 @@ from typing import Dict, List, Optional, Tuple
 
 SKILL_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 TEMPLATES_DIR = os.path.join(SKILL_ROOT, "resources", "templates")
+TAXONOMIES_FILE = os.path.join(
+    SKILL_ROOT, "resources", "taxonomies", "taxonomy_presets.json"
+)
+DEFAULT_TAXONOMY = "data-analytics-agents"
 GDRIVE_BIN = "/google/bin/releases/gemini-agents-gdrive/gdrive"
+
+
+def load_taxonomy_presets() -> Tuple[str, Dict[str, Dict]]:
+  """Load canonical domain taxonomy presets from resources/taxonomies/taxonomy_presets.json."""
+  if not os.path.exists(TAXONOMIES_FILE):
+    return DEFAULT_TAXONOMY, {}
+  try:
+    with open(TAXONOMIES_FILE, "r", encoding="utf-8") as f:
+      data = json.load(f)
+    default_id = data.get("default_taxonomy", DEFAULT_TAXONOMY)
+    presets = data.get("presets", {})
+    return default_id, presets
+  except (OSError, json.JSONDecodeError):
+    return DEFAULT_TAXONOMY, {}
+
+
+def render_specs_taxonomy_table(preset: Dict) -> str:
+  """Render the Section 3 Markdown table for specs/specs_project.md from a taxonomy preset."""
+  lines = [
+      "| Domain ID | Canonical Domain Name | `project/topics/` Directory Slug | Core Technical Scope & Keywords |",
+      "| :--- | :--- | :--- | :--- |",
+  ]
+  for dom in preset.get("domains", []):
+    d_id = dom["id"]
+    d_name = dom["name"]
+    d_slug = dom["slug"]
+    d_kw = dom["keywords"].replace(" -> ", " $\\rightarrow$ ")
+    lines.append(
+        f"| **{d_id}** | **{d_name}** | `{d_slug}` | {d_kw} |"
+    )
+  return "\n".join(lines)
+
+
+def apply_taxonomy_to_specs_text(text: str, preset: Dict) -> str:
+  """Replace the Section 3 domain table in specs_project.md with the selected taxonomy preset."""
+  new_table = render_specs_taxonomy_table(preset)
+  pattern = re.compile(
+      r"\| Domain ID \| Canonical Domain Name \| `project/topics/` Directory Slug \| Core Technical Scope & Keywords \|\n\|[^\n]+\|\n(?:\|[^\n]+\|\n?)+",
+      flags=re.MULTILINE,
+  )
+  return pattern.sub(new_table + "\n", text)
+
+
+def apply_taxonomy_to_questions_log_text(text: str, preset: Dict) -> str:
+  """Replace the Session Overview table and D1/D2 headings in project_questions-log.md with the selected taxonomy preset."""
+  domains = preset.get("domains", [])
+  if not domains:
+    return text
+  table_lines = [
+      "| Domain Category | Code Range | Core Technical Focus Areas | Total Raised |",
+      "| :---- | :---- | :---- | :---- |",
+  ]
+  d1_name = "Data Platform Foundation, Ingestion & Data Products"
+  d2_name = "Data Sharing, Consumer Authorization & Access Management"
+  p1_name = "Project Organization, Workstream Alignment & Delivery Governance"
+  for dom in domains:
+    d_id = dom["id"]
+    d_name = dom["name"]
+    focus = dom.get("summary_focus") or dom.get("keywords", "")
+    table_lines.append(
+        f"| **{d_id}. {d_name}** | `{d_id}-Q01..` | {focus} | 0 |"
+    )
+    if d_id == "D1":
+      d1_name = d_name
+    elif d_id == "D2":
+      d2_name = d_name
+    elif d_id == "P1":
+      p1_name = d_name
+
+  table_pattern = re.compile(
+      r"\| Domain Category \| Code Range \| Core Technical Focus Areas \| Total Raised \|\n\|[^\n]+\|\n(?:\|[^\n]+\|\n?)+",
+      flags=re.MULTILINE,
+  )
+  text = table_pattern.sub("\n".join(table_lines) + "\n", text)
+  text = re.sub(
+      r"^# \*\*D1\. [^*]+\*\*$",
+      f"# **D1. {d1_name}**",
+      text,
+      flags=re.MULTILINE,
+  )
+  text = re.sub(
+      r"^# \*\*D2\. [^*]+\*\*$",
+      f"# **D2. {d2_name}**",
+      text,
+      flags=re.MULTILINE,
+  )
+  text = re.sub(
+      r"^# \*\*P1\. [^*]+\*\*$",
+      f"# **P1. {p1_name}**",
+      text,
+      flags=re.MULTILINE,
+  )
+  return text
 
 
 def extract_drive_id(url_or_id: Optional[str]) -> Optional[str]:
@@ -109,11 +206,8 @@ def discover_drive_subfolders(
   return discovered
 
 
-def build_replacements(
-    args: argparse.Namespace,
-    discovered_folders: Optional[Dict[str, Dict[str, str]]] = None,
-) -> Dict[str, str]:
-  """Build template placeholder dictionary from CLI arguments and discovered folders."""
+def build_replacements(args: argparse.Namespace) -> Dict[str, str]:
+  """Build template placeholder dictionary from CLI arguments."""
   today = datetime.date.today().isoformat()
   customer_name = args.customer_name or "Customer"
   customer_domain = (
@@ -137,7 +231,6 @@ def build_replacements(
       or "{{DELIVERABLES_FOLDER_ID}}"
   )
   root_name = args.root_folder_name or "20 Project"
-  folders = discovered_folders or {}
 
   return {
       "{{CUSTOMER_NAME}}": customer_name,
@@ -165,18 +258,6 @@ def build_replacements(
       "{{DRIVE_ROOT_FOLDER_ID}}": root_id,
       "{{MEETING_NOTES_FOLDER_ID}}": notes_id,
       "{{DELIVERABLES_FOLDER_ID}}": deliverables_id,
-      "{{COMMON_FOLDER_ID}}": (
-          folders.get("common", {}).get("id") or "{{COMMON_FOLDER_ID}}"
-      ),
-      "{{MEETINGS_FOLDER_ID}}": (
-          folders.get("meetings", {}).get("id") or "{{MEETINGS_FOLDER_ID}}"
-      ),
-      "{{QUESTIONS_FOLDER_ID}}": (
-          folders.get("questions", {}).get("id") or "{{QUESTIONS_FOLDER_ID}}"
-      ),
-      "{{TOPICS_FOLDER_ID}}": (
-          folders.get("topics", {}).get("id") or "{{TOPICS_FOLDER_ID}}"
-      ),
       "{{YYYY-MM-DD}}": today,
       "{{YYYYMMDD}}": today.replace("-", ""),
       "{{TOTAL_COUNT}}": "0",
@@ -233,8 +314,8 @@ def build_replacements(
       "{{PARTICIPANTS_LIST}}": f"{customer_name} & Google Cloud Architecture Team",
       "{{CUSTOMER_PRESENTERS}}": f"{customer_name} Architecture Team",
       "{{GOOGLE_PRESENTERS}}": "Google Cloud Architecture Team",
-      "{{TOPIC_1_TITLE}}": "Data Mesh, Data Products & Platform Framework",
-      "{{TOPIC_2_TITLE}}": "Analytics Hub, Data Sharing & Access Management",
+      "{{TOPIC_1_TITLE}}": "Data Platform Foundation, Ingestion & Data Products",
+      "{{TOPIC_2_TITLE}}": "Data Sharing, Consumer Authorization & Access Management",
   }
 
 
@@ -549,8 +630,45 @@ def main() -> int:
       action="store_true",
       help="Also scaffold GEMINI.md workspace rules if not present",
   )
+  parser.add_argument(
+      "--taxonomy",
+      "-t",
+      default=None,
+      help=(
+          "Canonical domain taxonomy preset ID (default: 'data-analytics-agents'; "
+          "alternatives: 'agentic-ai-platform'). Run --list-taxonomies to inspect all presets."
+      ),
+  )
+  parser.add_argument(
+      "--list-taxonomies",
+      action="store_true",
+      help="List available canonical domain taxonomy presets and exit",
+  )
 
   args = parser.parse_args()
+  default_tax_id, taxonomy_presets = load_taxonomy_presets()
+
+  if args.list_taxonomies:
+    print("Available Canonical Architectural Domain Taxonomy Presets:\n")
+    for preset_id, preset in taxonomy_presets.items():
+      default_badge = " [DEFAULT]" if preset.get("default") or preset_id == default_tax_id else ""
+      print(f"  * {preset_id}{default_badge}: {preset.get('name', '')}")
+      print(f"    {preset.get('description', '')}")
+      for dom in preset.get("domains", []):
+        print(f"      - {dom['id']} ({dom['slug']}): {dom['name']}")
+      print()
+    return 0
+
+  selected_tax_id = args.taxonomy or default_tax_id
+  if taxonomy_presets and selected_tax_id not in taxonomy_presets:
+    print(
+        f"[Error] Unknown taxonomy preset '{selected_tax_id}'. "
+        f"Available presets: {', '.join(taxonomy_presets.keys())}",
+        file=sys.stderr,
+    )
+    return 1
+  selected_preset = taxonomy_presets.get(selected_tax_id, {})
+
   workspace_root = os.path.abspath(
       os.path.expanduser(args.workspace or os.getcwd())
   )
@@ -572,10 +690,19 @@ def main() -> int:
       workspace_root, "specs", "gdrive_sync_manifest.json"
   )
 
+  replacements = build_replacements(args)
+  if selected_preset:
+    for dom in selected_preset.get("domains", []):
+      if dom["id"] == "D1":
+        replacements["{{TOPIC_1_TITLE}}"] = dom["name"]
+      elif dom["id"] == "D2":
+        replacements["{{TOPIC_2_TITLE}}"] = dom["name"]
+
   # 2. Create or update specs/specs_project.md and specs/gdrive_sync_manifest.json
   if os.path.exists(specs_project_path) and not args.force:
     if any([
         args.update_config,
+        args.taxonomy,
         args.customer_name,
         args.project_name,
         args.program_name,
@@ -587,23 +714,33 @@ def main() -> int:
         args.deliverables_folder,
     ]):
       update_existing_specs_project(specs_project_path, args)
+      if args.taxonomy and selected_preset:
+        with open(specs_project_path, "r", encoding="utf-8") as f:
+          updated_specs = apply_taxonomy_to_specs_text(f.read(), selected_preset)
+        with open(specs_project_path, "w", encoding="utf-8") as f:
+          f.write(updated_specs)
+        print(f"[Taxonomy Applied] {selected_tax_id} -> {specs_project_path}")
     else:
       print(f"[Exists] {specs_project_path} (use --update-config or --force)")
     manifest = init_or_update_manifest(
         manifest_path, specs_project_path, args, workspace_root
     )
-    replacements = build_replacements(args, manifest.get("folders", {}))
   else:
     manifest = init_or_update_manifest(
         manifest_path, specs_project_path, args, workspace_root
     )
-    replacements = build_replacements(args, manifest.get("folders", {}))
     rendered_specs = render_clean_master_doc(
         "template_specs_project.md", replacements
     )
+    if selected_preset:
+      rendered_specs = apply_taxonomy_to_specs_text(
+          rendered_specs, selected_preset
+      )
     with open(specs_project_path, "w", encoding="utf-8") as f:
       f.write(rendered_specs)
-    print(f"[Created] {specs_project_path}")
+    print(
+        f"[Created] {specs_project_path} (taxonomy={selected_tax_id})"
+    )
 
   # 3. Initialize the 5 master files in project/common/ (unless --update-config only)
   if not args.update_config:
@@ -622,6 +759,8 @@ def main() -> int:
         print(f"[Skipped Existing] project/common/{target_name}")
         continue
       content = render_clean_master_doc(tpl_name, replacements)
+      if target_name == "project_questions-log.md" and selected_preset:
+        content = apply_taxonomy_to_questions_log_text(content, selected_preset)
       with open(target_path, "w", encoding="utf-8") as f:
         f.write(content)
       print(f"[Created] project/common/{target_name}")

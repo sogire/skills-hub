@@ -149,6 +149,7 @@ Read **[`references/console_urls_and_selectors.md`](./references/console_urls_an
 - [ ] **Step 3.2 — Author `.runtime/capture_manifest.json`**:
   Copy and customize [`resources/templates/template_capture_manifest.json`](./resources/templates/template_capture_manifest.json):
   - Map every scene to its `persona`, clean target `url` (`https://console.cloud.google.com/...?project=<SANDBOX_PROJECT_ID>` — never append `&authuser=`), deterministic UI `actions` (`bq_set_query` + `bq_run_query`, `wait_for_selector`, `click`), `dom_replacements`, and `callouts` (`1`, `2`, `3` highlight boxes; use viewport coordinate boxes + `anchor: "bottom-left"` for BigQuery `<canvas>` result rows).
+  - **Viewport & Layout-Pane Calibration Rule**: Always verify `viewport.width` (`1600`) and `viewport.height` (`1000`) (at `device_scale_factor: 2` $\rightarrow$ `3200×2000` physical PNGs) before calculating static `(x, y, width, height)` callout coordinates. Prefer `selector`-based callouts when targeting DOM elements, or run `--inspect-scene <scene-id>` first to inspect `viewport` and `layout_panes` bounding boxes. Keep callout `"label"` strings $\le 44$ characters to avoid pill truncation, and never set `"optional": true` on required navigation tab clicks.
 - [ ] **Step 3.3 — Execute Automated 2× HiDPI Screenshot Capture**:
   ```bash
   python3 <skill-dir>/scripts/capture_gcp_console.py \

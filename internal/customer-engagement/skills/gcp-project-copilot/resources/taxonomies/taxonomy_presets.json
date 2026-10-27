@@ -1,0 +1,150 @@
+{
+  "default_taxonomy": "data-analytics-agents",
+  "presets": {
+    "data-analytics-agents": {
+      "id": "data-analytics-agents",
+      "name": "Data, Analytics & AI Agents (Default: 3 Data + 2 Analytics + 2 Agents + P1)",
+      "description": "End-to-end Google Cloud Data, Analytics & AI Agents platforms covering Data Products, consumer authorization, governance/security, BI/ML consumption, FinOps, and ADK/Gemini Enterprise agent grounding & AgentOps.",
+      "default": true,
+      "domains": [
+        {
+          "id": "D1",
+          "pillar": "Data",
+          "name": "Data Platform Foundation, Ingestion & Data Products",
+          "slug": "platform-framework",
+          "keywords": "Medallion architecture (`Bronze` / `Silver` / `Gold`), Data Product classification & contracts, batch/streaming ingestion (`Dataflow`, `Pub/Sub`, `DTS`), ELT pipelines (`Dataform`, `dbt`, `Managed Spark`), GCP Project Factory & Terraform IaC",
+          "summary_focus": "Medallion architecture (`Bronze`/`Silver`/`Gold`), Data Product classification & contracts, ingestion/ELT pipelines, Project Factory & IaC"
+        },
+        {
+          "id": "D2",
+          "pillar": "Data",
+          "name": "Data Sharing, Consumer Authorization & Access Management",
+          "slug": "access-management",
+          "keywords": "Consumer application & user authorization models, least-privilege view-level access (`Authorized Views` / `Authorized Datasets`), stable semantic interface datasets, `BigQuery Sharing (Analytics Hub)`, approval workflows & IAM scale quotas",
+          "summary_focus": "Consumer application authorization, Authorized Views/Datasets, semantic interface datasets, Analytics Hub & IAM scale quotas"
+        },
+        {
+          "id": "D3",
+          "pillar": "Data",
+          "name": "Data Governance, Knowledge Catalog, Quality & Security",
+          "slug": "governance-security",
+          "keywords": "`Dataplex Universal Catalog` (Knowledge Catalog Data Products, business glossary, aspect types, `Data Lineage`), automated Data Quality & profiling scans, banking/enterprise compliance, `Cloud DLP`, BigQuery Column-Level Security (`Policy Tags` / Dynamic Masking), Row-Level Security (`RLS`), CMEK & `VPC-SC`",
+          "summary_focus": "Dataplex Universal Catalog, Data Quality & lineage, Cloud DLP, Column-Level Security (`Policy Tags`), Row-Level Security (`RLS`) & VPC-SC"
+        },
+        {
+          "id": "D4",
+          "pillar": "Analytics",
+          "name": "Analytics Consumption, Semantic Layer, BI & Applied ML",
+          "slug": "analytics-bi-ml",
+          "keywords": "Enterprise BI & governed semantic layer (`Looker`, `Conversational Analytics`), analytical SQL patterns, `BigQuery ML` (`BQML`), Python/Spark analytics (`BigFrames`, notebooks), unstructured & graph analytics (`BigLake`, `BigQuery Graph`)",
+          "summary_focus": "Governed BI & semantic layer (`Looker`, `Conversational Analytics`), analytical SQL, `BQML`, `BigFrames`, `BigLake` & `BigQuery Graph`"
+        },
+        {
+          "id": "D5",
+          "pillar": "Analytics",
+          "name": "Platform Observability, Capacity Optimization & FinOps",
+          "slug": "observability-finops",
+          "keywords": "`BigQuery Editions` slot reservations & autoscaling, physical/logical storage & partitioning/clustering optimization, centralized `INFORMATION_SCHEMA` & Cloud Logging telemetry, and producer vs. consumer compute cost attribution",
+          "summary_focus": "`BigQuery Editions` slot reservations & autoscaling, storage/query optimization, `INFORMATION_SCHEMA` telemetry & cost attribution"
+        },
+        {
+          "id": "D6",
+          "pillar": "Agents",
+          "name": "AI Agents Architecture, Orchestration & Data Grounding",
+          "slug": "ai-agents-architecture",
+          "keywords": "Agentic design & multi-agent orchestration (`Google ADK`, `Gemini Enterprise`), grounding agents on governed Data Products (`Google Cloud MCP`, `BigQuery Data Agents`, `Data Agent Kit`, Vector Search/RAG), and end-to-end identity passthrough (`OAuth On-Behalf-Of` -> `SESSION_USER()`)",
+          "summary_focus": "`Google ADK`, `Gemini Enterprise`, grounding over Data Products (`MCP`, `BigQuery Data Agents`, `DAK`, RAG) & OAuth `On-Behalf-Of` identity"
+        },
+        {
+          "id": "D7",
+          "pillar": "Agents",
+          "name": "AgentOps, Evaluation, Security Guardrails & AI FinOps",
+          "slug": "agentops-governance",
+          "keywords": "Agent evaluation datasets & quality metrics (`ADK Eval`, `Vertex AI Evaluation`), agent tracing & telemetry (`Cloud Trace`, `Cloud Logging`), prompt/tool security guardrails (`Model Armor`, IAM tool boundaries), and combined LLM token + BigQuery slot FinOps guardrails",
+          "summary_focus": "Agent evaluation (`ADK Eval`, `Vertex AI Evaluation`), trace observability, `Model Armor` guardrails & token/slot FinOps"
+        },
+        {
+          "id": "P1",
+          "pillar": "Delivery",
+          "name": "Project Organization, Workstream Alignment & Delivery Governance",
+          "slug": "project-organization",
+          "keywords": "Engagement roadmap & milestone prioritization, workshop cadence & session preparation, cross-workstream alignment across Data, Analytics & Agents, and PoC/pilot handoff logistics",
+          "summary_focus": "Roadmap prioritization, workshop cadence, cross-workstream alignment across Data, Analytics & Agents, and pilot logistics"
+        }
+      ]
+    },
+    "agentic-ai-platform": {
+      "id": "agentic-ai-platform",
+      "name": "Agentic AI, Conversational Analytics & MCP Grounding Platform",
+      "description": "AI-first engagements focused on Google ADK, Gemini Enterprise, BigQuery Data Agents, MCP tool servers, structured/unstructured grounding, OAuth On-Behalf-Of security, and production AgentOps.",
+      "default": false,
+      "domains": [
+        {
+          "id": "D1",
+          "pillar": "Agents",
+          "name": "Agentic Use Cases, Persona Journeys & Multi-Agent Orchestration",
+          "slug": "agent-orchestration",
+          "keywords": "Agentic architecture patterns (`Google ADK`, `Gemini Enterprise`), single-agent vs. multi-agent orchestration, session memory & state management, human-in-the-loop (HITL) workflows, and user experience integration",
+          "summary_focus": "`Google ADK` & `Gemini Enterprise` orchestration, multi-agent topologies, session memory & human-in-the-loop patterns"
+        },
+        {
+          "id": "D2",
+          "pillar": "Data Grounding",
+          "name": "Structured Data Grounding, Semantic Layer & Conversational Analytics",
+          "slug": "structured-grounding-nl2sql",
+          "keywords": "`BigQuery Data Agents`, `Conversational Analytics API`, `Data Agent Kit (DAK)`, `Looker` semantic layer grounding, context enrichment (`Dataplex` metadata, verified SQL templates, golden queries), and high-accuracy NL2SQL",
+          "summary_focus": "`BigQuery Data Agents`, `Conversational Analytics`, `Looker` semantic layer, context enrichment & NL2SQL accuracy"
+        },
+        {
+          "id": "D3",
+          "pillar": "Knowledge Grounding",
+          "name": "Unstructured Knowledge, Vector Search (RAG) & Graph Grounding",
+          "slug": "unstructured-rag-graph",
+          "keywords": "`BigLake` object tables, document parsing & chunking pipelines, `Vertex AI Vector Search` & `BigQuery VECTOR_SEARCH` embeddings, hybrid relational + `BigQuery Property Graph` (`GQL`) retrieval, and citation grounding",
+          "summary_focus": "Unstructured document chunking, `Vertex AI` / `BigQuery` vector search (RAG), and `BigQuery Property Graph` hybrid retrieval"
+        },
+        {
+          "id": "D4",
+          "pillar": "Tooling & Actions",
+          "name": "MCP Tool Servers, External API Integration & Action Execution",
+          "slug": "mcp-tools-integrations",
+          "keywords": "Model Context Protocol (`MCP`) servers (`Google Cloud MCP`, `MCP Toolbox for Databases`), custom ADK function tools, `Apigee` / external ERP & CRM API connectors, transactional write-back safety, and idempotency",
+          "summary_focus": "`MCP` servers (`Google Cloud MCP`, `MCP Toolbox`), custom ADK tools, external API integration & transactional safety"
+        },
+        {
+          "id": "D5",
+          "pillar": "Security & Identity",
+          "name": "Identity Propagation (`OAuth On-Behalf-Of`), IAM, RLS/CLS & Model Armor",
+          "slug": "agent-security-identity",
+          "keywords": "End-to-end user identity propagation (`OAuth 2.0 On-Behalf-Of` -> `SESSION_USER()`), BigQuery Row-Level Security (`RLS`) & Column-Level Security (`Policy Tags` / Dynamic Masking), `Model Armor` prompt injection/DLP shields, and VPC-SC perimeters",
+          "summary_focus": "`OAuth On-Behalf-Of` identity passthrough (`SESSION_USER()`), BigQuery `RLS`/`CLS`, `Model Armor` prompt shields & VPC-SC"
+        },
+        {
+          "id": "D6",
+          "pillar": "AgentOps",
+          "name": "Agent Evaluation (`ADK Eval`), Observability & Quality Benchmarking",
+          "slug": "agent-evaluation-telemetry",
+          "keywords": "Golden evaluation datasets, trajectory & tool-call accuracy metrics (`ADK Eval`, `Vertex AI GenAI Evaluation`), OpenTelemetry / `Cloud Trace` distributed tracing, conversation logging, and continuous regression testing",
+          "summary_focus": "Golden evaluation datasets, trajectory & response benchmarking (`ADK Eval`), `Cloud Trace` telemetry & CI/CD regression gates"
+        },
+        {
+          "id": "D7",
+          "pillar": "Runtime & FinOps",
+          "name": "Runtime Deployment (`Agent Engine` / `Cloud Run`), Latency & Token/Slot FinOps",
+          "slug": "agent-runtime-finops",
+          "keywords": "`Vertex AI Agent Engine` & `Cloud Run` production hosting, context caching, model routing (`Gemini Flash` vs. `Pro`), latency SLOs, BigQuery `maximum_bytes_billed` dry-run guards, and combined LLM token + BigQuery slot FinOps",
+          "summary_focus": "`Vertex AI Agent Engine` / `Cloud Run` deployment, latency tuning, model routing & combined LLM token + BigQuery slot FinOps"
+        },
+        {
+          "id": "P1",
+          "pillar": "Delivery",
+          "name": "Project Organization, Workstream Alignment & Delivery Governance",
+          "slug": "project-organization",
+          "keywords": "Engagement roadmap & milestone prioritization, workshop cadence & review slot scheduling, cross-workstream scope alignment, golden dataset/schema handoff logistics & unblocking workarounds",
+          "summary_focus": "Roadmap prioritization, workshop cadence, cross-workstream alignment, and golden dataset/schema handoff logistics"
+        }
+      ]
+    }
+  }
+}
+

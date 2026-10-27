@@ -40,7 +40,7 @@
 * **GCP Service / Feature**: {{SUBSECTION_2_2_GCP_SERVICE}}
 * **How It Works**: {{SUBSECTION_2_2_EXPLANATION}}
 * **Implementation**:
-  ```sql
+  ```bash
   {{SUBSECTION_2_2_CODE_SNIPPET}}
   ```
 
@@ -95,9 +95,9 @@
 
 ## 6. Skills Employed
 
-| Workspace Skill | Technical Contribution to This Evaluation |
-| :---- | :---- |
-| **`{{SKILL_NAME_1}}`** | {{SKILL_CONTRIBUTION_1}} |
-| **`{{SKILL_NAME_2}}`** | {{SKILL_CONTRIBUTION_2}} |
-| **`{{SKILL_NAME_3}}`** | {{SKILL_CONTRIBUTION_3}} |
+| External Skill | Validated Sections & Code Blocks | Grounding Artifacts Consulted | Technical Contribution to This Evaluation |
+| :---- | :---- | :---- | :---- |
+| **`{{EXTERNAL_SKILL_1}}`** | `§1`, `§2.1` (`sql`), `§3.2` | `SKILL.md`, `references/{{REF_FILE_1}}.md` | {{SKILL_CONTRIBUTION_1}} |
+| **`{{EXTERNAL_SKILL_2}}`** | `§2.3` (`json`), `§3.1` | `SKILL.md` | {{SKILL_CONTRIBUTION_2}} |
+| **`retrieving-developer-knowledge`** | `§2.2` (`bash`, `yaml`), `§3.1` | Live doc lookup: `{{DOC_PATH_WITHOUT_SCHEME}}` | {{DOC_GROUNDING_CONTRIBUTION}} |
 

@@ -84,8 +84,8 @@ Using the gcp-project-copilot skill and based on @project/common/project_challen
 ## 8. Answer One or More Technical Questions Using Workspace GCP Skills (`project/questions/`)
 ```text
 Use the gcp-project-copilot skill to evaluate and answer question(s) <D#-Q##> (or all questions in domain <D#>) from @project/common/project_questions-log.md:
-1. Analyze the relevant Google Cloud skills available in the workspace and official documentation.
-2. Save an individual structured answer file per question in `project/questions/` strictly following `resources/templates/template_answers_to_questions.md` (if delegating to subagents, require each subagent to read `template_answers_to_questions.md` first) and verify with `scripts/validate_question_answers.py`.
+1. Read the matching active external Google Cloud skills (`SKILL.md` + `references/*.md`) via `read_file` before authoring, and use `retrieving-developer-knowledge` to verify any CLI flag, SQL DDL option, YAML/JSON schema, or IAM permission not verbatim in a local skill.
+2. Save an individual structured answer file per question in `project/questions/` strictly following `resources/templates/template_answers_to_questions.md` (never list `gcp-project-copilot` or other `agyhub` internal/IDE meta-skills in Section 6; map 100% of `§2.x` code blocks and `§3.1` in Section 6; if delegating to subagents, require each subagent to read `template_answers_to_questions.md` and all cited `SKILL.md` files first) and verify with `scripts/validate_question_answers.py --require-active-skills`.
 3. Cross-link the answer(s) in @project/common/project_questions-log.md and sync `project/questions/` with Google Drive if requested.
 ```
 
@@ -100,5 +100,5 @@ Use the gcp-project-copilot skill to export all coded questions from @project/co
 
 ## 10. Synchronize Local `project/` (or `project/questions/`) Hierarchy with Google Drive
 ```text
-Use the gcp-project-copilot skill to synchronize all new or modified folders and Markdown documents in @project (or only `project/questions/`) with Google Drive, and refresh the synchronized registry in @specs/specs_project.md.
+Use the gcp-project-copilot skill to synchronize all new or modified folders and Markdown documents in @project (or only `project/questions/`) with Google Drive and update @specs/gdrive_sync_manifest.json.
 ```

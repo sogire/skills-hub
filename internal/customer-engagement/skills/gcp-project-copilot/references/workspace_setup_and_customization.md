@@ -29,7 +29,8 @@ Determine whether the user has provided:
   Ask the user for the core project identity and Google Drive Folder URL(s):
   1. **Customer & Project Name** (`CUSTOMER_NAME`, `PROJECT_NAME`, `PROGRAM_NAME`, `PILOT_DOMAIN`)
   2. **Root Project Google Drive Folder URL or ID** (e.g., `https://drive.google.com/drive/folders/<ID>`, where `common/`, `meetings/`, and `topics/` will be mirrored)
-  3. *(Optional)* **Meeting Notes Folder URL/ID** and **Deliverables Folder URL/ID**
+  3. **Canonical Domain Taxonomy Preset (`--taxonomy`)**: Defaults to **`data-analytics-agents`** (**3 Data + 2 Analytics + 2 Agents + `P1`**). If the project is an AI-first engagement focused on ADK, Conversational Analytics, and MCP grounding, you can select **`agentic-ai-platform`** (inspect presets via `python3 <skill-dir>/scripts/init_workspace.py --list-taxonomies`).
+  4. *(Optional)* **Meeting Notes Folder URL/ID** and **Deliverables Folder URL/ID**
 
 ### Step 2.2: Run `scripts/init_workspace.py`
 Execute `init_workspace.py` targeting the workspace root (`--workspace .`):
@@ -37,6 +38,7 @@ Execute `init_workspace.py` targeting the workspace root (`--workspace .`):
 ```bash
 python3 <skill-dir>/scripts/init_workspace.py \
   --workspace <workspace-root> \
+  --taxonomy data-analytics-agents \
   --customer-name "<Customer Name>" \
   --customer-domain "<customer.com>" \
   --project-name "<Project Name>" \
@@ -122,10 +124,10 @@ python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
 **What `sync_drive.py` does automatically**:
 1. **Resolves Target Workspace & Root Drive Folder ID**: Reads `specs/specs_project.md` and `specs/gdrive_sync_manifest.json` in `<workspace-root>`.
 2. **Phase 1 — Folder Mirroring (with Per-Parent `ls` Caching)**: Ensures every populated subfolder under `project/` (`common/`, `meetings/...`, `topics/...`, `questions/`) exists in Google Drive under the Root Project Drive Folder and records its folder ID in `specs/gdrive_sync_manifest.json`.
-3. **Phase 2 — Wave-Parallel Native Google Docs Sync (`--jobs 6` default)**:
+3. **Phase 2 — Parallel Asset Sync (`--jobs 6` default)**: Uploads or updates standalone `.svg`, `.png`, `.jpg`, `.jpeg`, `.json`, and `.csv` assets concurrently across `--jobs` workers (ensuring every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`) and records their Google Drive file IDs, URLs, and SHA-256 hashes in `specs/gdrive_sync_manifest.json["assets"]`.
+4. **Phase 3 — Wave-Parallel Native Google Docs Sync (`--jobs 6` default)**:
    - Partitions target `.md` files in `project/` into topological link-dependency waves (`topics/` & leaf `questions/` $\to$ `meetings/` $\to$ `common/`). Updates to existing documents run concurrently in Wave 0 because their permanent Google Doc IDs/URLs are already in the manifest, while brand-new documents run wave-by-wave so internal links always resolve to real Google Docs URLs.
    - Prefetches open-comment status across dirty documents in a single concurrent `gdocs readonly stream comments --open-only` batch call instead of per-file CLI startups.
    - Normalizes single-token LaTeX symbols (`$\rightarrow$` $\to$ `→`) on staged Markdown (after computing SHA-256 hashes so existing manifest hashes stay 100% compatible) and passes `--render-math=false` / `--render-diagrams=false` whenever safe.
-   - Imports new documents (`gdocs mutate import-md --pageless` + `gdrive mutate mv`) or updates modified documents (`gdocs mutate sync --save-base=false` when open comments exist, or `gdocs mutate import-md --update` otherwise) with automatic exponential backoff on transient `429`/`503` errors and atomic manifest checkpointing.
-4. **Phase 3 & 4 — Parallel Asset Sync & Registry Refresh**: Uploads/updates `.svg`, `.png`, `.json`, and `.csv` assets concurrently across `--jobs` workers, and rewrites Section 2.2 (`#### A. Synchronized Drive Subfolders`, `#### B. Synchronized Native Google Docs`, and `#### C. Synchronized Diagram & Spec Assets`) in `specs/specs_project.md`.
+   - Imports new documents (`gdocs mutate import-md --pageless` + `gdrive mutate mv`) or updates modified documents (`gdocs mutate sync --save-base=false` when open comments exist, or `gdocs mutate import-md --update` otherwise) with automatic exponential backoff on transient `429`/`503` errors and atomic checkpointing into `specs/gdrive_sync_manifest.json` (`specs/specs_project.md` is never mutated during Drive sync).
 

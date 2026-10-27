@@ -15,9 +15,9 @@ Workspace-agnostic script for the `gcp-project-copilot` skill:
    `gdocs readonly stream comments --open-only` batch call, preserves comments via
    `gdocs mutate sync` when open comments exist, and uses fast `gdocs mutate import-md`
    (with automatic retry/backoff on transient `429`/`503` errors) otherwise.
-5. Automatically updates Section 2.2 (`Synchronized Drive Subfolders`,
-   `Synchronized Native Google Docs`, and `Synchronized Diagram & Spec Assets`)
-   in `specs/specs_project.md`.
+5. Atomically checkpoints all synchronized folder IDs, native Google Docs URLs,
+   diagram/screenshot/CSV asset IDs, and SHA-256 content hashes in
+   `specs/gdrive_sync_manifest.json` (never mutating `specs/specs_project.md`).
 """
 
 import argparse
@@ -1501,122 +1501,6 @@ def sync_asset_file(
   return True
 
 
-def update_specs_project_registry(
-    specs_project_path: str, manifest: Dict
-) -> bool:
-  """Update Section 2.2 (Subfolders, Native Google Docs, and Assets tables) in specs/specs_project.md."""
-  if not os.path.exists(specs_project_path):
-    return False
-
-  with open(specs_project_path, "r", encoding="utf-8") as f:
-    original_text = f.read()
-
-  root_name = manifest.get("root_folder_name") or "20 Project"
-  folders = manifest.get("folders", {})
-  documents = manifest.get("documents", {})
-  assets = manifest.get("assets", {})
-
-  # Build Table A: Synchronized Drive Subfolders
-  folder_lines = [
-      f"#### A. Synchronized Drive Subfolders (Under `{root_name}`)",
-      "",
-      "| Local Directory (`project/...`) | Google Drive Folder Link | Parent Folder |",
-      "| :--- | :--- | :--- |",
-  ]
-  for rel_dir in sorted(folders.keys()):
-    f_info = folders[rel_dir]
-    f_id = f_info.get("id", "")
-    f_url = f_info.get("url", f"https://drive.google.com/drive/folders/{f_id}")
-    parent_rel = os.path.dirname(rel_dir)
-    parent_label = f"`{root_name}`" if not parent_rel else f"`{parent_rel}/`"
-    folder_lines.append(
-        f"| `{rel_dir}/` | [`{f_id}`]({f_url}) | {parent_label} |"
-    )
-
-  # Sort meetings grouped by folder, with questions-log before challenges
-  def doc_table_key(rel_path: str) -> Tuple[int, str, int, str]:
-    if rel_path.startswith("common/"):
-      common_display_order = {
-          "common/meetings_registry.md": 1,
-          "common/project_members.md": 2,
-          "common/project_glossary.md": 3,
-          "common/project_questions-log.md": 4,
-          "common/project_challenges.md": 5,
-      }
-      return (1, "", common_display_order.get(rel_path, 9), rel_path)
-    if rel_path.startswith("meetings/"):
-      folder = os.path.dirname(rel_path)
-      sub = 1 if "_questions-log_" in rel_path else 2
-      return (2, folder, sub, rel_path)
-    if rel_path.startswith("topics/"):
-      return (3, os.path.dirname(rel_path), 1, rel_path)
-    if rel_path.startswith("questions/"):
-      return (4, os.path.dirname(rel_path), 1, rel_path)
-    return (5, os.path.dirname(rel_path), 1, rel_path)
-
-  sorted_docs = sorted(documents.keys(), key=doc_table_key)
-  doc_lines = [
-      f"#### B. Synchronized Native Google Docs ({len(sorted_docs)} Documents)",
-      "",
-      "| Layer / Scope | Local Markdown Source (`project/...`) | Synchronized Google Doc |",
-      "| :--- | :--- | :--- |",
-  ]
-  for rel_path in sorted_docs:
-    d_info = documents[rel_path]
-    d_title = d_info.get("title") or os.path.splitext(os.path.basename(rel_path))[0]
-    d_url = d_info.get("url", "")
-    if rel_path.startswith("common/"):
-      layer_label = "**Layer 1 (`common/`)**"
-    elif rel_path.startswith("meetings/"):
-      layer_label = "**Layer 2 (`meetings/`)**"
-    elif rel_path.startswith("topics/"):
-      layer_label = "**Layer 3 (`topics/`)**"
-    elif rel_path.startswith("questions/"):
-      layer_label = "**Layer 4 (`questions/`)**"
-    else:
-      layer_label = "**Project (`project/`)**"
-    doc_lines.append(
-        f"| {layer_label} | [`{rel_path}`](../project/{rel_path}) | [{d_title}]({d_url}) |"
-    )
-
-  sections = ["\n".join(folder_lines), "\n".join(doc_lines)]
-
-  if assets:
-    sorted_assets = sorted(assets.keys())
-    asset_lines = [
-        f"#### C. Synchronized Diagram & Spec Assets ({len(sorted_assets)} Files)",
-        "",
-        "| Parent Folder | Local Asset Path (`project/...`) | Synchronized Google Drive File |",
-        "| :--- | :--- | :--- |",
-    ]
-    for rel_path in sorted_assets:
-      a_info = assets[rel_path]
-      a_name = a_info.get("name") or os.path.basename(rel_path)
-      a_url = a_info.get("url", "")
-      a_parent = a_info.get("parent_folder", os.path.dirname(rel_path))
-      asset_lines.append(
-          f"| `{a_parent}/` | [`{rel_path}`](../project/{rel_path}) | [`{a_name}`]({a_url}) |"
-      )
-    sections.append("\n".join(asset_lines))
-
-  replacement_block = "\n\n".join(sections) + "\n"
-
-  pattern = re.compile(
-      r"(#### A\. Synchronized Drive Subfolders.*?)(?=\n## 3\.|\Z)",
-      flags=re.DOTALL,
-  )
-  if not pattern.search(original_text):
-    return False
-
-  updated_text = pattern.sub(replacement_block + "\n", original_text, count=1)
-  if updated_text != original_text:
-    with open(specs_project_path, "w", encoding="utf-8") as f:
-      f.write(updated_text)
-    log_line(f"[Specs Updated] Refreshed Section 2.2 in {specs_project_path}")
-    return True
-  return False
-
-
 def main() -> int:
   global ACTIVE_CHECKPOINTER  # pylint: disable=global-statement
   t_start = time.monotonic()
@@ -1655,7 +1539,7 @@ def main() -> int:
   parser.add_argument(
       "--no-update-specs",
       action="store_true",
-      help="Skip automatic update of Section 2.2 in specs/specs_project.md",
+      help=argparse.SUPPRESS,
   )
   parser.add_argument(
       "--file",
@@ -1952,10 +1836,6 @@ def main() -> int:
 
       total_mutated_docs += len(dirty_plans)
       checkpointer.flush()
-
-    # 4. Auto-update Section 2.2 in specs/specs_project.md
-    if not args.dry_run and not args.no_update_specs:
-      update_specs_project_registry(specs_project_path, manifest)
 
   finally:
     cleanup_all_active_temps()
