@@ -6,18 +6,21 @@ Capabilities:
    - `specs/`
    - `project/common/`
    - `project/meetings/`
-   - `project/topics/`
-   - `project/questions/`
+   - `project/working-process/`
+   - `project/questions-answered/`
+   - `project/deliverables/docs/`
+   - `project/deliverables/diagrams/`
 2. Renders and customizes `specs/specs_project.md` and `specs/gdrive_sync_manifest.json`
    using CLI flags (accepting either full Google Drive URLs or raw Folder IDs).
 3. Supports `--update-config` to update customer identity or Google Drive folder
    IDs/URLs in an existing `specs/specs_project.md` and `specs/gdrive_sync_manifest.json`
    while preserving existing domains (`D1..Dn`), ASR aliases, and `project/common/` files.
 4. Supports `--discover-drive` to query the Root Project Drive Folder via `gdrive`
-   and pre-populate existing `common/`, `meetings/`, `topics/`, and `questions/` folder IDs.
+   and pre-populate existing `common/`, `meetings/`, `working-process/`, `questions-answered/`,
+   and `deliverables/` folder IDs.
 5. Initializes the 5 living master documents in `project/common/` (`meetings_registry.md`,
    `project_members.md`, `project_glossary.md`, `project_questions-log.md`,
-   `project_challenges.md`) and optional `GEMINI.md` workspace rules.
+   `project_challenges.md`) and optional `GEMINI.md` project-specific rules.
 """
 
 import argparse
@@ -55,7 +58,7 @@ def load_taxonomy_presets() -> Tuple[str, Dict[str, Dict]]:
 def render_specs_taxonomy_table(preset: Dict) -> str:
   """Render the Section 3 Markdown table for specs/specs_project.md from a taxonomy preset."""
   lines = [
-      "| Domain ID | Canonical Domain Name | `project/topics/` Directory Slug | Core Technical Scope & Keywords |",
+      "| Domain ID | Canonical Domain Name | `project/working-process/` Directory Slug | Core Technical Scope & Keywords |",
       "| :--- | :--- | :--- | :--- |",
   ]
   for dom in preset.get("domains", []):
@@ -73,7 +76,7 @@ def apply_taxonomy_to_specs_text(text: str, preset: Dict) -> str:
   """Replace the Section 3 domain table in specs_project.md with the selected taxonomy preset."""
   new_table = render_specs_taxonomy_table(preset)
   pattern = re.compile(
-      r"\| Domain ID \| Canonical Domain Name \| `project/topics/` Directory Slug \| Core Technical Scope & Keywords \|\n\|[^\n]+\|\n(?:\|[^\n]+\|\n?)+",
+      r"\| Domain ID \| Canonical Domain Name \| `project/(?:working-process|topics)/` Directory Slug \| Core Technical Scope & Keywords \|\n\|[^\n]+\|\n(?:\|[^\n]+\|\n?)+",
       flags=re.MULTILINE,
   )
   return pattern.sub(new_table + "\n", text)
@@ -85,8 +88,8 @@ def apply_taxonomy_to_questions_log_text(text: str, preset: Dict) -> str:
   if not domains:
     return text
   table_lines = [
-      "| Domain Category | Code Range | Core Technical Focus Areas | Total Raised |",
-      "| :---- | :---- | :---- | :---- |",
+      "| Domain Category | Code Range (`Q` / `S`) | Core Technical Focus Areas | Customer (`Q`) | Scoping (`S`) | Total Raised |",
+      "| :---- | :---- | :---- | :----: | :----: | :----: |",
   ]
   d1_name = "Data Platform Foundation, Ingestion & Data Products"
   d2_name = "Data Sharing, Consumer Authorization & Access Management"
@@ -96,7 +99,7 @@ def apply_taxonomy_to_questions_log_text(text: str, preset: Dict) -> str:
     d_name = dom["name"]
     focus = dom.get("summary_focus") or dom.get("keywords", "")
     table_lines.append(
-        f"| **{d_id}. {d_name}** | `{d_id}-Q01..` | {focus} | 0 |"
+        f"| **{d_id}. {d_name}** | `{d_id}-Q01..` / `{d_id}-S01..` | {focus} | 0 | 0 | 0 |"
     )
     if d_id == "D1":
       d1_name = d_name
@@ -105,8 +108,12 @@ def apply_taxonomy_to_questions_log_text(text: str, preset: Dict) -> str:
     elif d_id == "P1":
       p1_name = d_name
 
+  table_lines.append(
+      "| **Total** | **`0 Questions`** | **All Canonical Architectural & Project Governance Domains** | **0** | **0** | **0** |"
+  )
+
   table_pattern = re.compile(
-      r"\| Domain Category \| Code Range \| Core Technical Focus Areas \| Total Raised \|\n\|[^\n]+\|\n(?:\|[^\n]+\|\n?)+",
+      r"\| Domain Category \| Code Range[^|]*\| Core Technical Focus Areas \|[^\n]+\|\n\|[^\n]+\|\n(?:\|[^\n]+\|\n?)+",
       flags=re.MULTILINE,
   )
   text = table_pattern.sub("\n".join(table_lines) + "\n", text)
@@ -191,7 +198,16 @@ def discover_drive_subfolders(
       c_mime = item.get("mimeType") or item.get("MimeType") or item.get("Type")
       c_id = item.get("id") or item.get("ID")
       if (
-          c_name in ("common", "meetings", "topics", "questions")
+          c_name
+          in (
+              "common",
+              "meetings",
+              "working-process",
+              "questions-answered",
+              "deliverables",
+              "topics",
+              "questions",
+          )
           and c_id
           and ("folder" in str(c_mime).lower())
       ):
@@ -271,15 +287,33 @@ def build_replacements(args: argparse.Namespace) -> Dict[str, str]:
       "{{COUNT_5}}": "2",
       "{{COUNT_6}}": "2",
       "{{TOTAL_QUESTIONS}}": "0",
+      "{{TOTAL_Q_QUESTIONS}}": "0",
+      "{{TOTAL_S_QUESTIONS}}": "0",
       "{{Q_COUNT}}": "0",
       "{{COUNT_D1}}": "0",
+      "{{COUNT_D1_Q}}": "0",
+      "{{COUNT_D1_S}}": "0",
       "{{COUNT_D2}}": "0",
+      "{{COUNT_D2_Q}}": "0",
+      "{{COUNT_D2_S}}": "0",
       "{{COUNT_D3}}": "0",
+      "{{COUNT_D3_Q}}": "0",
+      "{{COUNT_D3_S}}": "0",
       "{{COUNT_D4}}": "0",
+      "{{COUNT_D4_Q}}": "0",
+      "{{COUNT_D4_S}}": "0",
       "{{COUNT_D5}}": "0",
+      "{{COUNT_D5_Q}}": "0",
+      "{{COUNT_D5_S}}": "0",
       "{{COUNT_D6}}": "0",
+      "{{COUNT_D6_Q}}": "0",
+      "{{COUNT_D6_S}}": "0",
       "{{COUNT_D7}}": "0",
+      "{{COUNT_D7_Q}}": "0",
+      "{{COUNT_D7_S}}": "0",
       "{{COUNT_P1}}": "0",
+      "{{COUNT_P1_Q}}": "0",
+      "{{COUNT_P1_S}}": "0",
       "{{STAKEHOLDER_FULL_NAME}}": "Customer Lead Architect",
       "{{CUSTOMER_LEAD_NAME}}": "Customer Lead Architect",
       "{{HANDLE}}": "customer.lead",
@@ -304,8 +338,11 @@ def build_replacements(args: argparse.Namespace) -> Dict[str, str]:
       "{{MASTER_DATA_ALIAS}}": "MDM",
       "{{COMPLIANCE_STANDARD}}": "Enterprise Security & Compliance Standard",
       "{{QUESTION_TEXT_D1_1}}": "Pending initial meeting analysis.",
+      "{{QUESTION_TEXT_D1_S1}}": "Pending initial meeting analysis.",
       "{{QUESTION_TEXT_D2_1}}": "Pending initial meeting analysis.",
+      "{{QUESTION_TEXT_D2_S1}}": "Pending initial meeting analysis.",
       "{{QUESTION_TEXT_P1_1}}": "Pending initial meeting analysis.",
+      "{{QUESTION_TEXT_P1_S1}}": "Pending initial meeting analysis.",
       "{{FIRST_NAME}}": "Stakeholder",
       "{{LAST_NAME_UPPER}}": "NAME",
       "{{HH:MM:SS}}": "00:00:00",
@@ -492,33 +529,14 @@ def init_or_update_manifest(
 
 
 def write_gemini_rules(workspace_root: str, force: bool = False) -> None:
-  """Create GEMINI.md workspace rules if requested."""
+  """Create GEMINI.md container for project-specific architectural rules if requested."""
   gemini_path = os.path.join(workspace_root, "GEMINI.md")
   if os.path.exists(gemini_path) and not force:
     print(f"[Skipped Existing] {gemini_path}")
     return
-  content = """# Workspace Agent Rules (`GEMINI.md`)
+  content = """# Workspace Project-Specific Agent Rules (`GEMINI.md`)
 
-## 1. Project-Specific Configuration (`specs/`)
-- Keep customer-specific parameters, Google Drive Folder IDs, Canonical Architectural Domains (`D1..Dn`), and ASR phonetic aliases in [`specs/specs_project.md`](./specs/specs_project.md) and [`specs/gdrive_sync_manifest.json`](./specs/gdrive_sync_manifest.json).
-- Never hardcode Google Drive IDs, Google Doc IDs, or customer names inside scripts.
-
-## 2. Portable Relative Paths in Repository Markdown Files
-- All internal links across [`specs/`](./specs/) and [`project/`](./project/) (`project/common/`, `project/meetings/`, `project/topics/`) must use portable relative paths (never `file:///` URIs or absolute `/usr/...` filesystem paths inside `.md` files).
-
-## 3. Official Stakeholder Directory Separation
-- Maintain speech-to-text (ASR) phonetic aliases and transcript variants **exclusively** in Section 5 of [`specs/specs_project.md`](./specs/specs_project.md). Never include ASR misspellings in [`project/common/project_members.md`](./project/common/project_members.md), which is a clean, customer-facing stakeholder directory.
-
-## 4. Strict Separation of "Customer As-Is / Ideas" vs. "Google-Recommended Target Architecture"
-- Never automatically inject tools mentioned by customer stakeholders during discovery (e.g., `Apigee`, `Apache Hudi`, `Neo4j`, custom proxies) into the Google-recommended target architecture diagram or critical path.
-- Document customer-mentioned tools strictly in the **Customer Current State** or **Alternatives / Edge-Case Notes** sections, and explicitly explain when the Google-recommended architecture simplifies or replaces them.
-
-## 5. Minimal-Hop & Native GCP Integration First (Anti-Overengineering Rule)
-- Always default to native Google Cloud service-to-service integrations and identity propagation (e.g., native OAuth 2.0 `On-Behalf-Of` passthrough from **Gemini Enterprise** $\\rightarrow$ **Google Cloud MCP Server / BigQuery Data Agent** $\\rightarrow$ **BigQuery** `SESSION_USER()`).
-- Never insert intermediate API gateways (e.g., `Apigee`), custom middleware, or extra data movement hops between native Google Cloud services unless crossing an external/non-GCP trust boundary (such as calling an on-premises ERP/ALM REST API) or solving a requirement that native GCP IAM/OAuth cannot satisfy.
-
-## 6. Mermaid Diagram Syntax Safety in Markdown Deliverables
-- Never use semicolons (`;`) or HTML tags (`<br>`) inside Mermaid `sequenceDiagram` notes or `flowchart` labels, as semicolons act as statement terminators in Mermaid and break rendering.
+> General workspace methodology, directory conventions (`project/common/`, `project/meetings/`, `project/working-process/`, `project/questions-answered/`, `project/deliverables/`), Mermaid syntax hygiene, and Google Drive sync guardrails are governed by the `gcp-project-copilot` skill. Add only project-specific architectural rules below.
 """
   with open(gemini_path, "w", encoding="utf-8") as f:
     f.write(content)
@@ -678,8 +696,10 @@ def main() -> int:
       os.path.join(workspace_root, "specs"),
       os.path.join(workspace_root, "project", "common"),
       os.path.join(workspace_root, "project", "meetings"),
-      os.path.join(workspace_root, "project", "topics"),
-      os.path.join(workspace_root, "project", "questions"),
+      os.path.join(workspace_root, "project", "working-process"),
+      os.path.join(workspace_root, "project", "questions-answered"),
+      os.path.join(workspace_root, "project", "deliverables", "docs"),
+      os.path.join(workspace_root, "project", "deliverables", "diagrams"),
   ]
   for d in dirs_to_create:
     os.makedirs(d, exist_ok=True)

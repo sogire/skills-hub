@@ -1296,9 +1296,13 @@ def collect_target_files(
 ) -> List[Path]:
   """Resolve list of question Markdown files to validate."""
   if not cli_files:
-    q_dir = workspace_root / "project" / "questions"
+    q_dir = workspace_root / "project" / "questions-answered"
     if not q_dir.is_dir():
-      raise RuntimeError(f"Questions directory does not exist: {q_dir}")
+      legacy_q_dir = workspace_root / "project" / "questions"
+      if legacy_q_dir.is_dir():
+        q_dir = legacy_q_dir
+      else:
+        raise RuntimeError(f"Questions directory does not exist: {q_dir}")
     return [
         p
         for p in sorted(q_dir.glob("*.md"))
@@ -1329,7 +1333,7 @@ def collect_target_files(
 def main() -> int:
   parser = argparse.ArgumentParser(
       description=(
-          "Validate project/questions/*.md files against "
+          "Validate project/questions-answered/*.md files against "
           "resources/templates/template_answers_to_questions.md and anti-hallucination gates."
       )
   )

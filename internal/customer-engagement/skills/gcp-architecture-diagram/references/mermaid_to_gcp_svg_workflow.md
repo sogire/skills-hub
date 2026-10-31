@@ -21,7 +21,7 @@ Use `--markdown` with `--list-mermaid` to list every fenced ` ```mermaid ` block
 
 ```bash
 python3 /path/to/gcp-architecture-diagram/scripts/render_gcp_diagram.py \
-  --markdown ./project/topics/platform-framework/docs/rethink-data-mesh-architecture-with-knowledge-catalog-data-product.md \
+  --markdown ./project/working-process/platform-framework/docs/rethink-data-mesh-architecture-with-knowledge-catalog-data-product.md \
   --list-mermaid
 ```
 
@@ -39,10 +39,10 @@ Run [`scripts/render_gcp_diagram.py`](../scripts/render_gcp_diagram.py) with `--
 
 ```bash
 python3 /path/to/gcp-architecture-diagram/scripts/render_gcp_diagram.py \
-  --markdown ./project/topics/platform-framework/docs/rethink-data-mesh-architecture-with-knowledge-catalog-data-product.md \
+  --markdown ./project/working-process/platform-framework/docs/rethink-data-mesh-architecture-with-knowledge-catalog-data-product.md \
   --block-index 0 \
-  --dump-json ./project/topics/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/specs/storage-vs-compute-decoupling.json \
-  --output ./project/topics/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/storage-vs-compute-decoupling.svg
+  --dump-json ./project/working-process/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/specs/storage-vs-compute-decoupling.json \
+  --output ./project/working-process/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/storage-vs-compute-decoupling.svg
 ```
 
 What the automatic Mermaid translator does:
@@ -58,8 +58,8 @@ Mermaid diagrams in technical notes often cram 4–5 verbose bullet points into 
 - **Re-compile & Verify Visually**:
   ```bash
   python3 /path/to/gcp-architecture-diagram/scripts/render_gcp_diagram.py \
-    --input ./project/topics/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/specs/storage-vs-compute-decoupling.json \
-    --output ./project/topics/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/storage-vs-compute-decoupling.svg
+    --input ./project/working-process/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/specs/storage-vs-compute-decoupling.json \
+    --output ./project/working-process/platform-framework/diagrams/rethink-data-mesh-architecture-with-knowledge-catalog-data-product/storage-vs-compute-decoupling.svg
   ```
   `render_gcp_diagram.py` automatically generates both `storage-vs-compute-decoupling.svg` and the 2× HiDPI `storage-vs-compute-decoupling.png` in the same folder. View the `.png` with `view_file` to confirm crisp layout before updating the Markdown deliverable.
 

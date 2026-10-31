@@ -11,7 +11,7 @@
 > [!NOTE]
 > **Per-Meeting vs. Project-Level Usage**:
 > - In **per-meeting files** (`project/meetings/YYYY-MM-DD_<slug>/YYYYMMDD_challenges_<slug>.md`), use this table to document the chronological **Customer-Led** vs. **Google-Led** segments of the session.
-> - In the **project-level master file** ([`project/common/project_challenges.md`](../../project/common/project_challenges.md)), pair or replace this table with the cumulative **Architectural Challenge Overview (`D1..Dn`)** table linking to all covered sessions and deep-dive deliverables, and append session dates at the **end of each bullet paragraph** in the format `(Dates: `[YYYY-MM-DD]`)` (or `(Dates: `[YYYY-MM-DD]`, `[YYYY-MM-DD]`)` when synthesized across multiple sessions).
+> - In the **project-level master file** ([`project/common/project_challenges.md`](../../project/common/project_challenges.md)), pair or replace this table with the cumulative **Architectural Challenge Overview (`D1..Dn`)** table linking to all covered sessions, working-process deep-dives (`../working-process/<topic-slug>/docs/...`), and customer-facing deliverables (`../deliverables/docs/...`), and append session dates at the **end of each bullet paragraph** in the format `(Dates: `[YYYY-MM-DD]`)` (or `(Dates: `[YYYY-MM-DD]`, `[YYYY-MM-DD]`)` when synthesized across multiple sessions).
 
 | Segment # | Leadership | Time Range | Lead Presenter(s) | Segment Focus, Demos & Artifacts Shown | Primary Domains |
 | :--- | :--- | :--- | :--- | :--- | :--- |

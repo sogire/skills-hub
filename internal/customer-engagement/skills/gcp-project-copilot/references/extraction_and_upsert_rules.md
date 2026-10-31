@@ -46,18 +46,20 @@ Before generating any output files, map all extracted questions and topics again
 
 ---
 
-## 2. Output Scope & Template Rules (Session-Level vs. Project-Level)
+## 2. Output Scope & Template Rules Across the 5-Layer Knowledge Base
 
-Outputs are divided into **two scopes** so that session-specific discussions are captured per meeting while project-wide directories (`members` and `glossary`) and cumulative logs (`questions-log` and `challenges`) are maintained in `<workspace>/project/common/`:
+Outputs are organized across the 5 layers of `<workspace>/project/` so session-specific discussions are captured per meeting, project-wide directories (`members`, `glossary`) and cumulative logs (`questions-log`, `challenges`) are maintained in `project/common/`, exploratory deep-dive thinking lives in `project/working-process/`, individual question evaluations live in `project/questions-answered/`, and clean customer-shared deliverables live in `project/deliverables/`:
 
-| Output Type | Canonical Template | Maintained Per-Meeting (`project/meetings/`)? | Maintained at Project Level (`project/common/`)? |
-| :--- | :--- | :---: | :---: |
-| **0. Meetings Registry (`meetings_registry`)** | [`template_meetings_registry.md`](../resources/templates/template_meetings_registry.md) | **No** *(Project-level only)* | **Yes** (`project/common/meetings_registry.md`) |
-| **1. Stakeholder Roster (`members`)** | [`template_members.md`](../resources/templates/template_members.md) | **No** *(Project-level only)* | **Yes** (`project/common/project_members.md`) |
-| **2. Customer Glossary (`glossary`)** | [`template_glossary.md`](../resources/templates/template_glossary.md) | **No** *(Project-level only)* | **Yes** (`project/common/project_glossary.md`) |
-| **3. Technical Questions Log (`questions-log`)** | [`template_questions-log.md`](../resources/templates/template_questions-log.md) | **Yes** (`YYYYMMDD_questions-log_<slug>.md`) | **Yes** (`project/common/project_questions-log.md`) |
-| **4. Topics & Challenges (`challenges`)** | [`template_challenges.md`](../resources/templates/template_challenges.md) | **Yes** (`YYYYMMDD_challenges_<slug>.md`) | **Yes** (`project/common/project_challenges.md`) |
-| **5. Technical Question Answers (`questions`)** | [`template_answers_to_questions.md`](../resources/templates/template_answers_to_questions.md) | **No** *(Per-question in `project/questions/`)* | **Yes** (`project/questions/<DOMAIN_ID>-Q<NN>_<slug>.md`, linked from `project_questions-log.md`) |
+| Output Type | Canonical Template | Target Directory in `<workspace>/project/` | Purpose & Cross-Linking |
+| :--- | :--- | :--- | :--- |
+| **0. Meetings Registry (`meetings_registry`)** | [`template_meetings_registry.md`](../resources/templates/template_meetings_registry.md) | `project/common/meetings_registry.md` | Idempotency index of analyzed Google Meet docs |
+| **1. Stakeholder Roster (`members`)** | [`template_members.md`](../resources/templates/template_members.md) | `project/common/project_members.md` | Customer-facing roster (no ASR misspellings) |
+| **2. Customer Glossary (`glossary`)** | [`template_glossary.md`](../resources/templates/template_glossary.md) | `project/common/project_glossary.md` | 6-category business & technical glossary |
+| **3. Technical Questions Log (`questions-log`)** | [`template_questions-log.md`](../resources/templates/template_questions-log.md) | Per-meeting (`project/meetings/YYYY-MM-DD_<slug>/`) + Cumulative (`project/common/project_questions-log.md`) | Coded `[D#-Q##]` / `[P1-Q##]` questions linking to `questions-answered/` |
+| **4. Topics & Challenges (`challenges`)** | [`template_challenges.md`](../resources/templates/template_challenges.md) | Per-meeting (`project/meetings/YYYY-MM-DD_<slug>/`) + Cumulative (`project/common/project_challenges.md`) | Role-attributed synthesis linking to `working-process/` & `deliverables/` |
+| **5. Technical Question Answers (`questions-answered`)** | [`template_answers_to_questions.md`](../resources/templates/template_answers_to_questions.md) | `project/questions-answered/<DOMAIN_ID>-Q<NN>_<slug>.md` | Individual skill-grounded answer per question, validated by `validate_question_answers.py` |
+| **6. Working-Process Topic Deep-Dives (`working-process`)** | Flexible exploratory Markdown + [`gcp-architecture-diagram`](../../gcp-architecture-diagram/SKILL.md) | `project/working-process/<topic-slug>/docs/<doc-stem>.md` | Architect's deep-dive thinking & trade-off analysis (richly cross-linked to `[D#-Q##]` & meetings) |
+| **7. Final Customer Deliverables (`deliverables`)** | [`template_deliverable.md`](../resources/templates/template_deliverable.md) | `project/deliverables/docs/<deliverable-stem>.md` | Standalone, PDF-clean customer deliverables (zero internal links or inline `[D#-Q##]` codes), validated by `validate_deliverables.py` |
 
 ---
 
@@ -98,17 +100,21 @@ Outputs are divided into **two scopes** so that session-specific discussions are
 - **Template**: [`resources/templates/template_questions-log.md`](../resources/templates/template_questions-log.md)
 - **Extraction & Formatting Rules**:
   1. **Metadata Table**: Include `Source Document` (link to the Google Doc), `Session Date`, `Scope`, and `Note`.
-  2. **Session Overview & Question Summary Table**: Summarize all questions grouped by the **Canonical Architectural Domains** (`D1..Dn`) and **Project Governance Domain** (`P1`) defined in `<workspace>/specs/specs_project.md`, listing `Code Range` (e.g., `D1-Q01..D1-Q05`, `P1-Q01..P1-Q02`), `Core Technical Focus Areas`, and `Total Raised` per category.
-  3. **Comprehensive Question Extraction & `D1..Dn` vs. `P1` Classification**:
+  2. **Session Overview & Question Summary Table**: Summarize all questions grouped by the **Canonical Architectural Domains** (`D1..Dn`) and **Project Governance Domain** (`P1`) defined in `<workspace>/specs/specs_project.md`, listing `Code Range (Q / S)` (e.g., `D1-Q01..D1-Q05` / `D1-S01..D1-S02`), `Core Technical Focus Areas`, `Customer (Q)`, `Scoping (S)`, and `Total Raised` per category.
+  3. **Comprehensive Question Extraction, `D1..Dn` vs. `P1` Classification & `Q` vs. `S` Role Separation**:
      - Scan both `Full notes` and the verbatim `Transcript` to capture **all** technical, architectural, governance, security, FinOps, and project organization questions raised by customer, Google Cloud, or partner participants.
      - **Route Technical Architecture Questions to `D1..Dn`**: Questions about cloud services, data modeling, security, governance, quality, observability, AI agents, or BI belong in `D1..Dn`.
-     - **Route Project Organization & Coordination Questions to `P1` (`Project Organization, Workstream Alignment & Delivery Governance`)**: Questions about engagement roadmap/milestone prioritization, workshop cadence or review slot scheduling, cross-workstream alignment (e.g., bridging two project workstreams around a shared vertical), or deliverable/schema handoff logistics (often raised by Google Cloud or program leads) belong in **`P1`**.
+     - **Route Project Organization & Coordination Questions to `P1` (`Project Organization, Workstream Alignment & Delivery Governance`)**: Questions about engagement roadmap/milestone prioritization, workshop cadence or review slot scheduling, cross-workstream alignment (e.g., bridging two project workstreams around a shared vertical), or deliverable/schema handoff logistics belong in **`P1`**.
+     - **Strictly Separate Customer Technical Questions (`Q`) from Discovery & Scoping Questions (`S`) Within Every Domain**:
+       Cross-reference every questioner against `project/common/project_members.md` (Section 1 Customer vs. Section 2 Google Cloud vs. Section 3 External Partners) and split each domain into two H2 subsections:
+       - `## 1. Customer Technical Questions ({{CUSTOMER_NAME}})`: Questions raised by **Customer (`{{CUSTOMER_NAME}}`)** stakeholders seeking a Google Cloud architectural recommendation, technical evaluation, or platform design answer. Coded sequentially as **`[<DOMAIN_ID>-Q<NN>]`** (e.g., `[D1-Q01]`, `[P1-Q01]`).
+       - `## 2. Discovery & Scoping Questions (Google Cloud & External Partners)`: Questions raised by **Google Cloud** or **External Partner** consultants to qualify the customer's current state, organizational structure, business pain points, data volumes, or scope boundaries. Coded sequentially as **`[<DOMAIN_ID>-S<NN>]`** (e.g., `[D1-S01]`, `[P1-S01]`).
      - Formulate each question as a clear, self-contained, bolded question (preserving specific context such as data volumes, customer source systems, compliance standards, and GCP services).
      - Omit conversational filler or direct answers from the question text itself so the log remains a clean question inventory.
-  4. **Permanent Domain-Scoped Reference Code (`[D#-Q##]` / `[P1-Q##]`), Attribution & Deep-Linked Timestamp**:
-     - Assign every question a permanent, append-only **Domain-Scoped Reference Code** formatted as `` `[<DOMAIN_ID>-Q<NN>]` `` (zero-padded 2-digit counter per domain, e.g., `[D1-Q01]`, `[D1-Q02]`, ..., `[P1-Q01]`), numbered sequentially in chronological order across the project.
+  4. **Permanent Domain-Scoped Reference Code (`[D#-Q##]` vs. `[D#-S##]`), Pure Asker Attribution & Deep-Linked Timestamp**:
+     - Assign every Customer question a permanent, append-only **Customer Question Code** formatted as `` `[<DOMAIN_ID>-Q<NN>]` `` and every Google Cloud / Partner discovery question a **Discovery & Scoping Question Code** formatted as `` `[<DOMAIN_ID>-S<NN>]` ``, numbered sequentially in chronological order across the project.
      - Use the **exact same code** for a given question in both its per-meeting file (`YYYYMMDD_questions-log_<slug>.md`) and the master `project/common/project_questions-log.md` so any question can be unambiguously referenced anywhere in the repository.
-     - `**Asked By:** First LASTNAME` (uppercase last name matching template convention).
+     - `**Asked By:** First LASTNAME (<Role — Organization>)` (e.g., `First LASTNAME (Customer — {{CUSTOMER_NAME}})`, `First LASTNAME (External Partner — {{EXTERNAL_PARTNERS}})`, or `First LASTNAME (Google Cloud)`). **Never** include respondents who answered or reacted to the question in a `*(with ...)*` suffix—`Asked By` must strictly identify who raised the question (only include a second name if two stakeholders genuinely co-asked the question from the same side).
      - `**Timestamp:** [Timestamp HH:MM:SS](https://docs.google.com/document/d/<DOC_ID>/edit?tab=<TRANSCRIPT_TAB_ID>#heading=<HEADING_ID>)`
 
 #### B. Prioritized Topics, Challenges & Exploration Roadmap (`challenges`)
@@ -135,9 +141,10 @@ Outputs are divided into **two scopes** so that session-specific discussions are
 2. **Per-Session Output Filenames**:
    - `<YYYYMMDD>_questions-log_<meeting-slug>.md`
    - `<YYYYMMDD>_challenges_<meeting-slug>.md`
-3. **Relative Path Rule for All Workspace Markdown Links**:
-   - Every internal file or directory reference across `<workspace>/specs/specs_project.md`, `project/common/`, `project/meetings/`, and `project/topics/` MUST use **portable relative paths** (e.g., `../project/common/project_members.md`, `../meetings/YYYY-MM-DD_<slug>/...`).
+3. **Relative Path Rule for Workspace Markdown Links**:
+   - Every internal file or directory reference across `<workspace>/specs/specs_project.md`, `project/common/`, `project/meetings/`, `project/working-process/`, and `project/questions-answered/` MUST use **portable relative paths** (e.g., `../common/project_members.md`, `../meetings/YYYY-MM-DD_<slug>/...`, `../questions-answered/...`, `../working-process/...`).
    - **Never** write `file:///` URIs or absolute filesystem paths (`/usr/...`) inside repository Markdown files.
+   - **Customer Deliverables Exception (`project/deliverables/docs/`)**: Final customer deliverables in `project/deliverables/docs/` must contain **zero internal `.md` links** (only public external URLs and embedded `../diagrams/<deliverable-stem>/...` images; see Section 6 below).
 
 ---
 
@@ -155,23 +162,23 @@ Outputs are divided into **two scopes** so that session-specific discussions are
 ### Rule 4.3: Upsert `project/common/project_glossary.md`
 - Insert newly discovered terms across the 6 topic categories or enrich existing definitions and append `YYYY-MM-DD` to `Sessions Referenced`.
 
-### Rule 4.4: Aggregate `project/common/project_questions-log.md` (With Permanent `[D#-Q##]` / `[P1-Q##]` Codes)
-- Maintain the cumulative inventory of all technical and project organization questions across the project, grouped by the **Canonical Architectural Domains** (`D1..Dn`) and **Project Governance Domain** (`P1`) defined in `<workspace>/specs/specs_project.md`.
-- Under the matching Domain section, append each new question using the next sequential domain-scoped code (`[<DOMAIN_ID>-Q<NN>]`) and the multi-session format:
+### Rule 4.4: Aggregate `project/common/project_questions-log.md` (With Permanent `[D#-Q##]` Customer & `[D#-S##]` Scoping Codes)
+- Maintain the cumulative inventory of all Customer technical questions (`[D#-Q##]` / `[P1-Q##]`) and Google Cloud / External Partner discovery & scoping questions (`[D#-S##]` / `[P1-S##]`) across the project, grouped by the **Canonical Architectural Domains** (`D1..Dn`) and **Project Governance Domain** (`P1`) defined in `<workspace>/specs/specs_project.md`.
+- Within each Domain section, maintain two H2 subsections (`## 1. Customer Technical Questions ({{CUSTOMER_NAME}})` and `## 2. Discovery & Scoping Questions (Google Cloud & External Partners)`) and append each new question to its corresponding subsection using the next sequential domain-scoped code (`[<DOMAIN_ID>-Q<NN>]` or `[<DOMAIN_ID>-S<NN>]`) and the multi-session format:
   ```markdown
-  * **`[<DOMAIN_ID>-Q<NN>]` <Question Text>**
-    * **Asked By:** First LASTNAME
+  * **`[<DOMAIN_ID>-Q<NN>]` <Customer Question Text>**
+    * **Asked By:** First LASTNAME (Customer — {{CUSTOMER_NAME}})
     * **Session:** [YYYY-MM-DD (<meeting-slug>)](../meetings/YYYY-MM-DD_<slug>/YYYYMMDD_questions-log_<slug>.md)
     * **Timestamp:** [Timestamp HH:MM:SS](https://docs.google.com/document/d/<DOC_ID>/edit?tab=<TRANSCRIPT_TAB_ID>#heading=<HEADING_ID>)
   ```
-- Update the `Code Range` and `Total Raised` counts in the top `Project Question Summary` table.
+- Update the `Code Range (Q / S)`, `Customer (Q)`, `Scoping (S)`, and `Total Raised` counts in the top `Project Question Summary` table.
 
 ### Rule 4.5: Evolve `project/common/project_challenges.md`
 - `project_challenges.md` is a **living architectural synthesis**, not a raw concatenation of meeting files.
 - **Trailing Session Date Attribution (`(Dates: `[YYYY-MM-DD]`)`)**: In `project/common/project_challenges.md`, **never** place session dates at the beginning of a bullet point. Always place session date tags at the **end of each bullet paragraph** in the format `(Dates: `[YYYY-MM-DD]`)` for single-session items or `(Dates: `[YYYY-MM-DD]`, `[YYYY-MM-DD]`)` when an item spans multiple sessions.
 - When a meeting addresses an **existing topic section** (`D1..Dn`), preserve the **4-subsection role-attributed structure**:
   1. **Sessions Covered**: Append the new meeting date and link to the topic's `**Sessions Covered:**` metadata line.
-  2. **Deep-Dive Deliverables**: If a corresponding folder exists under `project/topics/<topic-slug>/`, link it under `**Deep-Dive Deliverables:**`.
+  2. **Working-Process Deep-Dives & Customer Deliverables**: Link any working analyses under `project/working-process/<topic-slug>/` and any finalized customer deliverables under `project/deliverables/docs/`.
   3. **1. Customer Current State, Implementations & Ambitions (`{{CUSTOMER_NAME}}`-Led)**: Merge newly presented customer architectures, implementations, or evolving business objectives, appending `(Dates: `[YYYY-MM-DD]`)` at the end of the paragraph.
   4. **2. Core Architectural Challenges & Friction Points**: Merge newly uncovered nuances, edge cases, or constraints without deleting still-valid challenges from earlier sessions, appending `(Dates: `[YYYY-MM-DD]`)` (or adding the new date to `(Dates: `[YYYY-MM-DD]`, `[YYYY-MM-DD]`)`) at the end of the paragraph.
   5. **3. Google Cloud Architectural Solutions & Recommendations (`Google-Led`)**: Expand with newly presented GCP reference architectures, patterns, or architectural decisions, appending `(Dates: `[YYYY-MM-DD]`)` at the end of the paragraph.
@@ -179,20 +186,21 @@ Outputs are divided into **two scopes** so that session-specific discussions are
 
 ### Rule 4.6: Atomic 4-File Propagation for Newly Approved Domains (`D(n+1)`)
 When the user approves a new domain `D(n+1)` during **Step 1.4**:
-1. **`specs/specs_project.md` (Section 3)**: Append `D(n+1)` to the **Canonical Architectural Domain Taxonomy** table with its `Canonical Domain Name`, plain-text logical `project/topics/` Directory Slug (`` `<new-slug>` ``), and `Core Technical Scope & Keywords`.
+1. **`specs/specs_project.md` (Section 3)**: Append `D(n+1)` to the **Canonical Architectural Domain Taxonomy** table with its `Canonical Domain Name`, plain-text logical `project/working-process/` Directory Slug (`` `<new-slug>` ``), and `Core Technical Scope & Keywords`.
 2. **Per-Meeting Outputs (`project/meetings/YYYY-MM-DD_<slug>/`)**: Include `D(n+1)` in the session's `YYYYMMDD_questions-log_<slug>.md` and `YYYYMMDD_challenges_<slug>.md`.
 3. **`project/common/project_questions-log.md`**: Add a `D(n+1)` row to the top `Project Question Summary` table (setting prior session counts to `0`) and append `# D(n+1). <Canonical Domain Name>` at the end of the file.
 4. **`project/common/project_challenges.md`**: Add a `D(n+1)` row to the `Architectural Challenge Overview` table and append `# D(n+1). <Canonical Domain Name>` (using the 4-subsection template) at the end of the file.
-5. **Lazy `project/topics/<new-slug>/` Folder Creation**: Do **not** create an empty directory under `project/topics/` when registering `D(n+1)`. Only create `project/topics/<new-slug>/docs/` when a deep-dive deliverable is actually generated.
+5. **Lazy `project/working-process/<new-slug>/` Folder Creation**: Do **not** create an empty directory under `project/working-process/` when registering `D(n+1)`. Only create `project/working-process/<new-slug>/docs/` when a deep-dive working document is actually generated.
 
 ---
 
-## 5. Technical Question Evaluation & Answering Rules (`project/questions/`)
+## 5. Technical Question Evaluation & Answering Rules (`project/questions-answered/`)
 
 - **Template**: [`resources/templates/template_answers_to_questions.md`](../resources/templates/template_answers_to_questions.md)
 - **Execution Rules**:
-  1. **Individual Answer File Per Question (`project/questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md`)**:
-     - Whether the user selects a single question (e.g., `D3-Q14`), multiple questions (`D3-Q14, D3-Q15`), or a domain/session group (e.g., all questions in `D3`), always generate **one individual Markdown file per question** inside `<workspace>/project/questions/` by default.
+  1. **Customer-Only Scope & Individual Answer File Per Question (`project/questions-answered/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md`)**:
+     - `project/questions-answered/` is strictly reserved for evaluating **Customer Technical Questions (`[D#-Q##]` / `[P1-Q##]`)** from Subsection 1 (`## 1. Customer Technical Questions ({{CUSTOMER_NAME}})`). Never generate `project/questions-answered/` files for Google Cloud or External Partner discovery/scoping questions (`[D#-S##]` / `[P1-S##]`), whose customer answers belong in `project_challenges.md` (`### 1. Customer Current State`).
+     - Whether the user selects a single question (e.g., `D3-Q14`), multiple questions (`D3-Q14, D3-Q15`), or a domain/session group (e.g., all Customer questions in `D3`), always generate **one individual Markdown file per question** inside `<workspace>/project/questions-answered/` by default.
   2. **External Skill Discovery, Read-Before-Cite & Zero-Guess Code Grounding**:
      - Before writing the evaluation, inspect all **currently active external** Google Cloud / technical skills available in the workspace (e.g., `bigquery-sql`, `bigquery-optimization`, `bigquery-basics`, `bigquery-observability`, `iam-helper-for-policy-management`, `google-cloud-waf-security`, `gcp-spark`, `dataform-bigquery`, `dbt-bigquery`, `retrieving-developer-knowledge`, etc.).
      - **Never list `agyhub` internal skills or IDE meta-skills in Section 6**: Strictly exclude `skills-hub/internal/*` skills (`gcp-project-copilot`, `gcp-architecture-diagram`, `gcp-console-demo-generator`, `agyhub-*`, `template-skill`) and IDE/doc utilities (`agy-customizations`, `antigravity-guide`, `gdocs`, `gdrive`).
@@ -207,5 +215,22 @@ When the user approves a new domain `D(n+1)` during **Step 1.4**:
      - **Section 5 — Google Cloud Documentation Reference Links**: Official `https://docs.cloud.google.com/...` / `https://cloud.google.com/...` URLs referenced in the evaluation.
      - **Section 6 — Skills Employed (4-Column Validation Matrix)**: `| External Skill | Validated Sections & Code Blocks | Grounding Artifacts Consulted | Technical Contribution to This Evaluation |`, mapping 100% of code-bearing `§2.x` subsections and `§3.1` to verified external skills and existing `SKILL.md` / `references/*.md` files (or live `retrieving-developer-knowledge` lookups). Run `scripts/validate_question_answers.py --require-active-skills` (and `--transcript` when available) and ensure `exit 0`.
   4. **Cross-Linking in `project_questions-log.md`**:
-     - Append `* **Answer:** [<Short Title>](../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md)` under the answered question in `project/common/project_questions-log.md` (and `../../questions/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` in the corresponding `project/meetings/YYYY-MM-DD_<slug>/YYYYMMDD_questions-log_<slug>.md`).
+     - Append `* **Answer:** [<Short Title>](../questions-answered/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md)` under the answered question in `project/common/project_questions-log.md` (and `../../questions-answered/<DOMAIN_ID>-Q<NN>_<short-kebab-slug>.md` in the corresponding `project/meetings/YYYY-MM-DD_<slug>/YYYYMMDD_questions-log_<slug>.md`).
 
+---
+
+## 6. Customer-Facing Deliverable Synthesis & Cleanliness Rules (`project/deliverables/`)
+
+- **Template**: [`resources/templates/template_deliverable.md`](../resources/templates/template_deliverable.md)
+- **Validator**: [`scripts/validate_deliverables.py`](../scripts/validate_deliverables.py)
+- **Execution Rules**:
+  1. **Purpose (`project/working-process/` $\to$ `project/deliverables/`)**:
+     - `project/working-process/<topic-slug>/docs/` is the architect's internal thinking space where documents explore options and richly link to `[D#-Q##]` questions, session logs, and challenges.
+     - `project/deliverables/docs/<deliverable-stem>.md` is the **final, customer-facing deliverable** synthesized from `project/working-process/` and `project/questions-answered/`, ready to be shared directly with customer executives/engineers or exported to PDF.
+  2. **Strict PDF-Clean Formatting Rules**:
+     - **Zero Internal Links**: Do **not** include any relative Markdown links (`../working-process/...`, `../questions-answered/...`, `../common/...`, `../meetings/...`, `../../specs/...`) or internal Google Docs/Drive links (`docs.google.com`, `drive.google.com`) anywhere in the document. All hyperlinks `[text](url)` must be public external URLs (`https://docs.cloud.google.com/...`, `https://cloud.google.com/...`).
+     - **Zero Inline Question Codes in Header & Sections 1–5**: Remove all `[D#-Q##]` and `[P#-Q##]` question codes from the headers, metadata table, prose, and tables across Sections 1–5.
+     - **Local Companion Diagrams**: Place all `.svg`, `.png`, and `specs/*.json` diagram files for `<deliverable-stem>.md` inside `project/deliverables/diagrams/<deliverable-stem>/` and embed them via `![Caption](../diagrams/<deliverable-stem>/<diagram>.svg)`.
+     - **Section 6 Source Traceability (`6.1` Public Docs + `6.2` Filename-Only Internal Sources)**:
+       - `### 6.1 Official Google Cloud Documentation`: Bulleted list of public official documentation URLs.
+       - `### 6.2 Internal Working Sources (Filename Reference Only)`: Bulleted list of plain-code `.md` filenames from `project/working-process/` and `project/questions-answered/` (e.g., `` `* \`rethink-data-mesh-architecture-with-knowledge-catalog-data-product.md\`` ``)—with **zero URLs or Markdown link syntax**.

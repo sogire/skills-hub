@@ -575,12 +575,14 @@ def extract_internal_md_dependencies(
 
 
 def doc_tier_priority(rel_path: str) -> Tuple[int, int, str]:
-  """Return (tier, sub_order, rel_path) for the 3-tier knowledge base hierarchy."""
-  # Tier 1: topics/ and questions/ (synced before meetings/ and common/ so hub links resolve)
-  if rel_path.startswith("topics/"):
+  """Return (tier, sub_order, rel_path) for the 5-layer knowledge base hierarchy."""
+  # Tier 1: working-process/, questions-answered/, and deliverables/ (synced before meetings/ and common/ so hub links resolve)
+  if rel_path.startswith(("working-process/", "topics/")):
     return (1, 1, rel_path)
-  if rel_path.startswith("questions/"):
+  if rel_path.startswith(("questions-answered/", "questions/")):
     return (1, 2, rel_path)
+  if rel_path.startswith("deliverables/"):
+    return (1, 3, rel_path)
   # Tier 2: meetings/ (challenges before questions-log)
   if rel_path.startswith("meetings/"):
     if "_challenges_" in rel_path:
@@ -1598,9 +1600,21 @@ def main() -> int:
       )
       rel = os.path.relpath(dirpath, project_dir)
       if rel != ".":
-        if rel == "questions" and not dirnames and not [
-            fn for fn in filenames if not fn.startswith(".")
-        ]:
+        if (
+            rel
+            in (
+                "questions",
+                "questions-answered",
+                "working-process",
+                "topics",
+                "deliverables",
+                "deliverables/docs",
+                "deliverables/diagrams",
+                "deliverables/demos",
+            )
+            and not dirnames
+            and not [fn for fn in filenames if not fn.startswith(".")]
+        ):
           continue
         rel_dirs.append(rel)
 

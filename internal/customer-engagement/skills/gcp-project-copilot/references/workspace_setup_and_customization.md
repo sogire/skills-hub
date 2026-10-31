@@ -1,7 +1,7 @@
 # Workspace Setup, Config Customization & Google Drive Sync Guide (`gcp-project-copilot`)
 
 This reference defines the exact procedures and CLI invocations for:
-1. **Scaffolding a customer project workspace** (`specs/`, `project/common/`, `project/meetings/`, `project/topics/`).
+1. **Scaffolding a customer project workspace** (`specs/`, `project/common/`, `project/meetings/`, `project/working-process/`, `project/questions-answered/`, `project/deliverables/`).
 2. **Interactively customizing `specs/specs_project.md` and `specs/gdrive_sync_manifest.json`**.
 3. **Executing Google Drive synchronization** (`scripts/sync_drive.py`) from any workspace.
 
@@ -12,6 +12,9 @@ This reference defines the exact procedures and CLI invocations for:
 Because `gcp-project-copilot` is a workspace-agnostic skill, its executable scripts live inside the skill directory alongside `SKILL.md`:
 - **Workspace Scaffolding & Config Customization Script**: `<skill-dir>/scripts/init_workspace.py`
 - **Google Drive & Native Google Docs Sync Script**: `<skill-dir>/scripts/sync_drive.py`
+- **Question Answers Validator**: `<skill-dir>/scripts/validate_question_answers.py`
+- **Customer Deliverables Validator**: `<skill-dir>/scripts/validate_deliverables.py`
+- **Question CSV Exporter**: `<skill-dir>/scripts/export_questions_csv.py`
 
 *(Note: When `SKILL.md` is loaded from `/path/to/gcp-project-copilot/SKILL.md`, `<skill-dir>` is `/path/to/gcp-project-copilot`).*
 
@@ -28,7 +31,7 @@ Determine whether the user has provided:
 - **Option B — Interactive Setup (No Kickoff Doc Yet)**:
   Ask the user for the core project identity and Google Drive Folder URL(s):
   1. **Customer & Project Name** (`CUSTOMER_NAME`, `PROJECT_NAME`, `PROGRAM_NAME`, `PILOT_DOMAIN`)
-  2. **Root Project Google Drive Folder URL or ID** (e.g., `https://drive.google.com/drive/folders/<ID>`, where `common/`, `meetings/`, and `topics/` will be mirrored)
+  2. **Root Project Google Drive Folder URL or ID** (e.g., `https://drive.google.com/drive/folders/<ID>`, where `common/`, `meetings/`, `working-process/`, `questions-answered/`, and `deliverables/` will be mirrored)
   3. **Canonical Domain Taxonomy Preset (`--taxonomy`)**: Defaults to **`data-analytics-agents`** (**3 Data + 2 Analytics + 2 Agents + `P1`**). If the project is an AI-first engagement focused on ADK, Conversational Analytics, and MCP grounding, you can select **`agentic-ai-platform`** (inspect presets via `python3 <skill-dir>/scripts/init_workspace.py --list-taxonomies`).
   4. *(Optional)* **Meeting Notes Folder URL/ID** and **Deliverables Folder URL/ID**
 
@@ -56,14 +59,14 @@ python3 <skill-dir>/scripts/init_workspace.py \
 
 **What this command creates**:
 - `<workspace-root>/specs/specs_project.md` (populated with customer identity and Drive folder links)
-- `<workspace-root>/specs/gdrive_sync_manifest.json` (initialized with `root_folder_id`, `root_folder_name`, `root_folder_url`, and any existing remote `common/`, `meetings/`, `topics/` folders discovered via `--discover-drive`)
+- `<workspace-root>/specs/gdrive_sync_manifest.json` (initialized with `root_folder_id`, `root_folder_name`, `root_folder_url`, and any existing remote `common/`, `meetings/`, `working-process/`, `questions-answered/`, `deliverables/` folders discovered via `--discover-drive`)
 - `<workspace-root>/project/common/meetings_registry.md`
 - `<workspace-root>/project/common/project_members.md`
 - `<workspace-root>/project/common/project_glossary.md`
 - `<workspace-root>/project/common/project_questions-log.md`
 - `<workspace-root>/project/common/project_challenges.md`
-- `<workspace-root>/project/meetings/` and `<workspace-root>/project/topics/`
-- `<workspace-root>/GEMINI.md` (when `--with-gemini-rules` is passed)
+- `<workspace-root>/project/meetings/`, `<workspace-root>/project/working-process/`, `<workspace-root>/project/questions-answered/`, and `<workspace-root>/project/deliverables/{docs,diagrams}`
+- `<workspace-root>/GEMINI.md` (when `--with-gemini-rules` is passed, initialized as a clean container for project-specific architectural rules)
 
 ---
 
@@ -88,7 +91,7 @@ python3 <skill-dir>/scripts/init_workspace.py \
 ### B. Customizing Canonical Architectural Domains (`D1..Dn` in Section 3)
 - Section 3 of `specs/specs_project.md` defines the canonical domains (`D1..Dn`) used to categorize `questions-log` and `challenges`.
 - When tailoring domains for a customer:
-  1. Update the Section 3 table in `specs/specs_project.md` (`Domain ID`, `Canonical Domain Name`, plain-code `` `<topic-slug>` ``, and `Core Technical Scope & Keywords`).
+  1. Update the Section 3 table in `specs/specs_project.md` (`Domain ID`, `Canonical Domain Name`, plain-code `` `<topic-slug>` `` under `project/working-process/`, and `Core Technical Scope & Keywords`).
   2. Ensure the domain headings in `project/common/project_questions-log.md` and `project/common/project_challenges.md` match `D1..Dn`.
 
 ### C. Customizing Transcript Phonetic Aliases (Section 5)
@@ -99,7 +102,9 @@ python3 <skill-dir>/scripts/init_workspace.py \
 
 ## 4. Executing Google Drive Synchronization from the Workspace (`scripts/sync_drive.py`)
 
-Whenever a workflow step or direct user prompt asks to synchronize the workspace (`project/`) with Google Drive:
+> [!IMPORTANT]
+> **Hold Synchronization Until User Review (Guardrail 8)**:
+> Always generate and validate local Markdown files and diagrams first, and wait for the user to review and explicitly request synchronization before running `sync_drive.py` (unless the user explicitly requested immediate synchronization in their prompt).
 
 ### Step 4.1: Pre-Flight Configuration Check
 1. Inspect `specs/specs_project.md` (Section 2.1) and `specs/gdrive_sync_manifest.json` (`root_folder_id`).
@@ -114,8 +119,9 @@ Execute `sync_drive.py` from the skill's `scripts/` directory, passing `--worksp
 # Preview changes without modifying Google Drive (optional dry-run)
 python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --dry-run
 
-# Synchronize only the project/questions/ folder (or pass repeatable --file flags for specific files):
-python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions
+# Synchronize only the project/questions-answered/ or project/deliverables/ folder (repeatable --file flags):
+python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/questions-answered
+python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root> --file project/deliverables
 
 # Execute live wave-parallel synchronization (default --jobs 6; pass --jobs <N> to tune concurrency):
 python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
@@ -123,11 +129,10 @@ python3 <skill-dir>/scripts/sync_drive.py --workspace <workspace-root>
 
 **What `sync_drive.py` does automatically**:
 1. **Resolves Target Workspace & Root Drive Folder ID**: Reads `specs/specs_project.md` and `specs/gdrive_sync_manifest.json` in `<workspace-root>`.
-2. **Phase 1 — Folder Mirroring (with Per-Parent `ls` Caching)**: Ensures every populated subfolder under `project/` (`common/`, `meetings/...`, `topics/...`, `questions/`) exists in Google Drive under the Root Project Drive Folder and records its folder ID in `specs/gdrive_sync_manifest.json`.
+2. **Phase 1 — Folder Mirroring (with Per-Parent `ls` Caching)**: Ensures every populated subfolder under `project/` (`common/`, `meetings/...`, `working-process/...`, `questions-answered/`, `deliverables/...`) exists in Google Drive under the Root Project Drive Folder and records its folder ID in `specs/gdrive_sync_manifest.json`.
 3. **Phase 2 — Parallel Asset Sync (`--jobs 6` default)**: Uploads or updates standalone `.svg`, `.png`, `.jpg`, `.jpeg`, `.json`, and `.csv` assets concurrently across `--jobs` workers (ensuring every `.svg` diagram has an up-to-date 2× HiDPI companion `.png`) and records their Google Drive file IDs, URLs, and SHA-256 hashes in `specs/gdrive_sync_manifest.json["assets"]`.
 4. **Phase 3 — Wave-Parallel Native Google Docs Sync (`--jobs 6` default)**:
-   - Partitions target `.md` files in `project/` into topological link-dependency waves (`topics/` & leaf `questions/` $\to$ `meetings/` $\to$ `common/`). Updates to existing documents run concurrently in Wave 0 because their permanent Google Doc IDs/URLs are already in the manifest, while brand-new documents run wave-by-wave so internal links always resolve to real Google Docs URLs.
+   - Partitions target `.md` files in `project/` into topological link-dependency waves (`working-process/`, `questions-answered/` & `deliverables/` $\to$ `meetings/` $\to$ `common/`). Updates to existing documents run concurrently in Wave 0 because their permanent Google Doc IDs/URLs are already in the manifest, while brand-new documents run wave-by-wave so internal links always resolve to real Google Docs URLs.
    - Prefetches open-comment status across dirty documents in a single concurrent `gdocs readonly stream comments --open-only` batch call instead of per-file CLI startups.
    - Normalizes single-token LaTeX symbols (`$\rightarrow$` $\to$ `→`) on staged Markdown (after computing SHA-256 hashes so existing manifest hashes stay 100% compatible) and passes `--render-math=false` / `--render-diagrams=false` whenever safe.
    - Imports new documents (`gdocs mutate import-md --pageless` + `gdrive mutate mv`) or updates modified documents (`gdocs mutate sync --save-base=false` when open comments exist, or `gdocs mutate import-md --update` otherwise) with automatic exponential backoff on transient `429`/`503` errors and atomic checkpointing into `specs/gdrive_sync_manifest.json` (`specs/specs_project.md` is never mutated during Drive sync).
-

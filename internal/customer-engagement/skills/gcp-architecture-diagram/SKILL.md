@@ -70,7 +70,7 @@ When a user asks to upgrade a ` ```mermaid ` flowchart inside a Markdown documen
 1. **List Mermaid Blocks in the Markdown File**:
    ```bash
    python3 /path/to/gcp-architecture-diagram/scripts/render_gcp_diagram.py \
-     --markdown ./project/topics/my-topic/docs/architecture.md \
+     --markdown ./project/working-process/my-topic/docs/architecture.md \
      --list-mermaid
    ```
    > **Note**: Only `flowchart` / `graph` blocks should be converted into GCP Reference Architecture SVGs. Keep `sequenceDiagram` blocks in Mermaid for protocol/auth call sequences.
@@ -79,10 +79,10 @@ When a user asks to upgrade a ` ```mermaid ` flowchart inside a Markdown documen
    - Store all `.svg`, `.png`, and `specs/*.json` files for a document `<doc-stem>.md` inside a dedicated per-document subfolder at `../diagrams/<doc-stem>/` (sibling to `docs/`):
    ```bash
    python3 /path/to/gcp-architecture-diagram/scripts/render_gcp_diagram.py \
-     --markdown ./project/topics/my-topic/docs/architecture.md \
+     --markdown ./project/working-process/my-topic/docs/architecture.md \
      --block-index 0 \
-     --dump-json ./project/topics/my-topic/diagrams/architecture/specs/flow-0.json \
-     --output ./project/topics/my-topic/diagrams/architecture/flow-0.svg
+     --dump-json ./project/working-process/my-topic/diagrams/architecture/specs/flow-0.json \
+     --output ./project/working-process/my-topic/diagrams/architecture/flow-0.svg
    ```
 
 3. **Refine the JSON Spec for Executive Polish *(Recommended)***:
@@ -94,7 +94,7 @@ When a user asks to upgrade a ` ```mermaid ` flowchart inside a Markdown documen
 ## Workflow 3: Embed in Markdown Deliverables & Sync to Google Docs / Google Drive
 
 1. **Standardized Per-Document Diagram Folder & Portable Relative Links**:
-   - For any Markdown document at `project/topics/<topic>/docs/<doc-stem>.md`, store its diagrams and JSON specs under `project/topics/<topic>/diagrams/<doc-stem>/` (`*.svg`, `*.png`, and `specs/*.json`) using hyphens (`-`) in filenames.
+   - For any Markdown document at `project/working-process/<topic>/docs/<doc-stem>.md` (or `project/deliverables/docs/<doc-stem>.md`), store its diagrams and JSON specs under `../diagrams/<doc-stem>/` (`*.svg`, `*.png`, and `specs/*.json`) using hyphens (`-`) in filenames.
    - Reference the `.svg` from the Markdown file using a portable relative path (never `file:///` or absolute `/usr/...` paths inside repository `.md` files):
      ```markdown
      ![Enterprise Data Mesh Reference Architecture](../diagrams/<doc-stem>/data-mesh-architecture.svg)

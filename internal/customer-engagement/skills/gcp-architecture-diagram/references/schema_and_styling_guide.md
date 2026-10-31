@@ -95,6 +95,7 @@ Each card renders as a crisp white rounded rectangle (`#ffffff`, `#c4c7c5` borde
    - **`subtitle`** (`#757575`, regular `9.0px`): Specific Google Cloud product or component (e.g., `"Knowledge Catalog"`, `"Analytics Hub"`, `"Dataform"`, `"BigQuery"`).
    - **`badge`** *(optional, `#1a73e8`, medium `8.2px`)*: Concise governance tag, project ID, or contract note.
 2. **Concise Text**: Keep `title` and `subtitle` under ~32 characters and `badge` under ~40 characters so cards remain compact (`130px–220px` wide).
+3. **Font-Safe ASCII Operators**: Avoid specialized mathematical Unicode glyphs such as `∩` (`\u2229`), `∪` (`\u222a`), or `⊆` inside `title`, `subtitle`, `badge`, or `label` strings, as headless SVG-to-PNG rasterizers (`rsvg-convert` / ImageMagick with system sans-serif fonts) may silently drop them; use standard ASCII equivalents (`+`, `&`, `/`, `->`, `x`) instead.
 
 ---
 
@@ -124,6 +125,10 @@ Each card renders as a crisp white rounded rectangle (`#ffffff`, `#c4c7c5` borde
 | `from_side` / `to_side` | `"auto"` \| `"top"` \| `"bottom"` \| `"left"` \| `"right"` | `"auto"` | Optional explicit port side override. When `"auto"`, sides and multi-port slots are chosen automatically to minimize crossings. |
 | `offset` | `float` | `auto` | Optional pixel nudge for the middle segment of a 4-point orthogonal dogleg. Parallel edges sharing a corridor are automatically staggered when `offset` is omitted. |
 | `color` | `string` | `"#3a7df0"` | Connector and arrowhead hex color. |
+
+### Multi-Plane Routing & Callout Pill Best Practices
+1. **Align Connected Columns Across Stacked Horizontal Planes**: When connecting cards vertically (`"from_side": "bottom"`, `"to_side": "top"`) across stacked horizontal zones, place connected source and target cards in matching `0..N` column positions so connectors drop straight down without L-bend doglegs cutting across sibling cards.
+2. **Keep Outer Horizontal Container Labels Short (`≤ 18 chars`)**: When vertical edges with `"step"` / `"label"` callout pills enter the top of child subzones, keep the parent horizontal zone's `"label"` concise (e.g., `"1. Sources"`, `"2. Control"`, `"3. Runtime"`) and put the longer descriptive title on the child `"subzones"` so top-entering callout pills never collide with the outer zone header text.
 
 ---
 

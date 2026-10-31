@@ -6,7 +6,9 @@ description: >-
   Sandbox/Argolis GCP project, captures sanitized 2x HiDPI Google Cloud Console
   screenshots across dedicated multi-persona Chrome CDP profiles with numbered
   callout overlays, and assembles Google Docs-ready visual walkthroughs (plus
-  optional Google Slides storyboards) under project/topics/<topic-slug>/demos/<demo-slug>/.
+  optional Google Slides storyboards) under
+  project/working-process/<topic-slug>/demos/<demo-slug>/ (or
+  project/deliverables/demos/<demo-slug>/).
   Activate when a user asks to create a narrative or story-based GCP demo,
   provision demo datasets/policies/exchanges for a customer walkthrough, or
   automatically capture Google Cloud Console UI screenshots for a demo flow.
@@ -36,16 +38,16 @@ description: >-
 
 ---
 
-## Target Directory Structure (`project/topics/<topic-slug>/demos/<demo-slug>/`)
+## Target Directory Structure (`project/working-process/<topic-slug>/demos/<demo-slug>/`)
 
-Inside a `gcp-project-copilot` workspace, every demo belongs to its canonical domain topic (`project/topics/<topic-slug>/demos/<demo-slug>/`). Customer-facing deliverables sit in `docs/`, `screenshots/`, and `diagrams/` (synced to Google Drive), while live Sandbox credentials, real Project IDs, and provisioning state stay strictly inside dot-prefixed `.runtime/` (**100% excluded from Google Drive sync**):
+Inside a `gcp-project-copilot` workspace, every exploratory demo belongs to its canonical domain topic (`project/working-process/<topic-slug>/demos/<demo-slug>/`, or `project/deliverables/demos/<demo-slug>/` for finalized customer demos). Customer-facing deliverables sit in `docs/`, `screenshots/`, and `diagrams/` (synced to Google Drive), while live Sandbox credentials, real Project IDs, and provisioning state stay strictly inside dot-prefixed `.runtime/` (**100% excluded from Google Drive sync**):
 
 ```text
 <workspace-root>/
 ├── specs/
 │   └── specs_project.md                                  # Optional Section 6: Sandbox Project ID & Argolis Persona Roster (local-only)
 └── project/
-    └── topics/
+    └── working-process/
         └── <topic-slug>/
             └── demos/
                 └── <demo-slug>/
@@ -97,7 +99,7 @@ Inside a `gcp-project-copilot` workspace, every demo belongs to its canonical do
 Read **[`references/storyboard_and_grill_guide.md`](./references/storyboard_and_grill_guide.md)** before starting Phase 1.
 
 - [ ] **Step 1.1 — Load Engagement Context**:
-  If working inside a `gcp-project-copilot` workspace, read `<workspace>/specs/specs_project.md`, `project/common/project_questions-log.md`, and `project/common/project_challenges.md` (plus any related `project/topics/<topic-slug>/docs/` or `project/questions/` files).
+  If working inside a `gcp-project-copilot` workspace, read `<workspace>/specs/specs_project.md`, `project/common/project_questions-log.md`, and `project/common/project_challenges.md` (plus any related `project/working-process/<topic-slug>/docs/` or `project/questions-answered/` files).
 - [ ] **Step 1.2 — Interactive Grill-Me (`ask_question`, One Question at a Time)**:
   Interview the user on any unresolved story choices, providing a `(Recommended)` option first:
   1. **Target Canonical Domain (`D1..Dn`) & `<topic-slug>`** (if not obvious from the prompt).
@@ -184,13 +186,13 @@ Read **[`references/console_urls_and_selectors.md`](./references/console_urls_an
     ```bash
     python3 <copilot-skill-dir>/scripts/sync_drive.py \
       --workspace <workspace-root> \
-      --file project/topics/<topic-slug>/demos/<demo-slug> \
+      --file project/working-process/<topic-slug>/demos/<demo-slug> \
       --file project/common/project_challenges.md \
       --dry-run
 
     python3 <copilot-skill-dir>/scripts/sync_drive.py \
       --workspace <workspace-root> \
-      --file project/topics/<topic-slug>/demos/<demo-slug> \
+      --file project/working-process/<topic-slug>/demos/<demo-slug> \
       --file project/common/project_challenges.md
     ```
   - Remind the user that live demo assets remain active in `SANDBOX_PROJECT_ID` for workshops and can be cleaned up anytime via `<demo-dir>/.runtime/teardown.sh`.

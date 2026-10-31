@@ -3,10 +3,10 @@
 ## 1. Conducting the Phase 1 "Grill-Me" Interview
 
 Follow these rules when interviewing the user in Phase 1:
-1. **Explore Workspace Context First**: Before asking any question, inspect `<workspace>/specs/specs_project.md`, `project/common/project_questions-log.md`, `project/common/project_challenges.md`, and existing `project/topics/<topic-slug>/docs/` so you never ask what the repository already answers.
+1. **Explore Workspace Context First**: Before asking any question, inspect `<workspace>/specs/specs_project.md`, `project/common/project_questions-log.md`, `project/common/project_challenges.md`, and existing `project/working-process/<topic-slug>/docs/` so you never ask what the repository already answers.
 2. **One Question at a Time via `ask_question`**: Put your recommended option first, prefixed with `(Recommended)`.
 3. **5 Decision Branches to Resolve**:
-   - **Branch A — Canonical Domain & Topic Slug**: Map the demo to `D1..Dn` (e.g., `platform-framework`, `access-management`, `security-compliance`, `data-quality-dlq`, `catalog-lineage`, `observability-monitoring`, `ai-agents-finops`). Target path: `project/topics/<topic-slug>/demos/<demo-slug>/`.
+   - **Branch A — Canonical Domain & Topic Slug**: Map the demo to `D1..Dn` (e.g., `platform-framework`, `access-management`, `security-compliance`, `data-quality-dlq`, `catalog-lineage`, `observability-monitoring`, `ai-agents-finops`). Target path: `project/working-process/<topic-slug>/demos/<demo-slug>/` (or `project/deliverables/demos/<demo-slug>/`).
    - **Branch B — Storyline Hook & Customer Parallel**:
      - *Pattern 1 (Recommended for executive + technical workshops)*: **Universal Detective Metaphor + Customer Industry Parallel** — e.g., a crisp 20–50 row synthetic dataset with 1 planted anomaly (a tampered container seal, a rogue supplier rebate, a miscalibrated plant sensor) paired explicitly with the customer's real business domain from `specs_project.md`.
      - *Pattern 2*: **Synthetic Customer-Domain Dataset** — synthetic tables named directly after the customer's Pilot Domain entities (using 100% synthetic values).
