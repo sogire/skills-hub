@@ -79,16 +79,15 @@ flowchart LR
 
 ## 2. Skill Breakdown by Competency
 
-The [`bq-sql-optimizer`](./bq-sql-optimizer.json) cluster bundles **11 skills** and **0 plugins** mapped directly to the core architectural pillars:
+The [`bq-sql-optimizer`](./bq-sql-optimizer.json) cluster bundles **10 skills** and **0 plugins** mapped directly to the core architectural pillars:
 
 | Competency Domain | Skill / Plugin Identifier | Architectural Rationale | Provenance Source |
 | :--- | :--- | :--- | :--- |
-| **Telemetry & Pareto Profiling** | `bigquery-observability` | Supplies authoritative schema dictionaries (`schema_compute.md`, `schema_storage.md`), `normalized_literals` cohort patterns, and reservation/slot telemetry guidance for interpreting `INFORMATION_SCHEMA.JOBS*` and `TABLE_STORAGE*` exports. | `external/googlecloud-base/cloud` |
+| **Telemetry & Pareto Profiling** | `bigquery-observability` | Supplies authoritative schema dictionaries (`schema_compute.md`, `schema_storage.md`), `normalized_literals` cohort patterns, and reservation/slot telemetry guidance for interpreting `INFORMATION_SCHEMA.JOBS*` and `TABLE_STORAGE*` exports. | `external/googlecloud-data` |
 | **Workload Grouping & Lineage** | `datalineage-bigquery-asset-impact-analysis` | Evaluates downstream blast radius when refactoring shared destination tables, views, or partition keys identified during job grouping. | `external/googlecloud-base/cloud` |
 | | `datalineage-summary` | Summarizes upstream source-to-target transformation flows across grouped SQL jobs. | `external/googlecloud-base/cloud` |
-| **Anti-Pattern Diagnosis** | `bigquery-troubleshooting` | Provides the 4-step cost diagnostic funnel and root-cause analysis workflows for execution graph bottlenecks, shuffle spills, and data skew. | `external/googlecloud-base/cloud` |
-| **SQL Refactoring & DDL Tuning** | `bigquery-sql` | Enforces concrete BigQuery SQL rewrite rules: column pruning, common subexpression reuse, predicate pushdown, early aggregation, and `IN` to `EXISTS` conversion. | `external/googlecloud-data` |
-| | `bigquery-optimization` | Guides table partitioning and clustering DDL design, `require_partition_filter` enforcement, physical vs. logical storage billing evaluation, and SQL tuning. | `external/googlecloud-base/cloud` |
+| **Anti-Pattern Diagnosis** | `bigquery-troubleshooting` | Provides the 4-step cost diagnostic funnel and root-cause analysis workflows for execution graph bottlenecks, shuffle spills, and data skew. | `external/googlecloud-data` |
+| **SQL Refactoring & DDL Tuning** | `bigquery-optimization` | Enforces concrete BigQuery SQL rewrite rules (column pruning, common subexpression reuse, predicate pushdown, early aggregation, `IN` to `EXISTS`) alongside table partitioning/clustering DDL design, `require_partition_filter` enforcement, and physical vs. logical storage billing evaluation. | `external/googlecloud-data` |
 | | `dbt-bigquery` | Applies SQL, incremental strategy, and partition/cluster optimizations directly to modular dbt BigQuery models. | `external/googlecloud-data` |
 | | `dataform-bigquery` | Applies SQLX refactoring, assertion tuning, and incremental partition pruning to Dataform pipelines. | `external/googlecloud-data` |
 | **FinOps & WAF Alignment** | `google-cloud-waf-cost-optimization` | Aligns query and storage optimization recommendations with Google Cloud Well-Architected Framework FinOps principles. | `external/googlecloud-base/cloud` |
@@ -99,7 +98,7 @@ The [`bq-sql-optimizer`](./bq-sql-optimizer.json) cluster bundles **11 skills** 
 
 ## 3. Missing Skills Analysis (Catalog Gaps)
 
-While the upstream catalog provides strong foundational rules for individual BigQuery SQL rewrites (`bigquery-sql`), DDL partitioning and capacity optimization (`bigquery-optimization`), and telemetry/execution diagnostics (`bigquery-observability`, `bigquery-troubleshooting`), it assumes interactive `gcloud`/`bq` CLI access and single-query analysis. To support **automated, batch-scale offline optimization from CSV/Google Sheets**, the following capability gaps exist and are recommended for creation in `internal/data-platform/skills/`:
+While the upstream catalog provides strong foundational rules for individual BigQuery SQL rewrites, DDL partitioning, and capacity optimization (`bigquery-optimization`) alongside telemetry/execution diagnostics (`bigquery-observability`, `bigquery-troubleshooting`), it assumes interactive `gcloud`/`bq` CLI access and single-query analysis. To support **automated, batch-scale offline optimization from CSV/Google Sheets**, the following capability gaps exist and are recommended for creation in `internal/data-platform/skills/`:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐

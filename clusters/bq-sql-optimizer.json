@@ -2,7 +2,6 @@
   "name": "bq-sql-optimizer",
   "description": "BigQuery SQL & Slot Cost Optimizer: Offline job telemetry analysis (CSV/Sheets), SQL similarity grouping, anti-pattern classification, query refactoring, and partitioning/clustering DDL tuning",
   "skills": [
-    "bigquery-sql",
     "bigquery-optimization",
     "bigquery-observability",
     "bigquery-troubleshooting",

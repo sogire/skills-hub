@@ -98,8 +98,8 @@ The [`gcp-data-enterprise-architect`](./gcp-data-enterprise-architect.json) clus
 | | `google-cloud-waf-cost-optimization` | Alignment with Google Cloud WAF principles for cost transparency, rightsizing, and FinOps. | `google-cloud-skills` |
 | | `google-cloud-waf-security` | Alignment with Google Cloud WAF principles for defense-in-depth, least privilege, and identity. | `google-cloud-skills` |
 | | `google-cloud-waf-reliability` | Alignment with Google Cloud WAF principles for high availability, fault tolerance, and DR. | `google-cloud-skills` |
-| **FinOps & Capacity Optimization** | `bigquery-optimization` | BigQuery Editions capacity planning, reservation rightsizing, partitioning/clustering DDL, and SQL tuning. | `external/googlecloud-base/cloud` |
-| | `bigquery-observability` | Auditing reservation capacity, slot contention, autoscaling saturation, and compute/storage billable usage via `INFORMATION_SCHEMA` and Cloud Monitoring. | `external/googlecloud-base/cloud` |
+| **FinOps & Capacity Optimization** | `bigquery-optimization` | BigQuery Editions capacity planning, reservation rightsizing, partitioning/clustering DDL, and SQL tuning. | `external/googlecloud-data` |
+| | `bigquery-observability` | Auditing reservation capacity, slot contention, autoscaling saturation, and compute/storage billable usage via `INFORMATION_SCHEMA` and Cloud Monitoring. | `external/googlecloud-data` |
 | **Security & Landing Zones** | `google-cloud-recipe-foundation-builder` | Enterprise landing zone automation, folder hierarchies, organizational policies, and project factories. | `google-cloud-skills` |
 | | `iam-helper-for-policy-management` | Designing least-privilege IAM policies, condition bindings, and service account perimeters. | `gcp-developer-assist-skills` |
 | | `iam-helper-for-privileged-access-management` | Enforcing just-in-time (JIT) access and Privileged Access Management (PAM) for production data. | `gcp-developer-assist-skills` |
